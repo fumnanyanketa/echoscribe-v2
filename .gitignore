@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Secrets (Clerk keys, etc.) - added ahead of the sign-in feature
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
