@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<![CDATA[<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#e7e9ef; font-family:'Manrope',Helvetica,sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#6b4df0; text-decoration:none; }
+  a:hover { color:#4b2fd6; text-decoration:underline; }
+  @keyframes wv { from { transform:scaleY(.18); } to { transform:scaleY(1); } }
+  @keyframes breathe { 0%,100% { opacity:.35; transform:scale(1); } 50% { opacity:1; transform:scale(1.35); } }
+</style>
+</helmet>
+
+<section style="padding:56px 64px 96px;display:flex;flex-direction:column;gap:56px">
+
+  <div id="1a" style="display:flex;flex-direction:column;gap:14px;max-width:960px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em;background:#14161a;color:#f7f6f3;padding:4px 8px;border-radius:4px">1a</span>
+      <h1 style="margin:0;font-size:26px;font-weight:600;color:#14161a;letter-spacing:-.01em">EchoScribe v2 — direction: <em style="font-style:normal;color:#7c5cff">Instrument</em></h1>
+    </div>
+    <p style="margin:0;font-size:16px;line-height:1.6;color:#40454c;text-wrap:pretty;max-width:78ch">A two-tone shell — graphite where you navigate, white where you read — and a dark-glass pill. Manrope + JetBrains Mono, one violet channel. The pill is a <strong style="font-weight:600">measuring instrument</strong>, not a chat window: a grip rail you can grab from any edge, a live level meter that only ever means &ldquo;sound is arriving&rdquo;, and one line of text where the locked front of the sentence is ink and the still-settling tail is grey with a dotted rule under it. The pill is deliberately the darkest thing on your screen — against a white document it reads as a physical object laid on the page rather than a panel grafted into it, and it needs no border tricks to stay legible. Violet is reserved exclusively for &ldquo;the mic is open&rdquo;, so it can never be confused with decoration. Contrast table at the bottom.</p>
+  </div>
+
+  <!-- ============ PILL ============ -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;color:#5c6169;text-transform:uppercase">Surface 1 — floating pill, shown over a bright document</div>
+    <div style="display:flex;flex-wrap:wrap;gap:28px">
+
+      <!-- Armed -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#14161a">1 · Armed</div>
+        <div style="width:520px;height:230px;border-radius:10px;background:#ffffff;border:1px solid #dcdfe7;padding:22px 26px;position:relative;overflow:hidden">
+          <div style="height:9px;width:74%;background:#eef0f5;border-radius:3px"></div>
+          <div style="height:9px;width:92%;background:#eef0f5;border-radius:3px;margin-top:12px"></div>
+          <div style="height:9px;width:60%;background:#eef0f5;border-radius:3px;margin-top:12px"></div>
+          <div style="position:absolute;left:96px;top:118px;display:flex;align-items:stretch;gap:0;background:#16171c;border:1px solid #34363f;border-radius:999px;box-shadow:0 22px 44px -12px rgba(10,11,16,.5),0 2px 6px rgba(10,11,16,.28),0 1px 0 rgba(255,255,255,.08) inset;height:44px">
+            <div style="display:flex;align-items:center;padding:0 9px 0 12px;cursor:grab" title="drag anywhere on the rail">
+              <div style="display:grid;grid-template-columns:3px 3px;gap:3px">
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+              </div>
+            </div>
+            <div style="width:1px;background:#34363f;margin:9px 0"></div>
+            <div style="display:flex;align-items:center;gap:9px;padding:0 16px 0 12px">
+              <div style="position:relative;width:10px;height:10px;display:flex;align-items:center;justify-content:center">
+                <div style="position:absolute;width:10px;height:10px;border-radius:99px;background:{{ accent }};animation:breathe 1.6s ease-in-out infinite"></div>
+                <div style="width:6px;height:6px;border-radius:99px;background:{{ accent }}"></div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:.06em;color:#c4b5fd;font-weight:500">MIC OPEN</div>
+              <div style="width:1px;height:14px;background:#34363f"></div>
+              <div style="font-size:12.5px;color:#9a9daa">go ahead</div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:12.5px;line-height:1.5;color:#5c6169;width:520px;text-wrap:pretty">Smallest form, 232&times;44. Off state is this pill absent from the screen entirely — nothing grey-and-idle to mistake for it. The breathing violet ring plus the literal words <span style="font-family:'JetBrains Mono',monospace">MIC OPEN</span> are two independent signals for the same fact.</div>
+      </div>
+
+      <!-- Listening -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#14161a">2 · Listening</div>
+        <div style="width:520px;height:230px;border-radius:10px;background:#ffffff;border:1px solid #dcdfe7;padding:22px 26px;position:relative;overflow:hidden">
+          <div style="height:9px;width:74%;background:#eef0f5;border-radius:3px"></div>
+          <div style="height:9px;width:92%;background:#eef0f5;border-radius:3px;margin-top:12px"></div>
+          <div style="height:9px;width:60%;background:#eef0f5;border-radius:3px;margin-top:12px"></div>
+          <div style="position:absolute;left:22px;top:112px;display:flex;align-items:stretch;background:#16171c;border:1px solid #34363f;border-radius:999px;box-shadow:0 22px 44px -12px rgba(10,11,16,.5),0 2px 6px rgba(10,11,16,.28),0 1px 0 rgba(255,255,255,.08) inset;height:52px;width:472px">
+            <div style="display:flex;align-items:center;padding:0 9px 0 13px;cursor:grab">
+              <div style="display:grid;grid-template-columns:3px 3px;gap:3px">
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:2px;height:26px;align-self:center;width:56px">
+              <sc-for list="{{ bars }}" as="b" hint-placeholder-count="18">
+                <div style="flex:1;height:100%;border-radius:2px;background:{{ accent }};transform-origin:center;animation:wv {{ b.dur }} ease-in-out {{ b.delay }} infinite alternate"></div>
+              </sc-for>
+            </div>
+            <div style="width:1px;background:#34363f;margin:11px 12px"></div>
+            <div style="flex:1;display:flex;align-items:center;overflow:hidden;padding-right:16px;white-space:nowrap">
+              <span style="font-size:14.5px;color:#f2f2f5;letter-spacing:-.005em">ship the migration on&nbsp;</span>
+              <span style="font-size:14.5px;color:#a1a5b4;border-bottom:1.5px dotted #7d8394;padding-bottom:1px">thursday morn</span>
+              <span style="display:inline-block;width:1.5px;height:15px;background:#7c5cff;margin-left:2px"></span>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:12.5px;line-height:1.5;color:#5c6169;width:520px;text-wrap:pretty">Final text is ink, flush left and stable. Interim text is grey with a dotted underline — the underline is the promise that it can still change; it disappears the instant Deepgram finalises, so the line visibly &ldquo;hardens&rdquo; left to right. The meter is amplitude only, never a spectrogram: 18 bars, 60&nbsp;ms updates, flat at silence.</div>
+      </div>
+
+      <!-- Long dictation -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#14161a">3 · Long dictation</div>
+        <div style="width:520px;height:230px;border-radius:10px;background:#ffffff;border:1px solid #dcdfe7;padding:22px 26px;position:relative;overflow:hidden">
+          <div style="height:9px;width:74%;background:#eef0f5;border-radius:3px"></div>
+          <div style="height:9px;width:92%;background:#eef0f5;border-radius:3px;margin-top:12px"></div>
+          <div style="height:9px;width:60%;background:#eef0f5;border-radius:3px;margin-top:12px"></div>
+          <div style="position:absolute;left:22px;top:112px;display:flex;align-items:stretch;background:#16171c;border:1px solid #34363f;border-radius:999px;box-shadow:0 22px 44px -12px rgba(10,11,16,.5),0 2px 6px rgba(10,11,16,.28),0 1px 0 rgba(255,255,255,.08) inset;height:52px;width:472px">
+            <div style="display:flex;align-items:center;padding:0 9px 0 13px;cursor:grab">
+              <div style="display:grid;grid-template-columns:3px 3px;gap:3px">
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+                <div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:2px;height:26px;align-self:center;width:56px">
+              <sc-for list="{{ bars2 }}" as="b" hint-placeholder-count="18">
+                <div style="flex:1;height:100%;border-radius:2px;background:{{ accent }};transform-origin:center;animation:wv {{ b.dur }} ease-in-out {{ b.delay }} infinite alternate"></div>
+              </sc-for>
+            </div>
+            <div style="width:1px;background:#34363f;margin:11px 12px"></div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;overflow:hidden;padding-right:16px;white-space:nowrap;mask-image:linear-gradient(to right,transparent 0,#000 64px);-webkit-mask-image:linear-gradient(to right,transparent 0,#000 64px)">
+              <span style="font-size:14.5px;color:#f2f2f5;letter-spacing:-.005em">, and then hand the release notes to Priya before the standup so she can&nbsp;</span>
+              <span style="font-size:14.5px;color:#a1a5b4;border-bottom:1.5px dotted #7d8394;padding-bottom:1px">post them in the</span>
+              <span style="display:inline-block;width:1.5px;height:15px;background:#7c5cff;margin-left:2px"></span>
+            </div>
+          </div>
+          <div style="position:absolute;left:22px;top:176px;width:472px;display:flex;justify-content:flex-end"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#c9ccd6;background:#16171c;border:1px solid #34363f;border-radius:99px;padding:3px 9px">0:41 · 84 words</span></div>
+        </div>
+        <div style="font-size:12.5px;line-height:1.5;color:#5c6169;width:520px;text-wrap:pretty">Decision: <strong style="font-weight:600;color:#40454c">truncate from the left with a soft fade</strong>, never scroll and never grow. The tail is the only part still in question, so the tail keeps the right edge; history is already recorded elsewhere and the real text is in your document. A small elapsed/word counter appears after 20&nbsp;s so long dictations feel accounted for.</div>
+      </div>
+
+      <!-- Errors -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#14161a">4 · Errors</div>
+        <div style="width:520px;height:230px;border-radius:10px;background:#ffffff;border:1px solid #dcdfe7;padding:20px 24px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:14px">
+          <div style="display:flex;align-items:stretch;background:#1b1917;border:1px solid #3d372c;border-left:3px solid #f0b95c;border-radius:999px;box-shadow:0 22px 44px -12px rgba(10,11,16,.5),0 2px 6px rgba(10,11,16,.28);height:48px;width:472px">
+            <div style="display:flex;align-items:center;padding:0 8px 0 11px;cursor:grab"><div style="display:grid;grid-template-columns:3px 3px;gap:3px"><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div></div></div>
+            <div style="flex:1;display:flex;align-items:center;gap:10px;min-width:0">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#f0b95c;letter-spacing:.06em;border:1px solid #4d452f;border-radius:4px;padding:2px 6px;white-space:nowrap">NO KEY</span>
+              <span style="font-size:13.5px;color:#f2f2f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">Deepgram key missing.</span>
+            </div>
+            <button style="align-self:center;margin-right:8px;font-family:'Manrope',sans-serif;font-size:12.5px;font-weight:500;color:#16171c;background:#f4f4f6;border:0;border-radius:99px;padding:7px 13px;cursor:pointer;white-space:nowrap" style-hover="background:#ffffff">Add key</button>
+          </div>
+          <div style="display:flex;align-items:stretch;background:#1c1618;border:1px solid #40302f;border-left:3px solid #ff8b80;border-radius:999px;box-shadow:0 22px 44px -12px rgba(10,11,16,.5),0 2px 6px rgba(10,11,16,.28);height:48px;width:472px">
+            <div style="display:flex;align-items:center;padding:0 8px 0 11px;cursor:grab"><div style="display:grid;grid-template-columns:3px 3px;gap:3px"><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div></div></div>
+            <div style="flex:1;display:flex;align-items:center;gap:10px;min-width:0">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#ff8b80;letter-spacing:.06em;border:1px solid #4d3634;border-radius:4px;padding:2px 6px;white-space:nowrap">NO MIC</span>
+              <span style="font-size:13.5px;color:#f2f2f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">No microphone detected.</span>
+            </div>
+            <button style="align-self:center;margin-right:8px;font-family:'Manrope',sans-serif;font-size:12.5px;font-weight:500;color:#e8e9ee;background:transparent;border:1px solid #45474f;border-radius:99px;padding:6px 12px;cursor:pointer;white-space:nowrap" style-hover="background:#24262d">Devices</button>
+          </div>
+          <div style="display:flex;align-items:stretch;background:#1c1618;border:1px solid #40302f;border-left:3px solid #ff8b80;border-radius:999px;box-shadow:0 22px 44px -12px rgba(10,11,16,.5),0 2px 6px rgba(10,11,16,.28);height:48px;width:472px">
+            <div style="display:flex;align-items:center;padding:0 8px 0 11px;cursor:grab"><div style="display:grid;grid-template-columns:3px 3px;gap:3px"><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div><div style="width:3px;height:3px;border-radius:2px;background:#6b7080"></div></div></div>
+            <div style="flex:1;display:flex;align-items:center;gap:10px;min-width:0">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:#ff8b80;letter-spacing:.06em;border:1px solid #4d3634;border-radius:4px;padding:2px 6px;white-space:nowrap">DROPPED</span>
+              <span style="font-size:13.5px;color:#f2f2f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">Connection lost. Kept &ldquo;…on thursday&rdquo;</span>
+            </div>
+            <button style="align-self:center;margin-right:8px;font-family:'Manrope',sans-serif;font-size:12.5px;font-weight:500;color:#16171c;background:#f4f4f6;border:0;border-radius:99px;padding:7px 13px;cursor:pointer;white-space:nowrap" style-hover="background:#ffffff">Retry</button>
+          </div>
+        </div>
+        <div style="font-size:12.5px;line-height:1.5;color:#5c6169;width:520px;text-wrap:pretty">Error pills keep the exact geometry of the working pill and swap the violet channel for one coloured edge, a mono code, one sentence of plain cause, and exactly one action. The dropped-connection case states what it managed to keep, because silent loss is the worst failure a dictation tool can have.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ DASHBOARD ============ -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;color:#5c6169;text-transform:uppercase">Surface 2 — dashboard, 1200 &times; 800</div>
+    <div style="font-size:12.5px;line-height:1.5;color:#5c6169;max-width:78ch;text-wrap:pretty">Navigation: a persistent left rail, not tabs. History is a working surface you return to with a query in your head, and Settings is the section that will keep growing (deeper customisation, per-language rules, vocabulary). A rail keeps the search field anchored in one place and absorbs new sections without re-laying-out a tab bar. Account is pinned to the bottom because it is visited twice a year.</div>
+    <div style="display:flex;flex-wrap:wrap;gap:28px">
+
+      <!-- History -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#14161a">History</div>
+        <div style="width:1200px;height:800px;border-radius:12px;overflow:hidden;background:#ffffff;border:1px solid #d5d8e1;box-shadow:0 28px 64px -20px rgba(16,18,26,.22),0 2px 8px rgba(16,18,26,.06);display:flex">
+          <div style="width:232px;background:#121317;border-right:1px solid #1f2127;display:flex;flex-direction:column;padding:18px 14px">
+            <div style="display:flex;align-items:center;gap:9px;padding:0 8px 20px">
+              <div style="width:9px;height:9px;border-radius:99px;background:#7c5cff"></div>
+              <div style="font-size:14px;font-weight:600;color:#f4f4f6;letter-spacing:-.01em">EchoScribe</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#9a9daa;border:1px solid #33353d;border-radius:4px;padding:1px 5px">v2</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;background:#22242c;border:1px solid #30333d;font-size:13.5px;font-weight:500;color:#ffffff"><div style="width:4px;height:14px;border-radius:2px;background:#7c5cff"></div>History<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#74788a">1,284</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;font-size:13.5px;color:#a7abb6;cursor:pointer" style-hover="background:#1c1e25"><div style="width:4px;height:14px;border-radius:2px;background:transparent"></div>Settings</div>
+            </div>
+            <div style="margin-top:auto;padding-top:14px;border-top:1px solid #26282f;display:flex;align-items:center;gap:10px;padding-left:6px">
+              <div style="width:26px;height:26px;border-radius:99px;background:#7c5cff;color:#ffffff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">MK</div>
+              <div style="font-size:12.5px;color:#c9ccd6">Maya Kern</div>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+            <div style="padding:20px 26px;border-bottom:1px solid #e7e9ef;display:flex;align-items:center;gap:14px">
+              <div style="flex:1;display:flex;align-items:center;gap:9px;background:#ffffff;border:1px solid #d5d8e1;border-radius:8px;padding:9px 12px">
+                <div style="width:11px;height:11px;border:1.5px solid #8b9098;border-radius:99px"></div>
+                <span style="font-size:13.5px;color:#14161a">migration</span>
+                <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#5c6169">7 results</span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <div style="font-size:12.5px;color:#14161a;background:#ffffff;border:1px solid #d5d8e1;border-radius:7px;padding:8px 12px;cursor:pointer" style-hover="background:#f4f5f8">All apps</div>
+                <div style="font-size:12.5px;color:#14161a;background:#ffffff;border:1px solid #d5d8e1;border-radius:7px;padding:8px 12px;cursor:pointer" style-hover="background:#f4f5f8">Any date</div>
+              </div>
+            </div>
+            <div style="padding:8px 26px;display:flex;flex-direction:column">
+              <sc-for list="{{ history }}" as="h" hint-placeholder-count="6">
+                <div style="display:flex;gap:18px;padding:16px 0;border-bottom:1px solid #eef0f5" style-hover="background:#f4f5f8">
+                  <div style="width:118px;flex:none;display:flex;flex-direction:column;gap:5px">
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#5c6169">{{ h.when }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#8b9098">{{ h.dur }}</span>
+                  </div>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+                    <div style="font-size:14.5px;line-height:1.5;color:#14161a;text-wrap:pretty">{{ h.text }}</div>
+                    <div style="display:flex;align-items:center;gap:7px">
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#40454c;background:#f4f5f8;border:1px solid #e7e9ef;border-radius:4px;padding:2px 6px">{{ h.app }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#5c6169">{{ h.lang }}</span>
+                    </div>
+                  </div>
+                  <div style="flex:none;display:flex;align-items:flex-start;gap:6px">
+                    <div style="font-size:12px;color:#14161a;border:1px solid #d5d8e1;border-radius:6px;padding:5px 10px;background:#ffffff;cursor:pointer" style-hover="background:#f4f5f8">Copy</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History empty -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#14161a">History — empty (first thing a new user sees)</div>
+        <div style="width:1200px;height:800px;border-radius:12px;overflow:hidden;background:#ffffff;border:1px solid #d5d8e1;box-shadow:0 28px 64px -20px rgba(16,18,26,.22),0 2px 8px rgba(16,18,26,.06);display:flex">
+          <div style="width:232px;background:#121317;border-right:1px solid #1f2127;display:flex;flex-direction:column;padding:18px 14px">
+            <div style="display:flex;align-items:center;gap:9px;padding:0 8px 20px">
+              <div style="width:9px;height:9px;border-radius:99px;background:#7c5cff"></div>
+              <div style="font-size:14px;font-weight:600;color:#f4f4f6;letter-spacing:-.01em">EchoScribe</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#9a9daa;border:1px solid #33353d;border-radius:4px;padding:1px 5px">v2</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;background:#22242c;border:1px solid #30333d;font-size:13.5px;font-weight:500;color:#ffffff"><div style="width:4px;height:14px;border-radius:2px;background:#7c5cff"></div>History<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#74788a">0</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;font-size:13.5px;color:#a7abb6;cursor:pointer" style-hover="background:#1c1e25"><div style="width:4px;height:14px;border-radius:2px;background:transparent"></div>Settings</div>
+            </div>
+            <div style="margin-top:auto;padding-top:14px;border-top:1px solid #26282f;display:flex;align-items:center;gap:10px;padding-left:6px">
+              <div style="width:26px;height:26px;border-radius:99px;background:#7c5cff;color:#ffffff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">MK</div>
+              <div style="font-size:12.5px;color:#c9ccd6">Maya Kern</div>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px">
+            <div style="width:520px;display:flex;flex-direction:column;gap:22px;align-items:flex-start">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:.12em;color:#5c6169">NOTHING DICTATED YET</div>
+              <div style="font-size:27px;line-height:1.28;font-weight:500;color:#14161a;letter-spacing:-.015em;text-wrap:pretty">Press <span style="font-family:'JetBrains Mono',monospace;font-size:22px;background:#ffffff;border:1px solid #d5d8e1;border-bottom-width:2px;border-radius:7px;padding:3px 10px">Ctrl</span> <span style="font-family:'JetBrains Mono',monospace;font-size:22px;background:#ffffff;border:1px solid #d5d8e1;border-bottom-width:2px;border-radius:7px;padding:3px 10px">Space</span> in any app and start talking.</div>
+              <div style="font-size:14.5px;line-height:1.6;color:#40454c;text-wrap:pretty">Your words are typed straight into whatever you were writing in. Everything you dictate is saved here, on this machine only, so you can find it again later.</div>
+              <div style="display:flex;gap:10px;padding-top:2px">
+                <div style="font-size:13px;font-weight:500;color:#ffffff;background:#14161a;border-radius:99px;padding:10px 18px;cursor:pointer" style-hover="background:#2b2f36">Try it in a scratchpad</div>
+                <div style="font-size:13px;font-weight:500;color:#14161a;background:transparent;border:1px solid #d5d8e1;border-radius:99px;padding:10px 18px;cursor:pointer" style-hover="background:#f4f5f8">Change the hotkey</div>
+              </div>
+              <div style="margin-top:8px;padding:14px 16px;background:#f4f5f8;border:1px solid #e7e9ef;border-radius:9px;display:flex;gap:12px;align-items:center;width:100%">
+                <div style="width:8px;height:8px;border-radius:99px;background:#7c5cff;flex:none"></div>
+                <div style="font-size:13px;color:#40454c;line-height:1.5">Key added, microphone <span style="color:#14161a;font-weight:500">Yeti Nano</span>, language <span style="color:#14161a;font-weight:500">English (US)</span>. You&rsquo;re ready.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#14161a">Settings — key present, and (right) the first-run blocker</div>
+        <div style="width:1200px;height:800px;border-radius:12px;overflow:hidden;background:#ffffff;border:1px solid #d5d8e1;box-shadow:0 28px 64px -20px rgba(16,18,26,.22),0 2px 8px rgba(16,18,26,.06);display:flex">
+          <div style="width:232px;background:#121317;border-right:1px solid #1f2127;display:flex;flex-direction:column;padding:18px 14px">
+            <div style="display:flex;align-items:center;gap:9px;padding:0 8px 20px">
+              <div style="width:9px;height:9px;border-radius:99px;background:#7c5cff"></div>
+              <div style="font-size:14px;font-weight:600;color:#f4f4f6;letter-spacing:-.01em">EchoScribe</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#9a9daa;border:1px solid #33353d;border-radius:4px;padding:1px 5px">v2</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;font-size:13.5px;color:#a7abb6;cursor:pointer" style-hover="background:#1c1e25"><div style="width:4px;height:14px;border-radius:2px;background:transparent"></div>History<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#74788a">1,284</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;background:#22242c;border:1px solid #30333d;font-size:13.5px;font-weight:500;color:#ffffff"><div style="width:4px;height:14px;border-radius:2px;background:#7c5cff"></div>Settings</div>
+              <div style="display:flex;flex-direction:column;gap:1px;padding:6px 0 0 28px">
+                <div style="font-size:13px;color:#ffffff;font-weight:500;padding:5px 8px;border-radius:6px;background:#22242c">Dictation</div>
+                <div style="font-size:13px;color:#a7abb6;padding:5px 8px;border-radius:6px;cursor:pointer" style-hover="background:#1c1e25">Languages</div>
+                <div style="font-size:13px;color:#a7abb6;padding:5px 8px;border-radius:6px;cursor:pointer" style-hover="background:#1c1e25">Vocabulary</div>
+                <div style="font-size:13px;color:#a7abb6;padding:5px 8px;border-radius:6px;cursor:pointer" style-hover="background:#1c1e25">Transcription</div>
+              </div>
+            </div>
+            <div style="margin-top:auto;padding-top:14px;border-top:1px solid #26282f;display:flex;align-items:center;gap:10px;padding-left:6px">
+              <div style="width:26px;height:26px;border-radius:99px;background:#7c5cff;color:#ffffff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">MK</div>
+              <div style="font-size:12.5px;color:#c9ccd6">Maya Kern</div>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;min-width:0">
+            <div style="flex:1;padding:32px 30px;display:flex;flex-direction:column;gap:26px;border-right:1px dashed #dcdfe7;min-width:0">
+              <div style="font-size:19px;font-weight:600;color:#14161a;letter-spacing:-.01em">Dictation</div>
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="font-size:13px;font-weight:500;color:#14161a">Hotkey</div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="display:flex;gap:5px;background:#ffffff;border:1px solid #d5d8e1;border-radius:8px;padding:9px 11px">
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#14161a;background:#f4f5f8;border:1px solid #e7e9ef;border-radius:5px;padding:2px 8px">Ctrl</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#14161a;background:#f4f5f8;border:1px solid #e7e9ef;border-radius:5px;padding:2px 8px">Space</span>
+                  </div>
+                  <div style="font-size:12.5px;color:#14161a;border:1px solid #d5d8e1;background:#ffffff;border-radius:7px;padding:8px 12px;cursor:pointer" style-hover="background:#f4f5f8">Rebind</div>
+                  <div style="font-size:12px;color:#5c6169">hold to talk · tap to toggle</div>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="font-size:13px;font-weight:500;color:#14161a">Microphone</div>
+                <div style="display:flex;align-items:center;gap:12px;background:#ffffff;border:1px solid #d5d8e1;border-radius:8px;padding:11px 13px">
+                  <span style="font-size:13.5px;color:#14161a">Blue Yeti Nano</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#5c6169">USB</span>
+                  <div style="margin-left:auto;display:flex;align-items:center;gap:2px;height:16px;width:64px">
+                    <sc-for list="{{ bars3 }}" as="b" hint-placeholder-count="18">
+                      <div style="flex:1;height:100%;border-radius:2px;background:{{ accent }};transform-origin:center;animation:wv {{ b.dur }} ease-in-out {{ b.delay }} infinite alternate"></div>
+                    </sc-for>
+                  </div>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#4b2fd6">−18 dB</span>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="font-size:13px;font-weight:500;color:#14161a">Spoken languages</div>
+                <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center">
+                  <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:#14161a;background:#ffffff;border:1px solid #d5d8e1;border-radius:99px;padding:6px 12px">English (US)<span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#4b2fd6">DEFAULT</span></div>
+                  <div style="font-size:13px;color:#14161a;background:#ffffff;border:1px solid #d5d8e1;border-radius:99px;padding:6px 12px">Deutsch</div>
+                  <div style="font-size:13px;color:#14161a;background:#ffffff;border:1px solid #d5d8e1;border-radius:99px;padding:6px 12px">日本語</div>
+                  <div style="font-size:13px;color:#40454c;border:1px dashed #c2c6d1;border-radius:99px;padding:6px 12px;cursor:pointer" style-hover="background:#f4f5f8">+ Add</div>
+                </div>
+                <div style="font-size:12px;color:#5c6169">Switch mid-session with the hotkey held twice, or let Deepgram detect it.</div>
+              </div>
+
+              <div style="height:1px;background:#e7e9ef"></div>
+
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div style="font-size:13px;font-weight:500;color:#14161a">Deepgram API key</div>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.06em;color:#40454c;background:#f4f5f8;border:1px solid #e7e9ef;border-radius:4px;padding:2px 6px">SECRET · STORED LOCALLY</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;background:#f4f5f8;border:1px solid #c2c6d1;border-radius:8px;padding:11px 13px">
+                  <div style="width:8px;height:8px;border-radius:99px;background:#7c5cff;flex:none"></div>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#14161a;letter-spacing:.14em">••••••••••••••••••••</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#5c6169">·5f2a</span>
+                  <div style="margin-left:auto;display:flex;gap:6px">
+                    <div style="font-size:12px;color:#14161a;border:1px solid #d5d8e1;background:#ffffff;border-radius:6px;padding:5px 10px;cursor:pointer" style-hover="background:#f4f5f8">Replace</div>
+                    <div style="font-size:12px;color:#b3261e;border:1px solid #e0bdb9;background:#ffffff;border-radius:6px;padding:5px 10px;cursor:pointer" style-hover="background:#fffcfb">Remove</div>
+                  </div>
+                </div>
+                <div style="font-size:12px;color:#5c6169">Verified 4 Mar. Never leaves this machine.</div>
+              </div>
+            </div>
+
+            <div style="width:392px;flex:none;padding:32px 30px;background:#f7f8fb;display:flex;flex-direction:column;gap:14px">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#5c6169">EMPTY VARIANT — FIRST RUN</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div style="font-size:13px;font-weight:500;color:#14161a">Deepgram API key</div>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.06em;color:#5b3fd6;background:#fbf9ff;border:1px solid #cfc2f2;border-radius:4px;padding:2px 6px">REQUIRED</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;background:#ffffff;border:1.5px solid #5b3fd6;border-radius:8px;padding:11px 13px">
+                  <div style="width:8px;height:8px;border-radius:99px;background:#5b3fd6;flex:none"></div>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:13.5px;color:#5c6169">paste your key here</span>
+                  <div style="margin-left:auto;font-size:12px;font-weight:500;color:#ffffff;background:#14161a;border-radius:6px;padding:6px 12px;cursor:pointer" style-hover="background:#2b2f36">Verify</div>
+                </div>
+                <div style="font-size:12.5px;color:#5b3fd6;line-height:1.5">Dictation is off until this is set. <a href="#1a">Where do I get a key?</a></div>
+              </div>
+              <div style="height:1px;background:#e7e9ef;margin:6px 0"></div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#5c6169">ACCOUNT</div>
+              <div style="display:flex;flex-direction:column;gap:12px;background:#ffffff;border:1px solid #e7e9ef;border-radius:10px;padding:16px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="width:38px;height:38px;border-radius:99px;background:#14161a;color:#ffffff;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center">MK</div>
+                  <div style="display:flex;flex-direction:column;gap:2px">
+                    <div style="font-size:14px;font-weight:500;color:#14161a">Maya Kern</div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#5c6169">maya@kern.studio</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:7px;height:7px;border-radius:99px;background:#7c5cff"></div>
+                  <div style="font-size:12.5px;color:#40454c">Signed in since 2 Feb</div>
+                </div>
+                <div style="font-size:12.5px;font-weight:500;color:#14161a;border:1px solid #d5d8e1;border-radius:7px;padding:8px 12px;text-align:center;cursor:pointer" style-hover="background:#f4f5f8">Sign out</div>
+              </div>
+              <div style="font-size:12px;color:#5c6169;line-height:1.5">That is the whole Account section. Nothing to bill, nothing to upgrade.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ FIRST RUN ============ -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;color:#5c6169;text-transform:uppercase">Surface 3 — first run, 760 &times; 540</div>
+    <div style="display:flex;flex-wrap:wrap;gap:28px">
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#14161a">Sign in (Clerk)</div>
+        <div style="width:760px;height:540px;border-radius:12px;background:#101116;border:1px solid #262932;box-shadow:0 34px 80px -24px rgba(8,9,14,.55),0 2px 8px rgba(8,9,14,.3);display:flex;align-items:center;justify-content:center;overflow:hidden">
+          <div style="width:344px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <div style="width:9px;height:9px;border-radius:99px;background:#7c5cff"></div>
+              <div style="font-size:15px;font-weight:600;color:#f4f4f6">EchoScribe</div>
+            </div>
+            <div style="font-size:23px;font-weight:500;color:#f4f4f6;letter-spacing:-.015em;line-height:1.3">Sign in to continue</div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <label style="font-size:12.5px;color:#b6bac6">Email</label>
+                <div style="background:#191b21;border:1px solid #2f323b;border-radius:8px;padding:11px 13px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#9198a8">you@example.com</div>
+              </div>
+              <div style="font-size:13px;font-weight:500;color:#101116;background:#f4f4f6;border-radius:8px;padding:11px;text-align:center;cursor:pointer" style-hover="background:#ffffff">Continue</div>
+              <div style="display:flex;align-items:center;gap:10px;padding:6px 0"><div style="flex:1;height:1px;background:#2a2d35"></div><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9198a8">OR</span><div style="flex:1;height:1px;background:#2a2d35"></div></div>
+              <div style="font-size:13px;color:#f4f4f6;background:transparent;border:1px solid #3a3d47;border-radius:8px;padding:11px;text-align:center;cursor:pointer" style-hover="background:#1c1e25">Continue with Google</div>
+            </div>
+            <div style="font-size:11.5px;color:#9198a8;line-height:1.5">Sign in once. EchoScribe stays signed in on this machine and keeps your transcripts here.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#14161a">Add your Deepgram key</div>
+        <div style="width:760px;height:540px;border-radius:12px;background:#101116;border:1px solid #262932;box-shadow:0 34px 80px -24px rgba(8,9,14,.55),0 2px 8px rgba(8,9,14,.3);display:flex;flex-direction:column;justify-content:center;gap:20px;padding:0 64px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#9198a8">STEP 2 OF 2</span>
+            <div style="display:flex;gap:4px"><div style="width:22px;height:3px;border-radius:2px;background:#7c5cff"></div><div style="width:22px;height:3px;border-radius:2px;background:#7c5cff"></div></div>
+          </div>
+          <div style="font-size:27px;font-weight:500;color:#f4f4f6;letter-spacing:-.015em;line-height:1.25;text-wrap:pretty">One key, and you can dictate.</div>
+          <div style="font-size:14.5px;line-height:1.6;color:#b6bac6;max-width:56ch;text-wrap:pretty">EchoScribe uses Deepgram to turn speech into text. You bring your own key so your audio goes from this machine to your Deepgram account and nowhere else — there is no EchoScribe server in between, and nothing to pay us for.</div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;gap:11px;background:#191b21;border:1.5px solid #7c5cff;border-radius:9px;padding:13px 15px">
+              <div style="width:8px;height:8px;border-radius:99px;background:#7c5cff;flex:none"></div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#9198a8;flex:1">paste your key here</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.06em;color:#c4b5fd;background:#231d3d;border:1px solid #3b3363;border-radius:4px;padding:2px 6px">SECRET</span>
+              <div style="font-size:13px;font-weight:500;color:#101116;background:#f4f4f6;border-radius:7px;padding:8px 15px;cursor:pointer" style-hover="background:#ffffff">Verify &amp; finish</div>
+            </div>
+            <div style="display:flex;gap:16px;align-items:center">
+              <a href="#1a" style="font-size:12.5px;color:#a78bfa">Get a free key from Deepgram &rarr;</a>
+              <span style="font-size:12px;color:#9198a8">Takes about a minute. Stored encrypted on this machine.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ CONTRAST ============ -->
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:1000px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;color:#5c6169;text-transform:uppercase">Contrast audit — every text/background pair</div>
+    <div style="background:#ffffff;border:1px solid #d5d8e1;border-radius:10px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:1.5fr 1.1fr 1.1fr .7fr .9fr;gap:0;font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:.05em;color:#40454c;background:#f4f5f8;border-bottom:1px solid #e7e9ef">
+        <div style="padding:10px 14px">USE</div><div style="padding:10px 14px">TEXT</div><div style="padding:10px 14px">ON</div><div style="padding:10px 14px">RATIO</div><div style="padding:10px 14px">AA</div>
+      </div>
+      <sc-for list="{{ contrast }}" as="c" hint-placeholder-count="14">
+        <div style="display:grid;grid-template-columns:1.5fr 1.1fr 1.1fr .7fr .9fr;border-bottom:1px solid #eef0f5;font-size:12.5px;color:#14161a">
+          <div style="padding:9px 14px">{{ c.use }}</div>
+          <div style="padding:9px 14px;font-family:'JetBrains Mono',monospace;color:#40454c">{{ c.fg }}</div>
+          <div style="padding:9px 14px;font-family:'JetBrains Mono',monospace;color:#40454c">{{ c.bg }}</div>
+          <div style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-weight:500">{{ c.ratio }}</div>
+          <div style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:{{ c.color }}">{{ c.verdict }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size:13px;line-height:1.65;color:#40454c;text-wrap:pretty;max-width:78ch">Moving the pill to dark glass fixed the tightest pair in the old palette: <strong style="font-weight:600">interim text is now #a1a5b4 at 7.6:1</strong> (was 5.1:1), so the grey carrying the &ldquo;this can still change&rdquo; meaning no longer trades legibility for softness. Two failures remain, both flagged above and both deliberate. (1) <strong style="font-weight:600">The dot grip #6b7080 on #16171c is 2.9:1</strong> — a non-text decorative handle with a 44&nbsp;px hit area and a <span style="font-family:'JetBrains Mono',monospace">grab</span> cursor, exempt under 1.4.11; #8b909e takes it to 4.6:1 if you want it clean, at the cost of reading like a control. (2) <strong style="font-weight:600">The faint list counts #8b9098 on white are 3.4:1</strong> — redundant numbers beside already-labelled nav items; #6d727a takes them to 4.7:1. Everything else clears AA and all body copy clears AAA.</div>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#7c5cff&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#7c5cff&quot;,&quot;#3ecf9a&quot;,&quot;#f0b95c&quot;,&quot;#5eb2ff&quot;],&quot;section&quot;:&quot;Direction&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Comfortable&quot;,&quot;options&quot;:[&quot;Compact&quot;,&quot;Comfortable&quot;,&quot;Roomy&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;History&quot;}}">
+class Component extends DCLogic {
+  bars(seed, n) {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const h = 0.22 + Math.abs(Math.sin((i + seed) * 1.7)) * 0.78;
+      out.push({ dur: (0.42 + ((i * 7 + seed * 3) % 5) * 0.09).toFixed(2) + "s", delay: (((i * 5 + seed) % 9) * 0.055).toFixed(3) + "s", h: Math.round(h * 100) + "%" });
+    }
+    return out;
+  }
+  renderVals() {
+    const accent = this.props.accent ?? "#7c5cff";
+    const D = this.props.density ?? "Comfortable";
+    const pad = D === "Compact" ? 11 : D === "Roomy" ? 22 : 16;
+    const history = [
+      { when: "Today 14:02", dur: "0:41 · 84 w", app: "Slack", lang: "en-US", text: "Ship the migration on Thursday morning, and then hand the release notes to Priya before the standup so she can post them in the channel." },
+      { when: "Today 11:47", dur: "0:12 · 26 w", app: "VS Code", lang: "en-US", text: "TODO: the retry path needs a backoff, right now it hammers the socket the moment the connection drops." },
+      { when: "Today 09:20", dur: "1:08 · 141 w", app: "Word", lang: "en-US", text: "The migration plan has three phases. Phase one is read-only shadow traffic for a week, phase two flips writes for internal accounts only, phase three is everyone else." },
+      { when: "Yesterday 17:31", dur: "0:29 · 61 w", app: "Chrome", lang: "de-DE", text: "Danke für die schnelle Antwort — die Migration läuft ab Donnerstag, ich melde mich mit den Details." },
+      { when: "Yesterday 16:05", dur: "0:08 · 17 w", app: "Notes", lang: "en-US", text: "Ask Sam whether the migration window can move to the weekend." },
+      { when: "Yesterday 10:12", dur: "0:52 · 108 w", app: "Gmail", lang: "en-US", text: "Following up on the migration timeline: we are on track for Thursday, and I will send a short note once the shadow traffic numbers land." }
+    ];
+    const contrast = [
+      ["Body / final transcript", "#f2f2f5", "#16171c pill", "15.6:1", "AAA"],
+      ["Interim transcript", "#a1a5b4", "#16171c pill", "7.6:1", "AAA"],
+      ["Pill status label", "#c4b5fd", "#16171c pill", "9.9:1", "AAA"],
+      ["Pill drag grip (non-text)", "#6b7080", "#16171c pill", "2.9:1", "FAILS AA"],
+      ["Dashboard heading / body", "#14161a", "#ffffff app", "17.4:1", "AAA"],
+      ["Secondary body", "#40454c", "#ffffff app", "9.3:1", "AAA"],
+      ["Caption / metadata", "#5c6169", "#ffffff app", "6.0:1", "AA"],
+      ["Faint count text", "#8b9098", "#ffffff app", "3.4:1", "FAILS AA"],
+      ["Nav item on dark rail", "#a7abb6", "#121317 rail", "7.4:1", "AAA"],
+      ["Active nav item", "#ffffff", "#22242c rail", "14.1:1", "AAA"],
+      ["First-run heading", "#f4f4f6", "#101116", "16.4:1", "AAA"],
+      ["First-run body", "#b6bac6", "#101116", "9.7:1", "AAA"],
+      ["First-run caption", "#9198a8", "#101116", "6.4:1", "AAA"],
+      ["Primary button label", "#ffffff", "#14161a", "17.4:1", "AAA"],
+      ["Warning label (dark pill)", "#f0b95c", "#16171c pill", "10.5:1", "AAA"],
+      ["Error label (dark pill)", "#ff8b80", "#16171c pill", "8.2:1", "AAA"],
+      ["Blocker label (light UI)", "#5b3fd6", "#fbf9ff", "6.9:1", "AAA"],
+      ["Link", "#6b4df0", "#ffffff app", "5.6:1", "AA"],
+      ["Level meter fill (non-text)", accent, "#16171c pill", "4.9:1", "AA (non-text)"]
+    ].map(r => ({ use: r[0], fg: r[1], bg: r[2], ratio: r[3], verdict: r[4], color: r[4].indexOf("FAIL") === 0 ? "#b3261e" : "#4b2fd6" }));
+    return { accent, rowPad: pad + "px 0", bars: this.bars(1, 18), bars2: this.bars(5, 18), bars3: this.bars(3, 18), history, contrast };
+  }
+}
+</script>
+</body>
+</html>
