@@ -1,0 +1,27 @@
+# Milestone 1 build and launch checks, 2026-08-29
+
+Run from src-tauri/ on the user's Windows 11 machine.
+
+## cargo test
+test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+(plus two 0-test binaries: the main.rs harness and doc-tests)
+
+## cargo clippy --all-targets -- -D warnings
+Finished `dev` profile in 1.00s. No warnings, no errors.
+
+## cargo fmt --check
+clean
+
+## npm run tauri dev
+Compiled in 21.12s. Line "Running target\debug\echoscribe.exe" printed.
+echoscribe.exe observed alive: PID 12192, ~42 MB, no panic and no error
+line in the log while running.
+The app was then force-killed with taskkill /F for this session; the
+"process didn't exit successfully (exit code: 1)" line in the raw log is
+that kill, not a crash.
+
+## What this evidence does NOT show
+Nothing here exercised the hotkey, the pill, the sounds, the drag, the
+signed-in gate, or multi-monitor behaviour. Those need live GUI and
+hardware interaction and a browser sign-in handoff, none of which is
+possible in this non-interactive session. See report.md.

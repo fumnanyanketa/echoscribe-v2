@@ -1,0 +1,30 @@
+Live run capture, 2026-08-29. Two runs of npm run tauri dev.
+ANSI colour codes stripped. Progress bar lines removed.
+
+=== Run 1: steps 1 to 5b ===
+
+> echoscribe@0.1.0 tauri
+> tauri dev
+
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching C:\Users\fumna\dev\echoscribe-v2\src-tauri for changes...
+   Compiling echoscribe v0.1.0 (C:\Users\fumna\dev\echoscribe-v2\src-tauri)
+     Running `target\debug\echoscribe.exe`
+dictate: open sound -> device event name
+dictate: close sound -> device event name
+error: process didn't exit successfully: `target\debug\echoscribe.exe` (exit code: 1)
+
+=== Run 2: after the deliberate restart, steps 6 to 8 ===
+
+> echoscribe@0.1.0 tauri
+> tauri dev
+
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching C:\Users\fumna\dev\echoscribe-v2\src-tauri for changes...
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.97s
+     Running `target\debug\echoscribe.exe`
+dictate: open sound -> device event name
+dictate: close sound -> device event name
+
+Note: run 1 was ended by this session with taskkill /F to test the
+restart in AC-24. It did not crash.
