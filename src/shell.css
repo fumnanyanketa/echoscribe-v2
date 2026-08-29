@@ -1,0 +1,12 @@
+/* App shell.
+ *
+ * One screen at a time is mounted into #app by main.js. The rail-and-surface
+ * two-tone layout from the design system arrives with the signed-in app; for
+ * now the shell is the dark first-run field the sign-in screen sits on.
+ */
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  background: var(--color-onboarding);
+}
