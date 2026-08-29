@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "pill",
+  "description": "The floating dictation pill window. It only receives the dictation lifecycle events the core sends it. It cannot ask to be dragged or moved: the pill's mouse behaviour is entirely in Rust, so that a click on it can never take focus from the app the person is typing into. It invokes nothing that this list does not name.",
+  "windows": ["pill"],
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+}
