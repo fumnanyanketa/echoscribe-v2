@@ -12,8 +12,8 @@ before any one piece is made great.
 
 | # | Feature | Phase | Weight | Status |
 |---|---|---|---|---|
-| 1 | Sign in | 1 | heavy | planned |
-| 2 | Dictate with a hotkey | 1 | heavy | planned |
+| 1 | Sign in | 1 | heavy | in progress |
+| 2 | Dictate with a hotkey | 1 | heavy | in progress |
 | 3 | Teach it your words | 2 | medium | planned |
 | 4 | Speak in your language | 2 | medium | planned |
 | 5 | See what you've said before | 2 | medium | planned |
@@ -26,7 +26,7 @@ Sign in, press a hotkey anywhere on the machine, speak, and watch the
 words type themselves out wherever your cursor was. This alone is
 something you could use daily.
 
-### 1. Sign in · needs a decision · heavy
+### 1. Sign in · in progress · heavy
 
 You need an account so your settings and words belong to you, and so
 what you say can be tied back to you.
@@ -34,9 +34,12 @@ what you say can be tied back to you.
 Done when: I can make an account, close the app, reopen it, and I'm
 still signed in.
 
-- [ ] Design it: /architect sign in
+- [x] Design it: [0003-sign-in](decisions/0003-sign-in.md), 18 acceptance criteria
+- [x] The sign-in screen and the browser handoff · `src-tauri/src/sign_in/`, `src/sign-in/`
+- [x] Staying signed in, and signing out · `src-tauri/src/sign_in/renewal.rs`
+- [x] Offline, and a second account on the machine · `src-tauri/src/sign_in/clerk.rs`, `src/sign-in/`
 
-### 2. Dictate with a hotkey · needs a decision · heavy
+### 2. Dictate with a hotkey · in progress · heavy
 
 The whole point of EchoScribe. Press a hotkey, speak, and the text
 appears wherever your cursor is, in any app you're typing into. Marked
@@ -47,7 +50,12 @@ sign-in by name.
 Done when: I press the hotkey, speak a sentence, and it appears as
 typed text exactly where my cursor was, in any app.
 
-- [ ] Design it: /architect dictate with a hotkey
+- [x] Design it: [0002-dictate-with-a-hotkey](decisions/0002-dictate-with-a-hotkey.md), 27 acceptance criteria
+- [x] The hotkey and the pill · `src-tauri/src/dictate/`, `src/dictate/` · built, awaiting `/check verify` (live two-monitor, focus and sound proof)
+- [ ] The microphone and the waveform
+- [ ] The Deepgram key
+- [ ] Transcription and typing
+- [ ] History and settings
 
 ---
 
