@@ -32,6 +32,19 @@ message, proven by probe on 2026-08-30 with the machine-wide microphone toggle
 off. This amendment replaces the detection mechanism for that one kind and
 touches nothing else. No criterion is renumbered, reworded or added. The count
 stays at 31.
+**Amended:** 2026-08-30, third of the day. Milestone 3 was built against five
+things this record named and never settled: where a person goes to get a
+Deepgram key, what request checks a pasted one, which Deepgram response means
+which cause, the sentence for each key error, and AC-13's two next steps. All
+five were answered in the build conversation and written down in
+`docs/evidence/dictate-with-a-hotkey/milestone-3-decisions-owed.md`. This
+amendment carries all five into the record itself, most of them into Value
+sourcing, so nothing downstream has to read an evidence file to know what was
+decided. It approves a second outside address, `https://console.deepgram.com`.
+None of the five renumbers, rewords or adds a criterion. It also settles one
+thing nobody had asked before: what an error screen shows once the person has
+fixed the cause and dictated successfully. That adds AC-32 and takes the count
+to 32.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -145,6 +158,10 @@ great.
 - **AC-31**: Dictation uses whichever microphone Windows is set to. Changing
   the Windows default and dictating again uses the new one, and there is
   nowhere in EchoScribe to choose a microphone.
+- **AC-32**: If I fix what an error told me was wrong and then dictate
+  successfully, the EchoScribe window is no longer showing that error. It
+  clears on its own, quietly: the window does not come to the front, does not
+  hide itself, and does not move.
 
 ## The decision
 
@@ -330,6 +347,128 @@ which would open the microphone from a second place in the app and touch the
 no silent listening rule. That is a feature with its own risk, so it gets its
 own record when it is wanted, not a settings row here.
 
+**The Deepgram key, settled 2026-08-30.** Milestone 3 built AC-9 to AC-13 and
+found five things this record named without settling. All five are settled
+here, for the reason the four microphone sentences were: an address that
+leaves the machine and the words a person reads are decisions, not details a
+build gets to choose.
+
+**Where a person goes to get a key.**
+`https://console.deepgram.com/signup?jump=keys`. Deepgram's signup page,
+jumping straight to the keys screen, so AC-9's link lands the person on the
+exact thing it sent them for. It is a fixed literal held in Rust and opened
+through the system browser by a command that takes nothing, the same shape as
+the Windows privacy page above. The interface never supplies or sees it, and
+it is never built from anything.
+
+**What checks a pasted key.** `GET https://api.deepgram.com/v1/auth/token`,
+with the pasted key in an `Authorization: Token <key>` header. It is
+Deepgram's own documented way to test a key. It proves the key is real and
+that Deepgram is reachable, it sends no audio, and it costs no allowance.
+AC-10 promises that a checked key means dictation works from then on, so what
+the check actually is decides whether that promise is true.
+
+**The gap that leaves, named rather than hidden.** A 200 from that endpoint
+does not prove the key can open a streaming socket. A key without the right
+scope passes this check and then fails on the live stream. Milestone 4 must
+therefore treat a scope failure on the stream as a real state of its own, and
+must never assume a saved key works because this check accepted it. Nothing
+in milestone 3 may be read as having closed that.
+
+**Which Deepgram response means which cause.** From Deepgram's published
+error table, checked against their live documentation on 2026-08-30:
+
+| What comes back | The cause it means |
+|---|---|
+| 2xx | The key is good. Save it. |
+| 401 `INVALID_AUTH` | Rejected by Deepgram |
+| 402 `ASR_PAYMENT_REQUIRED` | The allowance ran out |
+| No answer at all: connect failure, DNS, timeout | Could not reach Deepgram |
+| Anything else, 403, 429 and 5xx among them | The honest catch-all |
+
+The catch-all is a fourth kind and not a fold-in, for the same reason and in
+the same shape as the fourth microphone error above: telling somebody their
+key is bad when Deepgram was merely rate limiting them sends them off to
+replace a key that was fine.
+
+**A consequence worth writing down.** 402 is only ever returned for a
+transcription request, so `/v1/auth/token` can never produce one. An
+exhausted allowance therefore cannot appear at the setup screen at all. It is
+a live stream state, which is AC-13's own wording, and it arrives in
+milestone 4. Milestone 3 builds the kind, the code, the sentence and the
+action; milestone 4 wires the trigger and proves it.
+
+**The four key errors, their codes and their wording.** Four kinds, four
+codes, four sentences, fixed here and held in one place in Rust so no screen
+can invent its own. Two of these codes were already drawn in
+`design/registry.md` and are unchanged; the other two are fixed here.
+
+| Kind | Code | Sentence |
+|---|---|---|
+| `deepgram_key_rejected` | `DEEPGRAM_KEY_REJECTED` | Deepgram did not accept this key. Nothing was saved. |
+| `deepgram_no_allowance` | `DEEPGRAM_NO_ALLOWANCE` | This key's Deepgram allowance has run out. |
+| `deepgram_unreachable` | `DEEPGRAM_UNREACHABLE` | EchoScribe could not reach Deepgram, so the key was not checked. Nothing was saved. |
+| `deepgram_check_failed` | `DEEPGRAM_CHECK_FAILED` | The check did not succeed and Deepgram did not say why. Nothing was saved. |
+
+No sentence carries anything read off the pasted key, and no sentence blames
+the key when the network was the cause.
+
+**AC-13's two next steps.** AC-13 asks for the matching next step for each of
+its two causes, and the two genuinely differ.
+
+| Cause | Its one action | What that action does |
+|---|---|---|
+| Rejected | Replace key | Opens the AC-9 setup screen, so a new key can be pasted |
+| Allowance ran out | Open Deepgram console | Opens `https://console.deepgram.com` in the system browser, where the person tops up or makes a new key |
+
+Making them both Replace key was weighed and rejected: a person whose
+allowance has run out gets nowhere by pasting the same key again.
+
+**This approves a second outside address.** `https://console.deepgram.com` is
+a fixed literal held in Rust beside the signup page, opened by its own command
+that takes nothing. Those two, with the Windows privacy page, are the only
+three places this feature sends anybody outside the machine. A fourth is
+another amendment, not an addition.
+
+**What an error screen shows once the cause is fixed, settled 2026-08-30.**
+Every error this feature puts in the EchoScribe window is a claim that
+dictation cannot happen. The person can make that claim untrue without
+touching EchoScribe at all: switch the microphone back on in Windows, close
+the app that had it, top the allowance up on Deepgram's own site. Then they
+press the hotkey, dictation works, and the window is sitting behind everything
+still saying it cannot. Nothing had told it otherwise.
+
+So, for every error screen in this feature and not only the microphone one:
+**an error screen clears itself the moment the thing it complained about is
+shown to work**, and the window then shows whatever is ordinarily true.
+
+It clears quietly. The window does not come to the front, does not hide
+itself and does not move. The person is dictating into another app, and this
+record has one rule about bringing a window forward: only ever in answer to a
+hotkey that produced nothing. A successful dictation is the opposite of that.
+This is the same ending a successful Try again already has, drawn as
+"Microphone error, retried" in `design/registry.md`. What changes is that the
+button is no longer the only door into it.
+
+What counts as shown to work is each error's own proof, never one blanket
+signal:
+
+| The error | What clears it |
+|---|---|
+| Any of the four microphone errors | The microphone opening |
+| The three key errors a setup screen can show: rejected, unreachable, check failed | A key being accepted by Deepgram and saved |
+| `deepgram_no_allowance`, which only ever arrives mid dictation | The first finalised words coming back from Deepgram |
+
+An open microphone is not proof that a Deepgram allowance is back, which is
+why there is a second trigger rather than one. Clearing the allowance error
+when the microphone opened would take the message away while the problem was
+still there. Milestone 3 has no live stream, so that row is wired in milestone
+4 with the rest of AC-13.
+
+No new event carries this. `dictation:opened` and `dictation:text` already
+exist and already reach every window, the same way `dictation:error` does.
+Nothing in `src-tauri/capabilities/` widens for it.
+
 ## What else was considered
 
 | Option | Why not |
@@ -362,6 +501,14 @@ own record when it is wanted, not a settings row here.
 | Matching the Windows access-denied code inside the error message | The failure message carries the access-denied number, and that number is stable across languages. But it depends on the wording format of a library this project does not control, and the same number can occasionally mean an access problem that is not the privacy setting, which would send someone to a settings page that has nothing wrong on it. |
 | Matching the code and reading the switches, either one counts | Slightly more robust against Windows or the library changing. Two mechanisms to keep correct instead of one, for a case the switch check already catches, including the machine-toggle case the live run actually hit. |
 | A microphone picker in this record | The device row is already drawn, so it looks like a small addition. It needs a device list, a device stored against the account, a rule for when that device is gone, and a live input level in settings, which opens the microphone from a second place in the app. That is a feature with its own risk section, not a settings row. |
+| Deepgram's plain signup page as the get-a-key link | One less query string to keep working, and it survives Deepgram rearranging their console. It lands the person on a signup form and leaves them to find the keys screen themselves, which is the one thing AC-9 sent them for. |
+| Checking a pasted key by opening a real streaming socket | The only check that proves what AC-10 actually promises, scope included, so the gap named above would not exist. It opens the microphone path from a second place in the app to have something to send, or sends silence and pays allowance for it, and it turns a setup screen into a dictation session. Too much machinery, and too much risk, for a check. |
+| Folding 403, 429 and 5xx into rejected | Three kinds instead of four, and one fewer sentence to write. It tells somebody their key is bad when Deepgram was rate limiting them or having an outage, and sends them off to replace a key that was fine. Same reasoning as the fourth microphone error. |
+| Both of AC-13's next steps being Replace key | One action to build and one screen to draw. A person whose allowance has run out gets nowhere by pasting the same key again, and AC-13 asks in as many words for the matching next step for each. |
+| Leaving a stale error on screen until the person acts on it | Nothing ever changes behind their back, and the code stays there to be quoted. The window then says dictation cannot start while dictation is running, which is a lie on screen, and the person has no reason to go back and look at it. |
+| Clearing every error the moment the microphone opens | One trigger and one rule, the simplest thing to build and to read. An open microphone does not prove a Deepgram allowance is back, so it would take the allowance message away while the problem was still there. |
+| Hiding the EchoScribe window once the error clears | Tidier, and the person is dictating in another app anyway. It moves a window they may have deliberately left open, which is an act they did not ask for, and this record only ever brings a window forward in answer to a hotkey that produced nothing. |
+| A short note saying dictation is working now, in place of the cleared error | Confirms the fix worked, which is friendly after a person has gone off to Windows or Deepgram to sort something out. It is a component the design system does not hold, so it would owe `/canvas` a drawn row, to say something the words already arriving at their cursor say better. |
 
 ## Data model
 
@@ -424,7 +571,7 @@ One migration, creating all three tables.
 | Where the text is typed | AC-3, AC-7 | The window that has focus at the moment each phrase is ready, asked of Windows each time. |
 | Whether the focused field is a password field | AC-20 | Windows UI Automation, asked of the focused element at the moment of typing. Best effort, see Still open. |
 | 30 second silence, 5 minute cap | AC-8 | This record. Fixed, not settings. Silence means no final wording from Deepgram in that period. |
-| Rejected key versus allowance exhausted | AC-13 | The error Deepgram returns, distinguished by its own response. |
+| Rejected key versus allowance exhausted | AC-11, AC-13 | The error Deepgram returns, distinguished by its own response. The mapping is fixed in The decision: 401 `INVALID_AUTH` is rejected, 402 `ASR_PAYMENT_REQUIRED` is the allowance, no answer at all is unreachable, and anything else is the honest catch-all `deepgram_check_failed`, which names no cause. Until 2026-08-30 this row named the source and stopped there, which could not be acted on. 402 is only ever returned for a transcription request, so the allowance case can never arrive at the setup screen; it is a milestone 4 state. |
 | Microphone unavailable, and why | AC-15 | The error the audio layer returns when opening the device, mapped to a named cause. |
 | Start time of a dictation | AC-17 | The moment the microphone opened, taken in Rust as UTC. |
 | Duration | AC-17 | The moment the microphone closed, minus the start time. |
@@ -434,6 +581,12 @@ One migration, creating all three tables.
 | The sentence shown for each microphone error | AC-15, AC-28 | This record, the four sentence table in The decision. Fixed wording, not a setting, and it never carries a device name, a path, or anything from the audio. |
 | Where a microphone error is read | AC-15, AC-28, AC-30 | This record. The EchoScribe window, brought to the front. Never the pill, which has no action and never appears when the microphone did not open. |
 | The Windows microphone privacy page | AC-15, AC-29 | A fixed literal address held in Rust, `ms-settings:privacy-microphone`, opened through the Windows shell with the already approved `windows` crate. The interface never supplies or sees it, and it is never built from anything. |
+| The address a person gets a Deepgram key from | AC-9 | This record. A fixed literal held in Rust, `https://console.deepgram.com/signup?jump=keys`, opened through the system browser by `open_deepgram_signup`, which takes nothing. The interface never supplies or sees it, and it is never built from anything. |
+| What checks a pasted key against Deepgram | AC-10, AC-11 | This record. `GET https://api.deepgram.com/v1/auth/token`, with the pasted key in an `Authorization: Token <key>` header. Deepgram's own documented way to test a key. It sends no audio and costs no allowance. A 200 does not prove the key can open a streaming socket, so milestone 4 must treat a scope failure on the live stream as a state of its own. |
+| The sentence shown for each key error | AC-11, AC-13 | This record, the four sentence table in The decision. Fixed wording, not a setting, held in one place in Rust so no screen invents its own. Nothing read off the pasted key ever appears in a sentence, and no sentence blames the key when the network was the cause. |
+| The one next step for each of AC-13's two causes | AC-13 | This record, the two step table in The decision. Replace key on a rejected key, which opens the AC-9 setup screen. Open Deepgram console on a spent allowance, which opens the address below. |
+| The Deepgram console page | AC-13 | This record. A fixed literal held in Rust beside the signup page, `https://console.deepgram.com`, opened through the system browser by `open_deepgram_console`, which takes nothing. The second and last Deepgram address this feature opens, and the third and last outside address of any kind, the Windows privacy page being the other. The interface never supplies or sees it. |
+| What clears an error screen once the cause is fixed | AC-28, AC-30, AC-32 | This record, the clearing table in The decision. Each error's own proof that the thing it complained about now works: the microphone opening for the four microphone errors, a key being accepted for the three setup screen key errors, the first finalised words for a spent allowance. Never a timer, never one blanket signal, and never the interface deciding on its own. |
 
 ## Interface surface
 
@@ -442,8 +595,13 @@ decides. No command takes an account id, because Rust already knows it
 from the session. Every command refuses when nobody is signed in.
 
 - `save_deepgram_key(key)` returns the last four characters on success, or
-  a named error: rejected by Deepgram, no allowance left, or could not
-  reach Deepgram. Used only by the setup screen.
+  a named error: rejected by Deepgram, could not reach Deepgram, or the
+  check did not succeed and Deepgram did not say why. Used only by the setup
+  screen. **Corrected 2026-08-30.** This bullet used to list "no allowance
+  left" here and to name no catch-all. An exhausted allowance cannot reach
+  this command, because Deepgram only ever returns 402 for a transcription
+  request. That kind still exists, in the same four kind table in The
+  decision, and it arrives on the live stream in milestone 4.
 - `get_deepgram_key_info()` returns the last four characters, when it was
   saved and when it was last checked, or nothing if no key is saved. Never
   returns the key.
@@ -464,6 +622,13 @@ from the session. Every command refuses when nobody is signed in.
 - `open_microphone_privacy_settings()` opens the Windows microphone privacy
   page. It takes nothing and returns nothing. The address is a fixed literal
   in Rust, so the interface can ask for that one page and no other.
+- `open_deepgram_signup()` opens `https://console.deepgram.com/signup?jump=keys`
+  in the system browser. It takes nothing and returns nothing, and its address
+  is a fixed literal in Rust for the same reason. It is AC-9's link out to get
+  a key.
+- `open_deepgram_console()` opens `https://console.deepgram.com` in the system
+  browser, same shape and same reason. It is AC-13's next step when the
+  allowance has run out, and it does nothing else.
 - `retry_dictation()` tries to open the microphone again and starts dictation
   if it opens, or comes back with the same named error if it does not. It is
   the Try again action on three of the four microphone errors, and it goes
@@ -481,10 +646,12 @@ Rust sends these events out to the pill. None carries audio or the key.
 - `dictation:error` with a named kind and a message safe to show
 
 Errors that matter and must each read differently: no key saved, key
-rejected, allowance exhausted, cannot reach Deepgram, connection lost mid
-dictation, microphone blocked by Windows, microphone in use by another
-app, no microphone found, the microphone failing for some other reason, not
-signed in.
+rejected, allowance exhausted, cannot reach Deepgram, the key check failing
+for some other reason, connection lost mid dictation, microphone blocked by
+Windows, microphone in use by another app, no microphone found, the microphone
+failing for some other reason, not signed in. The two "for some other reason"
+kinds are the two honest catch-alls, one per side, and neither is ever dressed
+up as one of the named causes beside it.
 
 **Where each of those is read, settled 2026-08-30.** The pill says what
 happened, in words, and carries no action, because nothing but its grip
@@ -547,6 +714,15 @@ call for it.**
   EchoScribe window instead, never on a pill.
 - Treat transcribed text as anything but characters to type. It is
   outside input and is never interpreted.
+- Open any outside address other than the three fixed literals this record
+  names: the Windows microphone privacy page, Deepgram's signup page and
+  Deepgram's console. All three live in Rust, none is built from anything, and
+  the interface can ask for those pages and no others. A fourth is an
+  amendment, not an addition.
+- Keep showing an error the person has already fixed. An error screen is a
+  claim that dictation cannot happen, so it clears itself the moment the thing
+  it named is shown to work. It never clears on a timer, and it never clears
+  on a signal that does not actually prove the cause is gone.
 
 ## Build plan
 
@@ -634,10 +810,47 @@ the desktop-apps toggle off.
 
 3. **The Deepgram key.** The guided setup screen, checking a key against
    Deepgram, storing it in Credential Manager, the masked display in
-   settings, and every key related error reading correctly.
+   settings, and every key related error reading correctly. **Built on
+   2026-08-30**, against five decisions this record owed and now holds, above
+   under "The Deepgram key". Two halves of it are deliberately not finished
+   here and must not be read as met: AC-12's masked row has nowhere to live
+   until the settings screen exists in milestone 5, so the last four
+   characters are stored and returned and nothing displays them; and AC-13
+   cannot be proved live until something streams, so its four kinds, codes,
+   sentences and actions are built and unit tested and milestone 4 wires the
+   trigger. Evidence:
+   `docs/evidence/dictate-with-a-hotkey/milestone-3-decisions-owed.md`.
+**Step 3a, added 2026-08-30: clearing an error the person has already fixed.**
+AC-32, and the only part of this amendment that is not already built. Today
+the EchoScribe window leaves an error screen on two triggers, a successful Try
+again and a key being saved, both of which are buttons on the screen itself.
+Neither fires when the person goes off to Windows or to Deepgram, fixes the
+cause there, and comes back with the hotkey. The window then sits behind
+everything saying dictation cannot start while it is running.
+
+- The shell also leaves an error screen on `dictation:opened`, which already
+  reaches every window and needs no new event and no capability change.
+- Only the four microphone kinds clear on that signal. The allowance kind
+  clears on the first finalised words and is milestone 4's, per the clearing
+  table in The decision. Do not wire it to the microphone opening to get it
+  working sooner.
+- The window is not brought forward, not hidden and not moved. The person is
+  dictating into another app, and this record brings a window forward for one
+  reason only.
+- Proved live, on the kind that most invites the round trip: switch microphone
+  access off in Windows, press the hotkey, read the error, switch access back
+  on without touching EchoScribe, press the hotkey again. The words land, and
+  the EchoScribe window behind them is no longer showing the error.
+
 4. **Transcription and typing.** Streaming to Deepgram, typing finalised
    phrases as simulated keystrokes at the focused cursor, the password
-   field refusal, and the reconnect and connection lost behaviour.
+   field refusal, and the reconnect and connection lost behaviour. It also
+   carries three things milestone 3 handed it, each named here so none is
+   forgotten: a scope failure on the live stream is a state of its own, because
+   a key the setup check accepted may still not be allowed to open a socket;
+   AC-13's live 401 and 402 are wired to the four kinds milestone 3 built, and
+   proved there; and the allowance error clears on the first finalised words,
+   which is the one clearing trigger milestone 3 could not build.
 5. **History and settings.** The three tables and their migration, saving
    each finished dictation against the account, per account separation, the
    two hotkey choices as a list in settings, and the sound switch. Both
@@ -685,6 +898,19 @@ the desktop-apps toggle off.
   only ever done in answer to a hotkey they just pressed that produced
   nothing, so it is never a surprise, but it does move focus out of their
   document. Nothing else in this feature may bring a window forward.
+- **A key that passes the setup check can still fail on the stream.** The
+  check that AC-10 rests on proves the key is real and Deepgram is reachable.
+  It cannot prove scope without opening a socket and paying for it, so the
+  setup screen can say yes to a key that dictation later says no to. That
+  gap is permanent, not a milestone 3 shortcut, and every future change near
+  the stream has to keep a scope failure as a state a person can read rather
+  than a crash.
+- **Every error screen now owes a way out that nobody presses.** An error
+  clears when the thing it named is shown to work, and that proof arrives from
+  wherever dictation happens to be running rather than from the screen itself.
+  So each new error worth showing costs a wording, an action, and a signal
+  that says it is over. Leave the third one out and the app sits there telling
+  somebody about a problem they fixed twenty minutes ago.
 - **The pill refusing focus is not free, and now never will be.** This
   record first wrote it down as one window style set once, and it turned out
   to need care at three separate layers. Any future change to the pill, its
@@ -722,6 +948,14 @@ the desktop-apps toggle off.
   on screen keyboard says the shape is possible; it does not say it is
   possible here. `/debug` finds out, the stop condition says when to stop
   trying, and the answer gets recorded here either way.
+- **Whether a key the setup check accepts can always open a streaming
+  socket.** `GET /v1/auth/token` proves the key is real and Deepgram is
+  reachable. It does not prove scope. A key without the right permission
+  passes the setup screen and fails on the live stream, and how Deepgram
+  reports that, and how often it happens to a key made the ordinary way, is
+  not known. Settle it in milestone 4 by pointing a deliberately narrow key at
+  the stream, and record what came back. Until then the setup screen's green
+  light means the key is real, not that dictation will work.
 - **The language the transcription runs in** is fixed to English here.
   Plan row 4 owns making it a choice, and will add a language field to
   `dictation`.
