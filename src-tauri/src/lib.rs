@@ -23,7 +23,12 @@ pub fn run() {
             sign_in::sign_out,
             dictate::get_dictation_state,
             dictate::open_microphone_privacy_settings,
-            dictate::retry_dictation
+            dictate::retry_dictation,
+            dictate::deepgram_key::save_deepgram_key,
+            dictate::deepgram_key::get_deepgram_key_info,
+            dictate::deepgram_key::clear_deepgram_key,
+            dictate::deepgram_key::open_deepgram_signup,
+            dictate::deepgram_key::open_deepgram_console
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

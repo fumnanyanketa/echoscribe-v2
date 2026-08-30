@@ -9,8 +9,9 @@
 //!
 //!   * `dictation` - one finished dictation. Filled from milestone 5.
 //!   * `dictation_setting` - one row per account: hotkey, sounds, pill spot.
-//!   * `deepgram_credential` - the masked key and its vault entry name, from
-//!     milestone 3.
+//!   * `deepgram_credential` - the masked key and its vault entry name. Filled
+//!     from milestone 3. The key itself is never here: it lives in Windows
+//!     Credential Manager, behind `key_vault.rs`.
 //!
 //! Record 0002's data model calls for "one migration, creating all three
 //! tables", so all three are created together here even though milestone 1 only
@@ -68,6 +69,21 @@ impl Hotkey {
             _ => Hotkey::DoubleTapCtrl,
         }
     }
+}
+
+/// What is kept about a saved Deepgram key. Never the key itself: that lives in
+/// Windows Credential Manager under `credential_target`, and only Rust reads it
+/// (record 0002 data model, AC-12).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SavedKey {
+    /// The last four characters, and the only part of the key ever stored here.
+    pub key_last_four: String,
+    /// The name of the Credential Manager entry holding the real key.
+    pub credential_target: String,
+    pub saved_at: String,
+    /// When Deepgram last accepted it. Set on save; milestone 4 refreshes it
+    /// from the live stream.
+    pub last_validated_at: Option<String>,
 }
 
 /// Owns this feature's connection to the shared database file.
@@ -210,6 +226,88 @@ impl Store {
         )?;
         Ok(())
     }
+
+    /// Whether this account has a Deepgram key saved at all (record 0002 AC-9).
+    ///
+    /// The presence of the row is the whole answer, which is what the record's
+    /// value sourcing names. Nothing here reads the credential store or asks
+    /// Deepgram anything: the hotkey path runs through this on every press and
+    /// must stay cheap.
+    pub fn has_deepgram_key(&self, account_id: &str) -> rusqlite::Result<bool> {
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM deepgram_credential WHERE account_id = ?1",
+            [account_id],
+            |row| row.get(0),
+        )?;
+        Ok(count > 0)
+    }
+
+    /// What is known about this account's saved key, or `None` if there is
+    /// none. Never returns the key: this table does not hold it.
+    pub fn deepgram_key_for(&self, account_id: &str) -> rusqlite::Result<Option<SavedKey>> {
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        conn.query_row(
+            "SELECT key_last_four, credential_target, saved_at, last_validated_at
+             FROM deepgram_credential WHERE account_id = ?1",
+            [account_id],
+            |row| {
+                Ok(SavedKey {
+                    key_last_four: row.get(0)?,
+                    credential_target: row.get(1)?,
+                    saved_at: row.get(2)?,
+                    last_validated_at: row.get(3)?,
+                })
+            },
+        )
+        .map(Some)
+        .or_else(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => Ok(None),
+            other => Err(other),
+        })
+    }
+
+    /// Record that Deepgram accepted a key for this account.
+    ///
+    /// Only ever called after Deepgram has accepted it and after the key itself
+    /// has reached the credential store, so a row here always means there is a
+    /// key to find. Replacing a key overwrites the row rather than adding one:
+    /// an account has zero or one, per the record's data model.
+    ///
+    /// `key_last_four` is the only part of the key this takes, and the caller
+    /// has no way to pass more: the full key is not a parameter.
+    pub fn save_deepgram_key(
+        &self,
+        account_id: &str,
+        key_last_four: &str,
+        credential_target: &str,
+        now_utc: &str,
+    ) -> rusqlite::Result<()> {
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        conn.execute(
+            "INSERT INTO deepgram_credential
+                 (account_id, key_last_four, credential_target, saved_at, last_validated_at)
+             VALUES (?1, ?2, ?3, ?4, ?4)
+             ON CONFLICT(account_id) DO UPDATE SET
+                 key_last_four     = excluded.key_last_four,
+                 credential_target = excluded.credential_target,
+                 saved_at          = excluded.saved_at,
+                 last_validated_at = excluded.last_validated_at",
+            rusqlite::params![account_id, key_last_four, credential_target, now_utc],
+        )?;
+        Ok(())
+    }
+
+    /// Forget this account's key. Succeeds when there was nothing to forget.
+    /// The credential entry is removed by the caller; this only drops the row.
+    pub fn clear_deepgram_key(&self, account_id: &str) -> rusqlite::Result<()> {
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        conn.execute(
+            "DELETE FROM deepgram_credential WHERE account_id = ?1",
+            [account_id],
+        )?;
+        Ok(())
+    }
 }
 
 /// Keep a fraction inside 0..=1. A NaN or out-of-range value becomes `fallback`,
@@ -318,6 +416,162 @@ mod tests {
         let setting = store.setting_for("acct_test").unwrap();
         assert_eq!(setting.pill_x, DEFAULT_PILL_X);
         assert_eq!(setting.pill_y, 0.5);
+    }
+
+    /// AC-9: whether a key exists at all is the presence of the row, and a
+    /// fresh account has none, so the first hotkey press gets the setup screen.
+    #[test]
+    fn a_new_account_has_no_deepgram_key() {
+        let store = Store::open_in_memory().unwrap();
+        assert!(!store.has_deepgram_key("acct_test").unwrap());
+        assert_eq!(store.deepgram_key_for("acct_test").unwrap(), None);
+    }
+
+    /// AC-10: a saved key survives a restart, which for this table means it
+    /// reads back exactly as written.
+    #[test]
+    fn a_saved_key_round_trips_and_keeps_only_four_characters() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .save_deepgram_key(
+                "acct_test",
+                "cdef",
+                "deepgram:acct_test",
+                "2026-08-30T10:00:00Z",
+            )
+            .unwrap();
+
+        assert!(store.has_deepgram_key("acct_test").unwrap());
+        let saved = store.deepgram_key_for("acct_test").unwrap().unwrap();
+        assert_eq!(saved.key_last_four, "cdef");
+        assert_eq!(saved.credential_target, "deepgram:acct_test");
+        assert_eq!(saved.saved_at, "2026-08-30T10:00:00Z");
+        assert_eq!(
+            saved.last_validated_at,
+            Some("2026-08-30T10:00:00Z".to_string())
+        );
+    }
+
+    /// An account has zero or one, per the data model. Replacing a key
+    /// overwrites rather than adding a second row.
+    #[test]
+    fn replacing_a_key_overwrites_the_one_row() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .save_deepgram_key(
+                "acct_test",
+                "cdef",
+                "deepgram:acct_test",
+                "2026-08-30T10:00:00Z",
+            )
+            .unwrap();
+        store
+            .save_deepgram_key(
+                "acct_test",
+                "wxyz",
+                "deepgram:acct_test",
+                "2026-08-30T11:00:00Z",
+            )
+            .unwrap();
+
+        let saved = store.deepgram_key_for("acct_test").unwrap().unwrap();
+        assert_eq!(saved.key_last_four, "wxyz");
+        assert_eq!(saved.saved_at, "2026-08-30T11:00:00Z");
+
+        let conn = store.conn.lock().unwrap();
+        let rows: i64 = conn
+            .query_row("SELECT COUNT(*) FROM deepgram_credential", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rows, 1);
+    }
+
+    /// After clearing, AC-9 holds again: the next hotkey press gets the setup
+    /// screen rather than the microphone.
+    #[test]
+    fn clearing_a_key_leaves_no_row() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .save_deepgram_key(
+                "acct_test",
+                "cdef",
+                "deepgram:acct_test",
+                "2026-08-30T10:00:00Z",
+            )
+            .unwrap();
+        store.clear_deepgram_key("acct_test").unwrap();
+        assert!(!store.has_deepgram_key("acct_test").unwrap());
+        assert_eq!(store.deepgram_key_for("acct_test").unwrap(), None);
+    }
+
+    #[test]
+    fn clearing_a_key_that_was_never_there_is_fine() {
+        let store = Store::open_in_memory().unwrap();
+        store.clear_deepgram_key("acct_test").unwrap();
+        assert!(!store.has_deepgram_key("acct_test").unwrap());
+    }
+
+    /// AC-18: a second account on the same machine sees none of the first
+    /// account's key, and clearing one leaves the other alone.
+    #[test]
+    fn a_second_account_cannot_see_the_first_accounts_key() {
+        let store = Store::open_in_memory().unwrap();
+        {
+            let conn = store.conn.lock().unwrap();
+            conn.execute("INSERT INTO account (id) VALUES ('acct_other')", [])
+                .unwrap();
+        }
+        store
+            .save_deepgram_key(
+                "acct_test",
+                "cdef",
+                "deepgram:acct_test",
+                "2026-08-30T10:00:00Z",
+            )
+            .unwrap();
+
+        assert!(!store.has_deepgram_key("acct_other").unwrap());
+        assert_eq!(store.deepgram_key_for("acct_other").unwrap(), None);
+
+        store
+            .save_deepgram_key(
+                "acct_other",
+                "wxyz",
+                "deepgram:acct_other",
+                "2026-08-30T11:00:00Z",
+            )
+            .unwrap();
+        store.clear_deepgram_key("acct_other").unwrap();
+
+        // The first account is untouched by the second's arrival and departure.
+        let saved = store.deepgram_key_for("acct_test").unwrap().unwrap();
+        assert_eq!(saved.key_last_four, "cdef");
+        assert_eq!(saved.credential_target, "deepgram:acct_test");
+    }
+
+    /// The data rules say the key itself is never in this database. Nothing in
+    /// the table's shape allows it, and this is the test that says so.
+    #[test]
+    fn the_table_has_no_column_that_could_hold_the_key() {
+        let store = Store::open_in_memory().unwrap();
+        let conn = store.conn.lock().unwrap();
+        let mut columns: Vec<String> = conn
+            .prepare("SELECT name FROM pragma_table_info('deepgram_credential')")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        columns.sort();
+        assert_eq!(
+            columns,
+            vec![
+                "account_id".to_string(),
+                "credential_target".to_string(),
+                "key_last_four".to_string(),
+                "last_validated_at".to_string(),
+                "saved_at".to_string(),
+            ]
+        );
     }
 
     #[test]

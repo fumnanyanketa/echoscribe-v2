@@ -1,4 +1,12 @@
-//! The one place EchoScribe reads or writes the OS credential store.
+//! Where the sign-in feature reads and writes the OS credential store.
+//!
+//! This used to say it was the one place in EchoScribe that did. It is not, as
+//! of milestone 3 of record 0002: the dictate feature keeps its own door onto
+//! the same vault in `dictate/key_vault.rs`, for the person's Deepgram key.
+//! AGENTS.md is why they are separate rather than shared. Feature folders do
+//! not import from each other, and something becomes shared only when a third
+//! feature needs it. Two is a coincidence. The entry names are prefixed, so the
+//! two never collide.
 //!
 //! Windows Credential Manager today, through `keyring`. A macOS implementation
 //! slots in behind this same small interface later (AGENTS.md platform

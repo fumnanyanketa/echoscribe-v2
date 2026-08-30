@@ -1,0 +1,263 @@
+/* The Deepgram key setup screen (design/registry.md "Deepgram key setup").
+ * Reuses the sign-in and onboarding window shell exactly: the dark window
+ * field comes from #app (--color-onboarding), one centered column, no nav
+ * rail. Every value here is a token from styles.css.
+ *
+ * These rules mirror the sign-in and microphone error screens on purpose and
+ * are not imported from them: feature folders do not import from each other,
+ * and a shape two features share moves to a shared module only when a third
+ * needs it.
+ *
+ * Violet appears exactly once on this screen, on the get-a-key link, and
+ * nowhere near the field, the button or a progress bar. Saturated violet stays
+ * exclusive to the open microphone (design/design-system.md, the violet rule).
+ */
+
+.keysetup {
+  margin: auto;
+  width: 100%;
+  max-width: 26rem;
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+}
+
+.keysetup__brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+}
+
+.keysetup__brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+}
+
+.keysetup__brand-word {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-ink-on-dark-heading);
+}
+
+/* The one display size on this screen, per the type scale's "one per screen
+   at most". */
+.keysetup__heading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--color-ink-on-dark-heading);
+}
+
+.keysetup__body {
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-sm);
+  line-height: var(--leading-prose);
+  color: var(--color-ink-on-dark-secondary);
+  text-align: left;
+}
+
+/* design/registry.md "Key setup error line": a mono code, one plain sentence,
+   the one action beneath. Code and left edge in the danger colour, the same
+   three parts in the same order as the sign-in and microphone error lines.
+   Two signals and words are one of them, so the colour never carries the
+   meaning alone. Empty in the resting state, and it takes no room then. */
+.keysetup__error:not(:empty) {
+  margin-bottom: var(--space-5);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-danger-on-dark);
+  text-align: left;
+}
+
+.keysetup__error-code {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  color: var(--color-danger-on-dark);
+}
+
+.keysetup__error-text {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--color-ink-on-dark-secondary);
+}
+
+.keysetup__form {
+  margin-bottom: var(--space-5);
+}
+
+/* The field is named for a screen reader without changing what is drawn. Not
+   `display: none`, which would take it out of the accessibility tree along
+   with the visual layout. */
+.keysetup__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* design/registry.md "Key field, dark": a dark well, a SECRET mono badge, and
+   the verify action sitting inside the field's right edge.
+
+   The edge uses the control-edge token for dark windows, never violet. It
+   clears the 3:1 a control boundary needs on this fill (3.27:1, audited in
+   design/check-contrast.py), which --color-pill-border is not allowed to do
+   because that one is for decorative separators. */
+.keysetup__field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  background: var(--color-pill-raised);
+  border: var(--border-width) solid var(--color-rail-border-control);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.keysetup__badge {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  color: var(--color-ink-on-dark-caption);
+}
+
+/* Mono, because the key is something a machine produced and a person must
+   paste back exactly. The masking is the input type, not a font trick. */
+.keysetup__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-2) 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-mono);
+  color: var(--color-ink-on-dark);
+  /* Dictation types into other applications, so selection is opt-in per
+     element in styles.css. This is a field a person types into, so it opts
+     itself back in. */
+  user-select: text;
+}
+
+.keysetup__input::placeholder {
+  color: var(--color-ink-on-dark-caption);
+  letter-spacing: var(--tracking-mono);
+}
+
+.keysetup__input:read-only {
+  color: var(--color-ink-on-dark-secondary);
+}
+
+.keysetup__btn {
+  flex: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  border: var(--border-width) solid transparent;
+}
+
+/* design/registry.md "Primary button, on dark". */
+.keysetup__btn--primary {
+  background: var(--color-ink-on-dark-heading);
+  color: var(--color-onboarding);
+}
+
+/* Nothing pasted yet, so there is nothing to check. Dimmed to the same rung
+   the busy state uses, so the button never changes size or moves. */
+.keysetup__btn--primary:disabled {
+  cursor: default;
+  background: var(--color-ink-on-dark-secondary);
+}
+
+/* design/registry.md "Key setup, checking": the "Primary button, on dark,
+   busy" primitive unchanged. Same geometry, label swapped to what is being
+   waited on, light fill breathing on the 1.4s cadence. Never violet. */
+.keysetup__btn--busy {
+  cursor: default;
+  animation: keysetup-btn-busy 1.4s var(--ease-standard) infinite;
+}
+
+@keyframes keysetup-btn-busy {
+  0%,
+  100% {
+    background: var(--color-ink-on-dark-heading);
+  }
+  50% {
+    background: var(--color-ink-on-dark-secondary);
+  }
+}
+
+/* The label carries the state on its own, so with reduced motion the fill
+   holds at the dim rung. The blanket rule in styles.css stops the animation
+   but would leave the bright rung showing, which reads as not busy at all. */
+@media (prefers-reduced-motion: reduce) {
+  .keysetup__btn--busy {
+    background: var(--color-ink-on-dark-secondary);
+  }
+}
+
+/* design/registry.md "Secondary button, on dark". Only ever drawn for AC-13's
+   allowance action, which this screen's own check can never raise. */
+.keysetup__btn--secondary {
+  background: transparent;
+  border-color: var(--color-rail-border-control);
+  color: var(--color-ink-on-dark-secondary);
+}
+
+.keysetup__action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: var(--space-5);
+}
+
+/* design/registry.md "Get-a-key link". The one violet on this screen, and it
+   is the light on-dark accent rather than the saturated channel, which stays
+   exclusive to an open microphone. 10.21:1 on the window field, audited in
+   design/check-contrast.py.
+
+   A button that reads as a link, because it opens the system browser rather
+   than navigating this window. Underlined, so the colour is not the only
+   thing marking it as the thing to press. */
+.keysetup__link {
+  display: inline-block;
+  margin-bottom: var(--space-6);
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-accent-on-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.keysetup__caption {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--color-ink-on-dark-caption);
+  text-align: left;
+}

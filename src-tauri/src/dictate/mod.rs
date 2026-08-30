@@ -24,13 +24,22 @@
 //! a failure with no named cause asks the Windows consent switches, read only,
 //! in `consent.rs`.
 //!
-//! Still to come: Deepgram, transcription and typing at the cursor (milestones
-//! 3 and 4), history and settings (milestone 5). AC-8's 30 second silence cap
-//! is built and deliberately unarmed until milestone 4 arms it, because its
-//! only named source is Deepgram's final results.
+//! Milestone 3: the Deepgram key (AC-9 to AC-13). The hotkey now checks that a
+//! key is saved before it touches the microphone. With no key the microphone
+//! does not open, no pill appears, neither sound plays, and the EchoScribe
+//! window comes forward with the guided setup screen instead. Checking a pasted
+//! key against Deepgram, storing it in Windows Credential Manager and the fixed
+//! wording for every key error all live in `deepgram_key.rs`.
+//!
+//! Still to come: transcription and typing at the cursor (milestone 4), history
+//! and settings (milestone 5). AC-8's 30 second silence cap is built and
+//! deliberately unarmed until milestone 4 arms it, because its only named
+//! source is Deepgram's final results.
 
 mod consent;
+pub mod deepgram_key;
 mod hook;
+mod key_vault;
 mod limits;
 mod machine;
 mod microphone;
@@ -194,7 +203,27 @@ fn on_double_tap(app: &AppHandle, commands: &Sender<Command>) {
     }
 
     if let Err(e) = try_start(app, commands) {
-        report_microphone_error(app, e);
+        report_start_error(app, e);
+    }
+}
+
+/// Everything that can stop dictation before it begins.
+///
+/// Two shapes, because they are read in two different places. A missing key is
+/// answered by the guided setup screen (AC-9); a microphone failure is answered
+/// by the error screen (AC-28). Both bring the EchoScribe window forward, both
+/// leave the microphone shut, and neither ever shows a pill.
+#[derive(Debug, Clone, Copy)]
+enum StartError {
+    /// No Deepgram key is saved for this account (record 0002 AC-9).
+    NoDeepgramKey,
+    /// The microphone would not open (record 0002 AC-15, AC-28).
+    Microphone(MicError),
+}
+
+impl From<MicError> for StartError {
+    fn from(e: MicError) -> Self {
+        StartError::Microphone(e)
     }
 }
 
@@ -209,7 +238,7 @@ fn on_double_tap(app: &AppHandle, commands: &Sender<Command>) {
 /// anyone knew whether it was, and on a failure it would be a plain lie. On
 /// an error nothing is shown here at all: no pill and no sound, because both
 /// of those mean "the microphone is on".
-fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), MicError> {
+fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), StartError> {
     let Some(account_id) = crate::sign_in::account_id_from(app) else {
         return Ok(());
     };
@@ -217,6 +246,23 @@ fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), MicError
         return Ok(());
     };
     let setting = state.store.setting_for(&account_id).unwrap_or_default();
+
+    // AC-9: with no key saved the microphone does not open. Checked before the
+    // device is touched, so there is no moment in which it was open. Whether a
+    // key exists is the presence of the row and nothing more; the key itself is
+    // not read here and Deepgram is not asked anything.
+    //
+    // A database that will not answer is treated as no key, deliberately. That
+    // sends the person to a screen they can act on, and it errs towards not
+    // opening the microphone, which is the only safe direction to err in.
+    match state.store.has_deepgram_key(&account_id) {
+        Ok(true) => {}
+        Ok(false) => return Err(StartError::NoDeepgramKey),
+        Err(e) => {
+            eprintln!("dictate: could not tell whether a Deepgram key is saved: {e}");
+            return Err(StartError::NoDeepgramKey);
+        }
+    }
 
     let mut listening = state
         .listening
@@ -265,28 +311,49 @@ fn level_sink(app: &AppHandle, commands: &Sender<Command>) -> Box<dyn Fn(f32) + 
     })
 }
 
-/// Say why the microphone would not open, where a person can actually read it
-/// (record 0002 AC-15, AC-28, settled by the fourth amendment of 2026-08-30).
+/// Say why dictation did not start, where a person can actually read it
+/// (record 0002 AC-9, AC-15, AC-28).
 ///
-/// The pill is a sign, never a control, and it never appears when the
-/// microphone did not open. So the message is read in the EchoScribe window,
-/// which is brought to the front carrying the code, the sentence and the one
-/// action. Bringing it forward moves focus out of whatever the person was in;
-/// the record accepts that cost because this only ever answers a hotkey they
-/// just pressed that produced nothing.
-fn report_microphone_error(app: &AppHandle, e: MicError) {
-    eprintln!(
-        "dictate: the microphone did not open: {} ({:?})",
-        e.message(),
-        e
-    );
-    // The event goes to every window, so the main window receives it on the
-    // capability it already has. Emitted before the window comes forward so
-    // the screen is mounting as it arrives.
-    let _ = app.emit(
-        "dictation:error",
-        json!({ "kind": e.kind(), "message": e.message() }),
-    );
+/// Both reasons take the same shape, which the record settled on 2026-08-30: a
+/// hotkey press that could not start dictation, and the EchoScribe window
+/// brought forward saying why, carrying exactly one thing to do. The pill is a
+/// sign, never a control, and it never appears when the microphone did not
+/// open, so neither of these is ever read on a pill.
+///
+/// Bringing the window forward moves focus out of whatever the person was in.
+/// The record accepts that cost because this only ever answers a hotkey they
+/// just pressed and got nothing from.
+fn report_start_error(app: &AppHandle, e: StartError) {
+    match e {
+        // AC-9. No code and no sentence: nothing has gone wrong, there is just
+        // a setup step outstanding, and the guided screen explains it. The
+        // event carries no detail because the screen needs none.
+        StartError::NoDeepgramKey => {
+            eprintln!("dictate: no Deepgram key is saved, so the microphone was not opened");
+            let _ = app.emit("dictation:needs_key", json!({}));
+        }
+        StartError::Microphone(mic) => {
+            eprintln!(
+                "dictate: the microphone did not open: {} ({:?})",
+                mic.message(),
+                mic
+            );
+            // The event goes to every window, so the main window receives it on
+            // the capability it already has. Emitted before the window comes
+            // forward so the screen is mounting as it arrives.
+            let _ = app.emit(
+                "dictation:error",
+                json!({ "kind": mic.kind(), "message": mic.message() }),
+            );
+        }
+    }
+    bring_window_forward(app);
+}
+
+/// Put the EchoScribe window in front of whatever the person was in. The one
+/// place that does this, so every reason to interrupt somebody goes through the
+/// same three calls.
+fn bring_window_forward(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();
@@ -307,11 +374,21 @@ pub struct DictationErrorPayload {
     message: &'static str,
 }
 
-impl From<MicError> for DictationErrorPayload {
-    fn from(e: MicError) -> Self {
-        Self {
-            kind: e.kind(),
-            message: e.message(),
+impl From<StartError> for DictationErrorPayload {
+    fn from(e: StartError) -> Self {
+        match e {
+            // The setup screen is already on its way from the
+            // `dictation:needs_key` event, so this only tells the caller why
+            // Try again did not start anything. It carries no sentence because
+            // no error line is ever drawn for it.
+            StartError::NoDeepgramKey => Self {
+                kind: "no_deepgram_key",
+                message: "",
+            },
+            StartError::Microphone(mic) => Self {
+                kind: mic.kind(),
+                message: mic.message(),
+            },
         }
     }
 }
@@ -359,7 +436,9 @@ pub async fn retry_dictation(app: AppHandle) -> Result<(), DictationErrorPayload
     }
     let commands = {
         let Some(state) = app.try_state::<Dictate>() else {
-            return Err(DictationErrorPayload::from(MicError::Unavailable));
+            return Err(DictationErrorPayload::from(StartError::Microphone(
+                MicError::Unavailable,
+            )));
         };
         let sender = state
             .commands
@@ -368,7 +447,15 @@ pub async fn retry_dictation(app: AppHandle) -> Result<(), DictationErrorPayload
             .clone();
         sender
     };
-    try_start(&app, &commands).map_err(DictationErrorPayload::from)
+    try_start(&app, &commands).map_err(|e| {
+        // A key that was cleared between the failure and the retry lands here.
+        // It needs the setup screen, not an error line, so it goes through the
+        // same reporting path a hotkey press would.
+        if matches!(e, StartError::NoDeepgramKey) {
+            report_start_error(&app, e);
+        }
+        DictationErrorPayload::from(e)
+    })
 }
 
 /// Close the microphone and the pill if they are open. Safe to call when they

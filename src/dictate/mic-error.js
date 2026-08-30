@@ -94,6 +94,11 @@ async function retry(ctx, button) {
     if (ctx.disposed) return;
     if (err && MIC_ERROR_KINDS.includes(err.kind)) {
       draw(ctx, err.kind, err.message);
+    } else if (err && err.kind === "no_deepgram_key") {
+      // The key was cleared between the failure and this retry (record 0002
+      // AC-9). Rust has already sent `dictation:needs_key` and the shell is
+      // mounting the setup screen, so do nothing here: asking the shell to
+      // re-render as well would race that screen and could replace it.
     } else {
       // Not a microphone error, so not this screen's to show. Let the shell
       // draw whatever is true now.

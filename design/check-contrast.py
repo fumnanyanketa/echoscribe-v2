@@ -83,6 +83,15 @@ PAIRS = [
     ("Sign-in session-ended notice", "--color-warning-on-dark", "--color-onboarding", "text"),
     ("Focus ring on onboarding", "--color-accent", "--color-onboarding", "nontext"),
 
+    # Deepgram key setup (record 0002 AC-9). The field is a dark well on the
+    # first-run window, so its own pairs are audited separately from the pill's.
+    ("Key setup field text", "--color-ink-on-dark", "--color-pill-raised", "text"),
+    ("Key setup placeholder and SECRET badge", "--color-ink-on-dark-caption", "--color-pill-raised", "text"),
+    ("Key setup field while checking", "--color-ink-on-dark-secondary", "--color-pill-raised", "text"),
+    ("Key setup field control edge", "--color-rail-border-control", "--color-pill-raised", "nontext"),
+    ("Key setup get-a-key link", "--color-accent-on-dark", "--color-onboarding", "text"),
+    ("Key setup verify button, nothing pasted yet", "--color-onboarding", "--color-ink-on-dark-secondary", "text"),
+
     ("Blocker label on wash", "--color-accent-on-light", "--color-accent-wash", "text"),
     ("Blocker edge on wash", "--color-accent-border", "--color-accent-wash", "decor"),
 ]

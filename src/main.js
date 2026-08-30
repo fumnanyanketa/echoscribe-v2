@@ -8,6 +8,7 @@
 
 import { mountSignIn, mountSignedIn } from "./sign-in/sign-in.js";
 import { mountMicError, MIC_ERROR_KINDS } from "./dictate/mic-error.js";
+import { mountKeySetup } from "./dictate/key-setup.js";
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -81,6 +82,17 @@ listen("dictation:error", (event) => {
     kind: payload.kind,
     message: payload.message,
     onCleared: () => render(),
+  });
+});
+// The hotkey was pressed with no Deepgram key saved (record 0002 AC-9). The
+// microphone did not open, no pill appeared and neither sound played; Rust
+// brings this window to the front and this mounts the guided setup screen.
+// Once Deepgram accepts a key the screen closes and the shell shows whatever
+// is true now, because the person was mid task and the hotkey works from here.
+listen("dictation:needs_key", () => {
+  unmountCurrent();
+  currentUnmount = mountKeySetup(app, {
+    onSaved: () => render(),
   });
 });
 // The core reached the point of knowing it cannot reach Clerk this launch. The
