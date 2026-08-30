@@ -36,6 +36,19 @@ windows = { version = "0.61", features = [
     "Win32_Media_Audio",
     "Win32_System_LibraryLoader",
     "Win32_System_Registry",
+    # AC-20: asking the focused element whether it is a password field.
+    "Win32_UI_Accessibility",
+    "Win32_System_Com",
+    "Win32_System_Variant",
 ] }
 cpal = "0.18.2"
+# Record 0002's New libraries table, approved with the decision. Deepgram's own
+# Rust SDK, at version zero, so it is pinned exactly: the record warns to expect
+# breaking changes between versions.
+# Only `listen` is switched on. The crate also ships `manage`, which can create
+# and delete API keys, and `speak`, which is text to speech. Neither belongs in
+# this app, and code that is not compiled in cannot be reached by mistake.
+deepgram = { version = "=0.10.0", default-features = false, features = ["listen"] }
+# Required by the Deepgram SDK regardless. Only the pieces the stream needs.
+tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
 

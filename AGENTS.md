@@ -248,6 +248,18 @@ already do this".
     is not the same as a way to see that it works.
 13. A debrief is plain text in the conversation. Never an artifact, never a
     published page. A Markdown file is fine if one is asked for.
+14. When a system call's real effect happens outside the program, its return
+    value tells you the call was accepted, not that the effect landed. Ask
+    what would have to be true for the effect to have happened, and check
+    that instead or as well. Playing a sound, typing into another window and
+    opening a page in a browser are all this shape. `sound.rs` read
+    `PlaySoundW` returning true as proof a person had heard something, so
+    the fallback never fired and both dictation sounds went silent on exactly
+    the machines it existed for. Reading a return value is not itself the
+    mistake: the five other Windows calls in this codebase are all correct,
+    because each is guarding an out-parameter it just filled or reading a
+    documented non-boolean meaning. Acceptance was mistaken for effect only
+    in that one place.
 
 ## Things to know about this project
 

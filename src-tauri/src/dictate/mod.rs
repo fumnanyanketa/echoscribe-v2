@@ -39,10 +39,24 @@
 //! which is why that event is broadcast rather than sent to the pill alone. It
 //! clears quietly, so nothing on this path brings the window forward.
 //!
-//! Still to come: transcription and typing at the cursor (milestone 4), history
-//! and settings (milestone 5). AC-8's 30 second silence cap is built and
-//! deliberately unarmed until milestone 4 arms it, because its only named
-//! source is Deepgram's final results.
+//! Milestone 4: transcription and typing at the cursor (AC-3, AC-4, AC-7,
+//! AC-8's silence half, AC-20). The hotkey now reads the account's Deepgram key,
+//! opens the microphone, and streams it to Deepgram over `transcribe.rs`.
+//! Wording Deepgram marks as final is typed at whatever cursor has focus, by
+//! `typing.rs`, which refuses a password field. Nothing unfinished is ever
+//! typed, so no text is ever taken back. AC-8's silence cap is armed here,
+//! because Deepgram's final results are the first thing on this machine that can
+//! honestly say a person spoke.
+//!
+//! **Milestone 4 is not finished.** Everything a person can read when Deepgram
+//! or the microphone ends a dictation mid flow is owed a drawn state that
+//! `design/registry.md` does not hold, so it is not built and was not invented:
+//! the pill's words, the pill's `MIC STOPPED`, and the EchoScribe window's
+//! screen with its one action. The kinds, codes, sentences and actions all exist
+//! and ride on `dictation:error` already. See
+//! `docs/evidence/dictate-with-a-hotkey/milestone-4-decisions-owed.md`.
+//!
+//! Still to come: history and settings (milestone 5).
 
 mod consent;
 pub mod deepgram_key;
@@ -55,16 +69,19 @@ mod pill_mouse;
 mod pill_window;
 mod sound;
 pub mod store;
+mod transcribe;
+mod typing;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Sender};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use serde::Serialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, Listener, Manager, State};
 
+use limits::Deadlines;
 use microphone::{MicError, Microphone};
 use store::{Hotkey, Store};
 
@@ -83,6 +100,28 @@ enum Command {
     /// A cap ran out (record 0002 AC-8). Carries the reason for
     /// `dictation:closed`.
     CloseBecause(&'static str),
+    /// Deepgram or a password field ended the dictation while the microphone
+    /// was open (record 0002 AC-13, AC-14, AC-20, AC-30).
+    EndedBy(transcribe::Ended),
+}
+
+/// One dictation in progress: the open microphone and the live connection to
+/// Deepgram. Holding one is what "listening" means.
+struct Live {
+    mic: Microphone,
+    session: transcribe::Session,
+}
+
+impl Live {
+    /// Close both, in the one order that works.
+    ///
+    /// The microphone first, always. It owns the only feed into the stream, so
+    /// closing it is what tells Deepgram no more audio is coming, which is what
+    /// lets the last words of a sentence come back instead of being cut off.
+    fn close(self) {
+        self.mic.stop();
+        self.session.stop();
+    }
 }
 
 /// What the interface may ask about the current dictation. Serialised with a
@@ -96,12 +135,12 @@ pub enum DictationState {
 
 /// Everything this feature keeps for the running app. Managed by Tauri.
 ///
-/// `listening` holds the open microphone, and holding it is what "listening"
-/// means: there is no separate flag that could disagree with the device. `None`
-/// is idle, and the microphone is shut.
+/// `listening` holds the open microphone and its Deepgram connection, and
+/// holding it is what "listening" means: there is no separate flag that could
+/// disagree with the device. `None` is idle, and the microphone is shut.
 pub struct Dictate {
     store: Store,
-    listening: Mutex<Option<Microphone>>,
+    listening: Mutex<Option<Live>>,
     /// A handle onto the command channel, so `retry_dictation` can build the
     /// same level sink the hotkey path builds. Behind a mutex only because a
     /// channel sender cannot be shared between threads without one.
@@ -135,6 +174,7 @@ pub fn init(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 match command {
                     Command::Toggle => on_double_tap(&consumer_handle, &consumer_commands),
                     Command::CloseBecause(reason) => close_if_listening(&consumer_handle, reason),
+                    Command::EndedBy(ended) => on_ended(&consumer_handle, ended),
                 }
             }
         })?;
@@ -200,10 +240,10 @@ fn on_double_tap(app: &AppHandle, commands: &Sender<Command>) {
             .lock()
             .expect("dictate listening mutex poisoned");
 
-        if let Some(mic) = listening.take() {
+        if let Some(live) = listening.take() {
             // Shut the device before anything on screen changes, so the pill
             // never outlives the microphone in either direction.
-            mic.stop();
+            live.close();
             pill_window::close(app, "you_stopped_it");
             sound::play_close(setting.sounds_enabled);
             return;
@@ -256,21 +296,17 @@ fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), StartErr
     let setting = state.store.setting_for(&account_id).unwrap_or_default();
 
     // AC-9: with no key saved the microphone does not open. Checked before the
-    // device is touched, so there is no moment in which it was open. Whether a
-    // key exists is the presence of the row and nothing more; the key itself is
-    // not read here and Deepgram is not asked anything.
+    // device is touched, so there is no moment in which it was open.
     //
-    // A database that will not answer is treated as no key, deliberately. That
-    // sends the person to a screen they can act on, and it errs towards not
-    // opening the microphone, which is the only safe direction to err in.
-    match state.store.has_deepgram_key(&account_id) {
-        Ok(true) => {}
-        Ok(false) => return Err(StartError::NoDeepgramKey),
-        Err(e) => {
-            eprintln!("dictate: could not tell whether a Deepgram key is saved: {e}");
-            return Err(StartError::NoDeepgramKey);
-        }
-    }
+    // Milestone 4 needs the key itself and not merely the row, because there is
+    // now something to stream with it. Anything that stops us getting it, a
+    // missing row, a vault that will not answer, or a credential somebody
+    // deleted from Windows behind our back, is treated as no key. That sends
+    // the person to a screen they can act on, and it errs towards not opening
+    // the microphone, which is the only safe direction to err in.
+    let Some(key) = read_key(&state, &account_id) else {
+        return Err(StartError::NoDeepgramKey);
+    };
 
     let mut listening = state
         .listening
@@ -280,15 +316,85 @@ fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), StartErr
         return Ok(());
     }
 
+    // AC-8: the silence cap is armed from here on. Milestone 2 built it unarmed
+    // because nothing could honestly report speech; Deepgram's final results
+    // can, and `transcribe` calls `speech_heard` on every one of them. Shared
+    // between the level thread, which reads the caps, and the transcription
+    // thread, which restarts the silence clock.
+    let deadlines = Arc::new(Mutex::new(Deadlines::watching_for_silence(Instant::now())));
+
+    // Made before the microphone, because the microphone needs somewhere to put
+    // its samples and Deepgram needs the microphone's sample rate.
+    let (feed, intake) = transcribe::channel();
+
     // `consent::refine` is step 2b: a failure with no named cause asks the
     // Windows consent switches, read only, and becomes blocked-by-Windows if
     // any of the three says deny. It sits here so the hotkey and Try again
     // share it, the same as they share everything else on this path.
-    let mic = microphone::open(level_sink(app, commands)).map_err(consent::refine)?;
-    *listening = Some(mic);
+    let mic = microphone::open(
+        level_sink(app, commands, Arc::clone(&deadlines)),
+        Box::new(move |samples| feed.push(samples)),
+    )
+    .map_err(consent::refine)?;
+
+    let ended_commands = commands.clone();
+    let session = match transcribe::start(
+        app.clone(),
+        key,
+        mic.sample_rate(),
+        deadlines,
+        Box::new(move |ended| {
+            // Everything that changes what this feature is doing goes through
+            // the one channel, so a failure arriving from the network thread
+            // cannot race the hotkey.
+            let _ = ended_commands.send(Command::EndedBy(ended));
+        }),
+        intake,
+    ) {
+        Ok(session) => session,
+        Err(e) => {
+            eprintln!("dictate: could not start the transcription thread: {e}");
+            // The device opened but nothing can transcribe. Close it again
+            // rather than leave a microphone open that does nothing.
+            mic.stop();
+            return Err(StartError::Microphone(MicError::Unavailable));
+        }
+    };
+
+    *listening = Some(Live { mic, session });
     pill_window::open(app, &setting);
     sound::play_open(setting.sounds_enabled);
     Ok(())
+}
+
+/// The account's Deepgram key, ready to stream with.
+///
+/// Returns `None` for every reason there might not be one, because they all
+/// have the same answer: the guided setup screen. The key is never logged and
+/// never returned anywhere but here.
+fn read_key(state: &Dictate, account_id: &str) -> Option<String> {
+    let saved = match state.store.deepgram_key_for(account_id) {
+        Ok(Some(saved)) => saved,
+        Ok(None) => return None,
+        Err(e) => {
+            eprintln!("dictate: could not tell whether a Deepgram key is saved: {e}");
+            return None;
+        }
+    };
+    match key_vault::load(&saved.credential_target) {
+        Ok(Some(key)) => Some(key),
+        Ok(None) => {
+            eprintln!(
+                "dictate: this account has a saved Deepgram key on record, but the credential is \
+                 no longer in Windows Credential Manager"
+            );
+            None
+        }
+        Err(e) => {
+            eprintln!("dictate: could not read the saved Deepgram key: {e}");
+            None
+        }
+    }
 }
 
 /// The callback the microphone calls every 60 ms with one loudness number.
@@ -296,10 +402,13 @@ fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), StartErr
 /// It does two things and nothing else: send the number to the pill's level
 /// meter, and check the caps. It never touches the listening state itself, so
 /// it can never be holding a lock that the close it asks for needs.
-fn level_sink(app: &AppHandle, commands: &Sender<Command>) -> Box<dyn Fn(f32) + Send> {
+fn level_sink(
+    app: &AppHandle,
+    commands: &Sender<Command>,
+    caps: Arc<Mutex<Deadlines>>,
+) -> Box<dyn Fn(f32) + Send> {
     let app = app.clone();
     let commands = commands.clone();
-    let caps = limits::Deadlines::without_deepgram(Instant::now());
     // Ticks keep arriving until the close actually happens, so remember whether
     // one has already been asked for.
     let asked_to_close = AtomicBool::new(false);
@@ -311,7 +420,13 @@ fn level_sink(app: &AppHandle, commands: &Sender<Command>) -> Box<dyn Fn(f32) + 
             json!({ "level": level }),
         );
 
-        if let Some(expiry) = caps.expired(Instant::now()) {
+        // Read the caps and let the lock go before doing anything with the
+        // answer, so this never holds it across a send.
+        let expiry = caps
+            .lock()
+            .ok()
+            .and_then(|caps| caps.expired(Instant::now()));
+        if let Some(expiry) = expiry {
             if !asked_to_close.swap(true, Ordering::SeqCst) {
                 let _ = commands.send(Command::CloseBecause(expiry.reason()));
             }
@@ -476,12 +591,94 @@ fn close_if_listening(app: &AppHandle, reason: &str) {
         .listening
         .lock()
         .expect("dictate listening mutex poisoned");
-    let Some(mic) = listening.take() else {
+    let Some(live) = listening.take() else {
         return;
     };
 
-    mic.stop();
+    live.close();
     pill_window::close(app, reason);
+
+    let sounds_enabled = crate::sign_in::account_id_from(app)
+        .and_then(|account_id| state.store.setting_for(&account_id).ok())
+        .map(|setting| setting.sounds_enabled)
+        .unwrap_or(true);
+    sound::play_close(sounds_enabled);
+}
+
+/// Deepgram or a password field ended the dictation while the microphone was
+/// open (record 0002 AC-13, AC-14, AC-20, AC-30).
+///
+/// The ending the record fixes for every mid dictation failure, in its order:
+/// the microphone shuts at once, the pill says what happened in words, and then
+/// the pill closes and the closing sound plays. The pill carries no action,
+/// ever; it is a sign and never a control.
+///
+/// **Two halves of this are deliberately not here yet, and both are `/canvas`
+/// work.** The record has the pill say what happened in words, and brings the
+/// EchoScribe window forward carrying the one action. `design/registry.md`
+/// draws neither for a mid dictation Deepgram error: its "Error pill" row keeps
+/// the working pill's 232x44, which the decided sentences do not fit in, and it
+/// has no screen for this at all. Record 0002 says twice that `/canvas` goes
+/// first and that nothing here may be invented during a build, so this stops at
+/// closing cleanly and emitting the event. The event already carries the kind,
+/// the code, the sentence and the action, so the two screens are all that is
+/// owed.
+fn on_ended(app: &AppHandle, ended: transcribe::Ended) {
+    let Some(state) = app.try_state::<Dictate>() else {
+        return;
+    };
+
+    // The device goes first, and immediately. Whatever went wrong, the
+    // microphone has no business staying open while somebody reads about it.
+    {
+        let mut listening = state
+            .listening
+            .lock()
+            .expect("dictate listening mutex poisoned");
+        let Some(live) = listening.take() else {
+            // Something else already closed it. Nothing to say twice.
+            return;
+        };
+        live.close();
+    }
+
+    match ended {
+        transcribe::Ended::Deepgram(cause) => {
+            eprintln!(
+                "dictate: dictation stopped: {} ({})",
+                cause.code(),
+                cause.message()
+            );
+            // Broadcast, the same way every other error on this feature is, so
+            // the window receives it on the capability it already has and
+            // nothing in `src-tauri/capabilities/` widens.
+            let _ = app.emit(
+                "dictation:error",
+                json!({
+                    "kind": cause.kind(),
+                    "code": cause.code(),
+                    "message": cause.message(),
+                    "action": cause.action(),
+                }),
+            );
+        }
+        // The pill was told at the moment of the refusal, from the thread that
+        // refused, so the person saw it before the words stopped arriving.
+        transcribe::Ended::BlockedPasswordField => {
+            eprintln!("dictate: dictation stopped: BLOCKED_PASSWORD_FIELD");
+        }
+    }
+
+    // The pill goes at once, rather than holding for a beat so the words can be
+    // read. That is not what record 0002 asks for, and it is deliberate: the
+    // pill has no error state built, because the one `design/registry.md` draws
+    // is the working pill's own geometry and the decided sentences do not fit
+    // in it. Holding the pill here would leave it saying MIC OPEN over a
+    // microphone that just closed, which is exactly the lie on screen this
+    // record refuses everywhere else. So it closes honestly and says nothing,
+    // and the pause comes back with the drawn state. See the milestone 4
+    // decisions file, "What is still blocked".
+    pill_window::close(app, "an_error");
 
     let sounds_enabled = crate::sign_in::account_id_from(app)
         .and_then(|account_id| state.store.setting_for(&account_id).ok())

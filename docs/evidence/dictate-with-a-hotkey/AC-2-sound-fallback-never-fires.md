@@ -84,3 +84,30 @@ whenever the microphone is open, and that is the rule's own requirement.
   from the machine's scheme, nothing bundled.
 - The fallback named in record 0002's build plan step 1a and its Still open
   section: **not met**. It does not fire, and the sounds are silent instead.
+
+## What happened next
+
+**Fixed in commit `661ce2f`, 2026-08-30**, after this sitting. Nothing above
+has been changed. It is what was observed on the day and it stands.
+
+`play_alias` now runs two checks instead of one. The machine's sound scheme is
+read from the registry first, and an entry that is present but names nothing,
+which is `(None)` on the Windows sound page, is skipped without asking Windows
+at all. `PlaySoundW`'s return value is kept as the second check, because a name
+absent from the scheme altogether does report failure honestly. An entry that
+cannot be read is treated as worth trying.
+
+So the fallback is reachable on the machine it exists for. The two findings
+this file raised against record 0002 are not answered by that commit and are
+still owed:
+
+- Whether the fallback is worth keeping at all, given finding 2 of the verify
+  report: on this machine `SystemAsterisk` and `SystemExclamation` resolve to
+  the same file, so the open and close sounds would be identical once it fires.
+- The Still open section's claim that the fallback "is the only thing keeping
+  the open and close audible". That sentence is now true of the fixed build and
+  was not true of the build tested here.
+
+Both belong to `/architect`, in a separate run. The re-verify of step 1a, with
+both device sounds set to `(None)`, has not been done and is owed to
+`/check verify`.

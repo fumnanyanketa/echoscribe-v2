@@ -1,14 +1,28 @@
 //! Capturing the microphone, and turning it into one loudness number.
 //!
 //! **No audio is kept.** Record 0002 refuses writing audio to disk or into a
-//! log, ever, and AGENTS.md's data rules say recorded audio is transient. The
-//! shape of this file is what makes that structurally true rather than merely
-//! intended: the only thing that leaves the audio callback is a running total
-//! of squared sample values and a count of samples. There is no buffer, no
-//! ring, no file handle, and no way to reconstruct a sound from what is kept.
-//! The samples themselves are borrowed from cpal for the length of one callback
-//! and are gone when it returns. Two tests at the bottom guard this file
-//! against ever gaining a way to write audio out or hold on to it.
+//! log, ever, and AGENTS.md's data rules say recorded audio is transient:
+//! captured, sent for transcription, and discarded.
+//!
+//! **This changed shape in milestone 4 and the change is worth reading.** Until
+//! milestone 4 the only thing that left the audio callback was a running total
+//! of squared sample values, and nothing here could produce a sound at all.
+//! Milestone 4 is where audio genuinely starts leaving, because that is the
+//! feature: a person's voice goes to Deepgram. So the guarantee is now narrower
+//! and more exact, and it is this:
+//!
+//!   * The callback turns its borrowed samples into one chunk, hands that chunk
+//!     to exactly one sink, and keeps nothing. When it returns, both the
+//!     borrowed slice and the chunk are gone from here.
+//!   * Nothing in this file accumulates audio across callbacks. There is no
+//!     buffer, no ring and no growing vector. The only state that survives a
+//!     callback is two numbers for the loudness meter.
+//!   * There is still no file handle, no network call and no log line carrying
+//!     audio, and the tests at the bottom guard all three.
+//!
+//! Where the chunk goes next is the caller's business, and the caller is
+//! `transcribe.rs`, which sends it to Deepgram and drops it. Nothing on either
+//! side keeps it.
 //!
 //! **cpal owns the stream, so the stream never leaves the thread that made it.**
 //! Milestone 1's hard lesson was that a library which owns a resource will
@@ -109,9 +123,20 @@ pub struct Microphone {
     stop_level: Sender<()>,
     audio: JoinHandle<()>,
     level: JoinHandle<()>,
+    sample_rate: u32,
 }
 
 impl Microphone {
+    /// How many samples a second this device is running at.
+    ///
+    /// Deepgram has to be told, because linear16 carries no header saying so,
+    /// and a wrong rate transcribes as gibberish rather than as an error. Read
+    /// from the device rather than assumed: record 0002 stores no device and
+    /// offers no picker, so whatever Windows is set to is what this is.
+    pub fn sample_rate(&self) -> u32 {
+        self.sample_rate
+    }
+
     /// Close the microphone and wait until it really is closed.
     ///
     /// The level thread is stopped first, so no loudness number can arrive at a
@@ -124,6 +149,7 @@ impl Microphone {
             stop_level,
             audio,
             level,
+            sample_rate: _,
         } = self;
 
         let _ = stop_level.send(());
@@ -143,18 +169,21 @@ impl Microphone {
 /// capturing: a failure comes back here rather than turning up later, which is
 /// what lets the caller keep AC-15's promise that the pill never appears when
 /// the microphone will not open.
-pub fn open(on_level: Box<dyn Fn(f32) + Send>) -> Result<Microphone, MicError> {
+pub fn open(
+    on_level: Box<dyn Fn(f32) + Send>,
+    on_audio: Box<dyn Fn(Vec<i16>) + Send>,
+) -> Result<Microphone, MicError> {
     let shared = Arc::new(Mutex::new(Loudness::default()));
 
-    let (ready_tx, ready_rx) = mpsc::channel::<Result<(), MicError>>();
+    let (ready_tx, ready_rx) = mpsc::channel::<Result<u32, MicError>>();
     let (stop_audio, stop_audio_rx) = mpsc::channel::<()>();
     let audio_shared = Arc::clone(&shared);
 
     let audio = spawn("echoscribe-dictate-audio", move || {
         // Everything to do with the stream happens here, on this one thread,
         // for the whole life of the stream. cpal owns it; we do not move it.
-        let stream = match build_stream(audio_shared) {
-            Ok(stream) => stream,
+        let (stream, sample_rate) = match build_stream(audio_shared, on_audio) {
+            Ok(built) => built,
             Err(e) => {
                 let _ = ready_tx.send(Err(e));
                 return;
@@ -164,7 +193,7 @@ pub fn open(on_level: Box<dyn Fn(f32) + Send>) -> Result<Microphone, MicError> {
             let _ = ready_tx.send(Err(classify(e.kind())));
             return;
         }
-        let _ = ready_tx.send(Ok(()));
+        let _ = ready_tx.send(Ok(sample_rate));
 
         // Park until told to stop, or until the sender goes away.
         let _ = stop_audio_rx.recv();
@@ -172,8 +201,8 @@ pub fn open(on_level: Box<dyn Fn(f32) + Send>) -> Result<Microphone, MicError> {
         drop(stream);
     })?;
 
-    match ready_rx.recv() {
-        Ok(Ok(())) => {}
+    let sample_rate = match ready_rx.recv() {
+        Ok(Ok(rate)) => rate,
         Ok(Err(e)) => {
             let _ = audio.join();
             return Err(e);
@@ -183,7 +212,7 @@ pub fn open(on_level: Box<dyn Fn(f32) + Send>) -> Result<Microphone, MicError> {
             let _ = audio.join();
             return Err(MicError::Unavailable);
         }
-    }
+    };
 
     let (stop_level, stop_level_rx) = mpsc::channel::<()>();
     let level = spawn("echoscribe-dictate-level", move || {
@@ -201,6 +230,7 @@ pub fn open(on_level: Box<dyn Fn(f32) + Send>) -> Result<Microphone, MicError> {
             stop_level,
             audio,
             level,
+            sample_rate,
         }),
         Err(e) => {
             // The device opened but we cannot report its level. Close it again
@@ -229,7 +259,10 @@ fn spawn(name: &str, body: impl FnOnce() + Send + 'static) -> Result<JoinHandle<
 /// setting and no device picker, so the one Windows is already set to use is
 /// the only microphone this feature has. Choosing between several is a settings
 /// screen the record does not describe.
-fn build_stream(shared: Arc<Mutex<Loudness>>) -> Result<cpal::Stream, MicError> {
+fn build_stream(
+    shared: Arc<Mutex<Loudness>>,
+    on_audio: Box<dyn Fn(Vec<i16>) + Send>,
+) -> Result<(cpal::Stream, u32), MicError> {
     let host = cpal::default_host();
     let device = host
         .default_input_device()
@@ -239,54 +272,89 @@ fn build_stream(shared: Arc<Mutex<Loudness>>) -> Result<cpal::Stream, MicError> 
         .map_err(|e| classify(e.kind()))?;
     let format = supported.sample_format();
     let config = supported.config();
+    let sample_rate = config.sample_rate;
+    let channels = config.channels as usize;
 
     let built = match format {
-        SampleFormat::F32 => capture::<f32>(&device, config, shared),
-        SampleFormat::F64 => capture::<f64>(&device, config, shared),
-        SampleFormat::I8 => capture::<i8>(&device, config, shared),
-        SampleFormat::I16 => capture::<i16>(&device, config, shared),
-        SampleFormat::I32 => capture::<i32>(&device, config, shared),
-        SampleFormat::U8 => capture::<u8>(&device, config, shared),
-        SampleFormat::U16 => capture::<u16>(&device, config, shared),
-        SampleFormat::U32 => capture::<u32>(&device, config, shared),
+        SampleFormat::F32 => capture::<f32>(&device, config, shared, channels, on_audio),
+        SampleFormat::F64 => capture::<f64>(&device, config, shared, channels, on_audio),
+        SampleFormat::I8 => capture::<i8>(&device, config, shared, channels, on_audio),
+        SampleFormat::I16 => capture::<i16>(&device, config, shared, channels, on_audio),
+        SampleFormat::I32 => capture::<i32>(&device, config, shared, channels, on_audio),
+        SampleFormat::U8 => capture::<u8>(&device, config, shared, channels, on_audio),
+        SampleFormat::U16 => capture::<u16>(&device, config, shared, channels, on_audio),
+        SampleFormat::U32 => capture::<u32>(&device, config, shared, channels, on_audio),
         _ => return Err(MicError::Unavailable),
     };
-    built.map_err(|e| classify(e.kind()))
+    built
+        .map(|stream| (stream, sample_rate))
+        .map_err(|e| classify(e.kind()))
 }
 
 /// The audio callback, for one sample type.
 ///
 /// This is the only code that ever sees the person's voice. It reads each
-/// sample once, squares it into a running total, and keeps nothing. When it
-/// returns, `data` is gone.
+/// sample once, adds it to a running total for the meter, and turns the frame
+/// into one signed 16-bit value for Deepgram. When it returns, `data` is gone
+/// and so is the chunk it made.
+///
+/// **Downmixed to one channel**, by averaging the channels of each frame. One
+/// person is dictating into one microphone; handing Deepgram two channels would
+/// have it treat them as two speakers and charge for both. Averaging rather
+/// than taking the first channel, because on some devices the first channel is
+/// the quiet one.
 fn capture<T>(
     device: &cpal::Device,
     config: cpal::StreamConfig,
     shared: Arc<Mutex<Loudness>>,
+    channels: usize,
+    on_audio: Box<dyn Fn(Vec<i16>) + Send>,
 ) -> Result<cpal::Stream, cpal::Error>
 where
     T: SizedSample,
     f32: FromSample<T>,
 {
+    let channels = channels.max(1);
     device.build_input_stream(
         config,
         move |data: &[T], _: &cpal::InputCallbackInfo| {
             let mut sum = 0.0f64;
-            for sample in data {
-                let value = f32::from_sample(*sample) as f64;
-                sum += value * value;
+            let mut mono: Vec<i16> = Vec::with_capacity(data.len() / channels + 1);
+            for frame in data.chunks(channels) {
+                let mut total = 0.0f32;
+                for sample in frame {
+                    total += f32::from_sample(*sample);
+                }
+                let value = total / frame.len() as f32;
+                sum += (value as f64) * (value as f64);
+                mono.push(to_i16(value));
             }
+            let frames = mono.len() as u64;
+
             // `try_lock`, never `lock`: an audio callback that waits on another
             // thread is how capture starts glitching. Losing one 60 ms window's
             // worth of level is not worth a stall.
             if let Ok(mut acc) = shared.try_lock() {
                 acc.sum_of_squares += sum;
-                acc.samples += data.len() as u64;
+                acc.samples += frames;
             }
+
+            // The one way audio leaves this file. The sink does not block: it
+            // hands the chunk to a bounded queue and returns.
+            on_audio(mono);
         },
         |e| eprintln!("dictate: the microphone stream reported an error: {e}"),
         None,
     )
+}
+
+/// One averaged sample, as the signed 16-bit value `Encoding::Linear16` means.
+///
+/// Clamped, and scaled by `i16::MAX` rather than `i16::MIN`, so a sample at or
+/// past full scale cannot wrap round to the opposite sign and arrive at
+/// Deepgram as a click in the middle of a word.
+fn to_i16(value: f32) -> i16 {
+    (value.clamp(-1.0, 1.0) * i16::MAX as f32) as i16
 }
 
 /// Take everything accumulated since the last tick and turn it into one number.
@@ -474,16 +542,59 @@ mod tests {
     }
 
     #[test]
-    fn the_audio_callback_keeps_no_samples() {
-        // The other way audio could be retained: collecting the callback's
-        // slice in memory instead of writing it out.
+    fn the_audio_callback_accumulates_nothing_across_calls() {
+        // Milestone 4 changed what this guard has to protect, and the change is
+        // deliberate. Until milestone 4 the callback produced no audio at all
+        // and the guard forbade it owning any. Milestone 4 is where a person's
+        // voice legitimately starts leaving, so the narrower and still exact
+        // promise is that nothing is retained *between* callbacks: one chunk is
+        // made, handed to one sink, and dropped.
+        //
+        // These are the shapes that would break it, by holding audio in state
+        // that outlives a single call.
         let source = this_file();
-        for forbidden in ["to_vec()", "data.clone()", "extend_from_slice", "VecDeque"] {
+        for forbidden in ["VecDeque", "static AUDIO", "lazy_static", "OnceLock<Vec"] {
             assert!(
                 !source.contains(forbidden),
-                "microphone.rs now mentions `{forbidden}`. The audio callback \
-                 borrows its samples for one call and must keep none of them"
+                "microphone.rs now mentions `{forbidden}`. The callback may                  build one chunk and hand it on; it may never keep audio from                  one call to the next (AGENTS.md data rules: audio is transient)"
             );
         }
+    }
+
+    #[test]
+    fn there_is_exactly_one_way_audio_leaves_this_file() {
+        // The chunk is handed to the sink the caller passed in, and to nothing
+        // else. A second call site would be a second destination for a person's
+        // voice, which is the thing the data rules are most exact about.
+        let source = this_file();
+        assert_eq!(
+            source.matches("on_audio(").count(),
+            1,
+            "audio now leaves microphone.rs by more than one route"
+        );
+    }
+
+    #[test]
+    fn a_full_scale_sample_never_wraps_to_the_opposite_sign() {
+        // covers: AC-3. Scaling by i16::MIN, or not clamping, turns the loudest
+        // moment of a word into a click at the other extreme. Deepgram hears
+        // that as noise, and nothing on screen would say why accuracy dropped.
+        assert_eq!(to_i16(1.0), i16::MAX);
+        assert_eq!(
+            to_i16(1.5),
+            i16::MAX,
+            "past full scale is held, not wrapped"
+        );
+        assert_eq!(to_i16(-1.5), -i16::MAX, "and the same the other way");
+        assert!(to_i16(-1.0) < 0);
+        assert_eq!(to_i16(0.0), 0);
+    }
+
+    #[test]
+    fn silence_converts_to_silence() {
+        // covers: AC-3. A quiet room must reach Deepgram as quiet, not as a
+        // constant offset, which would read as a hum and cost accuracy.
+        assert_eq!(to_i16(0.0), 0);
+        assert_eq!(to_i16(-0.0), 0);
     }
 }

@@ -233,18 +233,6 @@ impl Store {
     /// value sourcing names. Nothing here reads the credential store or asks
     /// Deepgram anything: the hotkey path runs through this on every press and
     /// must stay cheap.
-    pub fn has_deepgram_key(&self, account_id: &str) -> rusqlite::Result<bool> {
-        let conn = self.conn.lock().expect("store mutex poisoned");
-        let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM deepgram_credential WHERE account_id = ?1",
-            [account_id],
-            |row| row.get(0),
-        )?;
-        Ok(count > 0)
-    }
-
-    /// What is known about this account's saved key, or `None` if there is
-    /// none. Never returns the key: this table does not hold it.
     pub fn deepgram_key_for(&self, account_id: &str) -> rusqlite::Result<Option<SavedKey>> {
         let conn = self.conn.lock().expect("store mutex poisoned");
         conn.query_row(
@@ -423,7 +411,7 @@ mod tests {
     #[test]
     fn a_new_account_has_no_deepgram_key() {
         let store = Store::open_in_memory().unwrap();
-        assert!(!store.has_deepgram_key("acct_test").unwrap());
+        assert!(store.deepgram_key_for("acct_test").unwrap().is_none());
         assert_eq!(store.deepgram_key_for("acct_test").unwrap(), None);
     }
 
@@ -441,7 +429,7 @@ mod tests {
             )
             .unwrap();
 
-        assert!(store.has_deepgram_key("acct_test").unwrap());
+        assert!(store.deepgram_key_for("acct_test").unwrap().is_some());
         let saved = store.deepgram_key_for("acct_test").unwrap().unwrap();
         assert_eq!(saved.key_last_four, "cdef");
         assert_eq!(saved.credential_target, "deepgram:acct_test");
@@ -499,7 +487,7 @@ mod tests {
             )
             .unwrap();
         store.clear_deepgram_key("acct_test").unwrap();
-        assert!(!store.has_deepgram_key("acct_test").unwrap());
+        assert!(store.deepgram_key_for("acct_test").unwrap().is_none());
         assert_eq!(store.deepgram_key_for("acct_test").unwrap(), None);
     }
 
@@ -507,7 +495,7 @@ mod tests {
     fn clearing_a_key_that_was_never_there_is_fine() {
         let store = Store::open_in_memory().unwrap();
         store.clear_deepgram_key("acct_test").unwrap();
-        assert!(!store.has_deepgram_key("acct_test").unwrap());
+        assert!(store.deepgram_key_for("acct_test").unwrap().is_none());
     }
 
     /// AC-18: a second account on the same machine sees none of the first
@@ -529,7 +517,7 @@ mod tests {
             )
             .unwrap();
 
-        assert!(!store.has_deepgram_key("acct_other").unwrap());
+        assert!(store.deepgram_key_for("acct_other").unwrap().is_none());
         assert_eq!(store.deepgram_key_for("acct_other").unwrap(), None);
 
         store

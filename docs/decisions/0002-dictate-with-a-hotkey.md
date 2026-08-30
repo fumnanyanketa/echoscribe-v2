@@ -45,6 +45,30 @@ None of the five renumbers, rewords or adds a criterion. It also settles one
 thing nobody had asked before: what an error screen shows once the person has
 fixed the cause and dictated successfully. That adds AC-32 and takes the count
 to 32.
+**Amended:** 2026-08-30, fourth of the day, by `/sync` rather than
+`/architect`, because neither half is a decision. The live `/check verify`
+sitting checked this record's Interface surface against what the build actually
+exposes and found two places they had stopped matching. `pill_drag_finished()`
+is named here and does not exist, because the AC-27 fix moved the whole drag
+into Rust. `dictation:needs_key` exists, is what AC-9 rides on, and was never
+added to the event list when milestone 3 built it. Both are corrected in place
+and marked there. No criterion is renumbered, reworded or added, the count
+stays at 32, and nothing in Still open is touched. Evidence:
+`docs/evidence/dictate-with-a-hotkey/report.md`.
+**Amended:** 2026-08-30, fifth of the day, by `/architect`. Two questions in
+Still open are closed with what the live sitting found, and milestone 4 is
+handed a state its AC-30 list did not name. The sound bullet was not merely
+stale, it was wrong: the fallback it said was keeping the two sounds audible
+had never once run and could not have. The pill focus bullet is closed by the
+fix `/debug` landed and the live re-proof that followed. The third change names
+the microphone dying after it opened as a source of a mid dictation error,
+alongside the Deepgram ones, and settles its ending and its words. No criterion
+is renumbered, reworded or added and the count stays at 32. AC-30 already
+covers that state in as many words, which is why it gains no criterion of its
+own. Evidence:
+`docs/evidence/dictate-with-a-hotkey/AC-2-sound-fallback-never-fires.md`,
+`AC-27-pill-no-longer-takes-focus.md` and
+`finding-microphone-dies-mid-dictation.md`.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -334,6 +358,72 @@ wrong-and-misleading. The check is read only, forever: EchoScribe never
 changes a privacy setting, it only reads the state and opens the page for the
 person to decide.
 
+**The microphone dying after it opened, settled 2026-08-30.** Everything above
+is about a microphone that would not open. One can also stop working while it
+is open, and it was seen doing exactly that: with the pill up and the meter
+moving, switching Windows' desktop-apps microphone access off killed the
+stream. The pill went on saying `MIC OPEN`, the bars went flat, and nothing
+told the person, because a dead microphone and a quiet room are identical on a
+meter designed to read flat at silence. The stream error went to stderr and
+nowhere else. Evidence:
+`docs/evidence/dictate-with-a-hotkey/finding-microphone-dies-mid-dictation.md`.
+
+This record names three things that can go wrong mid dictation and all three
+are Deepgram's: the connection lost, the key rejected, the allowance spent,
+with a scope failure on the live stream handed to milestone 4 as a fourth. The
+audio device itself failing after a successful open is a fifth, and it was
+never named anywhere. It is named here.
+
+**It gains no criterion of its own.** AC-30 already covers it in as many words:
+"when something goes wrong while the microphone is open, the pill says so in
+words and closes, and if there is anything I can do about it the EchoScribe
+window comes forward carrying that one action." A dying device is that, exactly.
+What was missing was never a criterion, it was this record's own list of what
+can go wrong. A new criterion would restate AC-30 for one source and split one
+criterion's proof across two numbers. What this state gets instead is a source
+named, an ending fixed, its words fixed, and a proof step in milestone 4.
+
+**The ending.** The same one every other mid dictation failure has. The pill
+stops saying `MIC OPEN`, says `MIC STOPPED` long enough to be read, and closes.
+The closing sound plays, because the microphone did close, and that sound is
+how a person who is not looking at the pill learns it. Then the EchoScribe
+window comes forward with the code, the sentence and the one action, exactly as
+it does when the microphone will not open at all.
+
+**Which of the four kinds it is** is decided by the same classification, run
+again: a stream that dies for a reason the audio layer does not name reliably
+asks Windows about the three consent switches, and is
+`microphone_blocked_by_windows` with Open Windows settings if any of the three
+says deny, or the honest catch-all with Try again if they all say allow or
+cannot be read. That is not tidiness, it is what makes the observed case right.
+The person who just switched microphone access off is sent to the page that
+undoes it. A Try again button there would be a door that cannot open.
+
+**One sentence changes, and only for this moment.** Three of the four sentences
+are true whether the microphone never opened or stopped later. The catch-all is
+not: "The microphone could not be opened." is false about a microphone that
+did open. So `microphone_unavailable` gets a second sentence, **"The microphone
+stopped working."**, used when the failure arrives mid dictation. Same kind,
+same code, same Try again. No fifth kind and no fifth code is created, so a
+person quoting `MICROPHONE_UNAVAILABLE` is quoting the same thing either way.
+
+**It clears itself with the others.** The clearing table's first row already
+covers it: any of the four microphone errors clears when the microphone opens.
+Nothing new is needed and nothing about AC-32 changes.
+
+**The silence cap must not get there first.** AC-8 closes the pill after 30
+seconds without speech, and a dead microphone is 30 seconds without speech. If
+the cap wins that race the person is told nothing at all, the pill simply goes
+away, and this whole paragraph has bought nothing. The device failure ends the
+dictation the moment the stream reports it, and the cap is left for the thing
+it is for, a person who stopped talking.
+
+**Two things are not drawn and must not be invented during the build.** The
+pill's `MIC STOPPED` state, and the catch-all's second sentence in the
+microphone error screen. `design/registry.md` has to gain both before milestone
+4 builds them, which is `/canvas` work. This record fixes the words and does not
+draw the states.
+
 **Which microphone is used.** Whichever one Windows is already set to. This
 record names no microphone anywhere: no device column, no device field in
 `dictation_setting`, no device command, and until now no criterion. That was
@@ -576,9 +666,11 @@ One migration, creating all three tables.
 | Start time of a dictation | AC-17 | The moment the microphone opened, taken in Rust as UTC. |
 | Duration | AC-17 | The moment the microphone closed, minus the start time. |
 | Which microphone is opened | AC-1, AC-15, AC-31 | Whichever input device Windows is set to as its default, asked of the system at the moment the microphone opens. This record stores no device and offers no way to choose one. |
-| Which of the four microphone errors it is | AC-15, AC-28, AC-29 | The error the audio layer returns when opening the device, mapped to one of four named kinds. Anything that is none of the three known causes is the fourth, `microphone_unavailable`, and is never dressed up as one of the others. Until 2026-08-30 this row said the blocked kind came from the audio layer's permission-denied kind; disproved live, cpal on Windows never produces it. Blocked is now detected by reading the Windows microphone consent switches, see the detection paragraph in The decision. |
+| Which of the four microphone errors it is | AC-15, AC-28, AC-29, AC-30 | The error the audio layer returns when opening the device, or, added 2026-08-30, the one its error callback reports for a stream that dies after opening. Both run the same mapping to the same four named kinds. Anything that is none of the three known causes is the fourth, `microphone_unavailable`, and is never dressed up as one of the others. Until 2026-08-30 this row said the blocked kind came from the audio layer's permission-denied kind; disproved live, cpal on Windows never produces it. Blocked is now detected by reading the Windows microphone consent switches, see the detection paragraph in The decision. |
 | Whether Windows has microphone access switched off | AC-15, AC-29 | The three consent switches the Windows privacy page writes, read directly from Windows by Rust, read only, and only after the microphone has already failed to open for no named reason. Deny on any of the three means blocked; anything else, including the switches being unreadable, does not. Never stored, never logged beyond the named error kind, never shown to the interface as anything but the kind. |
-| The sentence shown for each microphone error | AC-15, AC-28 | This record, the four sentence table in The decision. Fixed wording, not a setting, and it never carries a device name, a path, or anything from the audio. |
+| The sentence shown for each microphone error | AC-15, AC-28, AC-30 | This record, the four sentence table in The decision. Fixed wording, not a setting, and it never carries a device name, a path, or anything from the audio. Added 2026-08-30: the catch-all kind has a second sentence, "The microphone stopped working.", used only when the failure arrives mid dictation, because the first one says the microphone could not be opened and it had been. Five sentences across the same four kinds. |
+| What the pill says when the microphone dies mid dictation | AC-30 | This record. `MIC STOPPED`, held long enough to read, then the pill closes and the closing sound plays. Fixed wording. It never carries a device name, a code or anything from the audio; the code and the action are the window's, not the pill's. |
+| Whether a mid dictation failure came from the microphone or from Deepgram | AC-13, AC-14, AC-30 | Which of the two reported it. The audio stream's own error callback for the device, the Deepgram connection for the rest. Added 2026-08-30, because until then the record named only Deepgram causes mid dictation and the device path went to stderr and nowhere else. |
 | Where a microphone error is read | AC-15, AC-28, AC-30 | This record. The EchoScribe window, brought to the front. Never the pill, which has no action and never appears when the microphone did not open. |
 | The Windows microphone privacy page | AC-15, AC-29 | A fixed literal address held in Rust, `ms-settings:privacy-microphone`, opened through the Windows shell with the already approved `windows` crate. The interface never supplies or sees it, and it is never built from anything. |
 | The address a person gets a Deepgram key from | AC-9 | This record. A fixed literal held in Rust, `https://console.deepgram.com/signup?jump=keys`, opened through the system browser by `open_deepgram_signup`, which takes nothing. The interface never supplies or sees it, and it is never built from anything. |
@@ -612,11 +704,18 @@ from the session. Every command refuses when nobody is signed in.
   anything else outright, which is the only refusal it has left to make.
 - `get_dictation_sounds()` and `set_dictation_sounds(enabled)`, for the one
   sound switch.
-- `pill_drag_finished()` tells Rust the person has let go of the pill. Rust
-  reads where the window actually ended up, works out its place within that
-  screen's working area, and stores it. There is no matching getter,
-  because Rust positions the pill itself before showing it. Nothing about
-  the position ever crosses into the interface as a number.
+- **Corrected 2026-08-30.** This bullet used to name a command,
+  `pill_drag_finished()`, through which the interface told Rust the person had
+  let go of the pill. There is no such command and there will not be one. The
+  AC-27 fix moved the whole drag into Rust: the pill's web view is kept out of
+  the mouse path entirely, so the interface never sees the mouse and has
+  nothing to report. `pill_mouse.rs` runs the drag and stores the position
+  itself. Everything the old bullet promised still holds and is now Rust's
+  alone: where the window actually ended up is read after the drag, worked out
+  as a place within that screen's working area, and stored. There is still no
+  getter, because Rust positions the pill itself before showing it, and nothing
+  about the position ever crosses into the interface as a number. Found by the
+  surface check in `docs/evidence/dictate-with-a-hotkey/report.md`.
 - `get_dictation_state()` returns idle, listening, or stopped with a
   reason. Lets the pill recover its state after a reload.
 - `open_microphone_privacy_settings()` opens the Windows microphone privacy
@@ -644,6 +743,14 @@ Rust sends these events out to the pill. None carries audio or the key.
 - `dictation:blocked` when typing was refused, currently only a password
   field
 - `dictation:error` with a named kind and a message safe to show
+- `dictation:needs_key` when the hotkey was pressed and no Deepgram key is
+  saved. It carries nothing, no kind and no sentence, because nothing has gone
+  wrong: there is a setup step outstanding and the guided screen explains it.
+  It is what AC-9 rides on. It is read in the EchoScribe window and not the
+  pill, because no pill appears and no sound plays when there is no key.
+  **Added to this list 2026-08-30.** Milestone 3 built this event and this
+  section was never amended to name it. Found by the surface check in
+  `docs/evidence/dictate-with-a-hotkey/report.md`.
 
 Errors that matter and must each read differently: no key saved, key
 rejected, allowance exhausted, cannot reach Deepgram, the key check failing
@@ -652,6 +759,13 @@ Windows, microphone in use by another app, no microphone found, the microphone
 failing for some other reason, not signed in. The two "for some other reason"
 kinds are the two honest catch-alls, one per side, and neither is ever dressed
 up as one of the named causes beside it.
+
+**Added 2026-08-30:** each of those four microphone kinds can also arrive mid
+dictation, when the device dies after it opened. Same four kinds and the same
+four codes, with one extra sentence for the catch-all and `MIC STOPPED` on the
+pill. The decision settles all of it. The list above is unchanged because the
+causes are unchanged; what changed is that they were only ever read as reasons
+the microphone would not start.
 
 **Where each of those is read, settled 2026-08-30.** The pill says what
 happened, in words, and carries no action, because nothing but its grip
@@ -765,6 +879,15 @@ re-verify that follows must cover, in one sitting:
   window on the other monitor is focused.
 - The sound fallback: set both device sounds to None in Windows, open and
   close the pill once, hear the two alert sounds, put the scheme back.
+  **Ran 2026-08-30 and failed**, and this line was wrong about what a pass
+  sounds like. Nothing was heard on open or on close, because a `(None)` entry
+  plays silence and still reports success. Fixed in `661ce2f`; see the sound
+  bullet in Still open for the whole of it. Two changes here. First, `/develop`
+  owes one more piece before this is re-run: the check that a named sound file
+  is actually there, settled as point 1 of that bullet, so the fix and the
+  file check are proved in one sitting. Second, the pass is corrected. On this
+  machine both alert names resolve to the same file, so hearing **one sound on
+  open and the same one on close** is a pass. Silence is the only failure.
 
 2. **The microphone and the waveform.** Live capture feeding a loudness
    number to the pill, silence and time cap closing it on their own, and
@@ -851,6 +974,21 @@ everything saying dictation cannot start while it is running.
    AC-13's live 401 and 402 are wired to the four kinds milestone 3 built, and
    proved there; and the allowance error clears on the first finalised words,
    which is the one clearing trigger milestone 3 could not build.
+
+   **Added 2026-08-30: a fourth source of a mid dictation failure, and it is
+   not Deepgram's.** The microphone dying after it opened, seen live during the
+   verify sitting. The ending, the classification, the changed sentence and the
+   race with AC-8's silence cap are all settled in The decision, under "The
+   microphone dying after it opened". `/canvas` goes first for the two states
+   it names, the pill's `MIC STOPPED` and the catch-all's second sentence, the
+   same way step 2a needed a drawn screen before it could be built. Prove it
+   live the way it was found: with the pill up and the meter moving, switch
+   Windows' desktop-apps microphone access off. The pill must say `MIC STOPPED`
+   and close, the closing sound must play, and the EchoScribe window must come
+   forward saying `MICROPHONE_BLOCKED_BY_WINDOWS` with Open Windows settings as
+   its one action. Switch access back on, press the hotkey, and the error must
+   clear itself, which is AC-32's path and costs nothing extra in the same
+   sitting. All of it is part of AC-30's proof, not a criterion of its own.
 5. **History and settings.** The three tables and their migration, saving
    each finished dictation against the account, per account separation, the
    two hotkey choices as a list in settings, and the sound switch. Both
@@ -934,12 +1072,62 @@ everything saying dictation cannot start while it is running.
 - **Whether those two device sounds can be played by name. Closed
   2026-08-29. They can.** The machine's own scheme gave the device connected
   sound on open and the device disconnected sound on close. The
-  `SystemAsterisk` and `SystemExclamation` fallback was never reached, so it
-  is in the app and has never run. It is kept, because on a machine whose
-  scheme has no device sounds it is the only thing keeping the open and
-  close audible, and that sound is half of how a person knows the microphone
-  is on. Proving it is now a step in the re-verify, build plan 1a. Evidence:
+  `SystemAsterisk` and `SystemExclamation` fallback was never reached. Evidence:
   `docs/evidence/dictate-with-a-hotkey/spikes-owed-to-record-0002.md`.
+
+  **Corrected 2026-08-30, and this is the part that was wrong.** This bullet
+  used to say the fallback was kept "because on a machine whose scheme has no
+  device sounds it is the only thing keeping the open and close audible". It
+  was keeping nothing audible. It had never run and it could not run. Setting a
+  device sound to `(None)` on the Windows sound page leaves the scheme entry
+  present and empty; `PlaySoundW` then plays silence and still reports success;
+  and `sound.rs` read that success as proof a person had heard something. So
+  the preferred name won every time and both dictation sounds went quiet, on
+  exactly the machine the fallback existed for. Observed live 2026-08-30, all
+  three ways, evidence in
+  `docs/evidence/dictate-with-a-hotkey/AC-2-sound-fallback-never-fires.md`.
+  Fixed in commit `661ce2f`: the scheme entry must name a sound, read from the
+  registry, and `PlaySoundW` must then succeed, because a name absent from the
+  scheme altogether does report failure honestly. Two checks, not one. The
+  general lesson is now standing rule 14 in AGENTS.md.
+
+  **Three things that fix did not decide, settled here 2026-08-30.**
+
+  1. **A named sound file that has since been deleted is checked for, and a
+     path that cannot be checked is played anyway.** Same class of hole, one
+     machine along: an entry that names a file nobody deleted and an entry that
+     names a file somebody did look identical to the fix above, and the second
+     plays silence. So the path is read from the scheme, environment variables
+     in it are expanded, a bare file name is resolved against the Windows media
+     folder, and a file has to be there. If the path cannot be resolved, or
+     cannot be checked, the name is tried and Windows gets the last word. It is
+     never read as silence. That is deliberate and it is the same rule
+     `sound.rs` already holds for an entry it cannot read, and `consent.rs` for
+     a switch it cannot read: not knowing is not evidence. The cost is named
+     rather than hidden. Windows resolves these entries in ways this app does
+     not fully control, so a path form we fail to resolve quietly degrades to
+     today's behaviour, which is wrong-but-safe rather than silent. `/develop`
+     owns this, in build plan step 1a, before the re-verify.
+
+  2. **The fallback is kept, and the two alert sounds may well be the same
+     sound.** On this machine `SystemAsterisk` and `SystemExclamation` both
+     resolve to `Windows Background.wav`, so once the fallback fires the open
+     and close are identical. Raised as finding 2 of
+     `docs/evidence/dictate-with-a-hotkey/report.md`. Kept anyway: one sound
+     heard twice still says something happened, the pill says which, and the
+     alternative on a scheme with no device sounds is hearing nothing at all.
+     Hunting for a pair of alert names that differ was weighed and rejected,
+     because which names collapse onto one file is a Windows convention this
+     project does not control and the next machine may collapse a different
+     pair. What this does change is the build plan's step 1a wording, which
+     expected to "hear the two alert sounds": one sound, heard on open and
+     again on close, is a pass. Silence is the only failure.
+
+  3. **The re-verify is still owed.** Nothing above has been proved against the
+     fixed build. Step 1a's sound item has not been run since `661ce2f`, so on
+     this machine the fallback remains code that has never made a sound. It
+     belongs to `/check verify`, with the file check from point 1 built first
+     so both are proved in one sitting.
 - **Whether the pill can be clicked and dragged without taking focus.
   Closed 2026-08-29, and the answer was no.** Not on the mechanism this
   record used to name. See The decision for what replaced it. What is open
@@ -948,6 +1136,19 @@ everything saying dictation cannot start while it is running.
   on screen keyboard says the shape is possible; it does not say it is
   possible here. `/debug` finds out, the stop condition says when to stop
   trying, and the answer gets recorded here either way.
+
+  **That narrower question is closed too, 2026-08-30, and the answer is yes.**
+  All three points hold for a pill with a web view inside it. `/debug` found
+  the cause and the fix landed: the web view is kept out of the mouse path
+  entirely, and `pill_mouse.rs` runs the drag and stores the position in Rust,
+  so the interface never sees the mouse. Re-proved live with Notepad focused
+  and never clicked again for the whole test, which is what makes it a real
+  test: a click on the grip, a click on the inert bars, and a drag a hand's
+  width across the screen, with typing after each one landing in Notepad every
+  time and Notepad's title bar staying active throughout. The hotkey also
+  answered on the first double tap straight afterwards with no click anywhere,
+  which was the knock-on AC-5 fault from the same failed run. Evidence:
+  `docs/evidence/dictate-with-a-hotkey/AC-27-pill-no-longer-takes-focus.md`.
 - **Whether a key the setup check accepts can always open a streaming
   socket.** `GET /v1/auth/token` proves the key is real and Deepgram is
   reachable. It does not prove scope. A key without the right permission

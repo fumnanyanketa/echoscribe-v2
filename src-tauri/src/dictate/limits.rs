@@ -5,18 +5,18 @@
 //!   * **5 minutes total.** Runs from the moment the microphone opened.
 //!   * **30 seconds with no speech.** Record 0002's Value sourcing is exact
 //!     about what "no speech" means: *"Silence means no final wording from
-//!     Deepgram in that period."* Deepgram arrives in milestone 4.
+//!     Deepgram in that period."*
 //!
-//! So in milestone 2 the silence cap is built, tested and **unarmed**. There is
-//! nothing on this machine yet that can honestly say a person spoke: loudness
-//! says sound is arriving, which a fan or a quiet room full of typing also does.
-//! Arming it on loudness would be a different promise from the one AC-8 makes,
-//! so it waits for its named source instead of borrowing a nearby one.
+//! Milestone 2 built this cap and left it **unarmed**, because nothing on the
+//! machine could honestly say a person had spoken: loudness says sound is
+//! arriving, which a fan or a quiet room full of typing also does. Arming it on
+//! loudness would have been a different promise from the one AC-8 makes.
 //!
-//! Milestone 4 changes exactly two things: it builds `Deadlines` with
-//! `SilenceWatch::Watching` instead of `Unarmed`, and it calls `speech_heard`
-//! on every final Deepgram result. The rules below do not change, and the tests
-//! at the bottom already cover the armed behaviour.
+//! **Milestone 4 armed it and the unarmed state is gone.** Deepgram's final
+//! results are the named source, `transcribe.rs` calls `speech_heard` on every
+//! one of them, and there is no longer any way to build a `Deadlines` that
+//! ignores silence. Keeping the unarmed variant would have left a second,
+//! quieter set of rules that nothing used and nothing checked.
 
 use std::time::{Duration, Instant};
 
@@ -47,52 +47,31 @@ impl Expiry {
     }
 }
 
-/// Whether the silence cap is running, and since when.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SilenceWatch {
-    /// Nothing can report speech yet, so the silence cap must not fire. This is
-    /// the milestone 2 value and the only one this milestone constructs.
-    Unarmed,
-    /// Counting from the last thing that counted as speech.
-    Watching { since: Instant },
-}
-
 /// The two caps for one open microphone, answered against a clock the caller
 /// passes in. Pure: it reads no clock of its own, which is what makes the tests
 /// below able to fast-forward five minutes without waiting five minutes.
 #[derive(Debug, Clone, Copy)]
 pub struct Deadlines {
     opened: Instant,
-    silence: SilenceWatch,
+    /// When the last thing that counted as speech arrived. Speech means a final
+    /// result from Deepgram, and nothing else.
+    last_speech: Instant,
 }
 
 impl Deadlines {
-    /// The caps as milestone 2 runs them: the time cap live, the silence cap
-    /// unarmed because Deepgram does not exist yet.
-    pub fn without_deepgram(opened: Instant) -> Self {
-        Self {
-            opened,
-            silence: SilenceWatch::Unarmed,
-        }
-    }
-
-    /// The caps as milestone 4 will run them, with the silence clock started at
-    /// the moment the microphone opened.
-    #[allow(dead_code)] // Milestone 4 calls this. Exercised by the tests below.
+    /// The caps for one open microphone, with the silence clock started at the
+    /// moment it opened.
     pub fn watching_for_silence(opened: Instant) -> Self {
         Self {
             opened,
-            silence: SilenceWatch::Watching { since: opened },
+            last_speech: opened,
         }
     }
 
     /// A phrase came back from Deepgram marked final. Restarts the silence
-    /// clock. Does nothing while the watch is unarmed.
-    #[allow(dead_code)] // Milestone 4 calls this. Exercised by the tests below.
+    /// clock.
     pub fn speech_heard(&mut self, now: Instant) {
-        if let SilenceWatch::Watching { .. } = self.silence {
-            self.silence = SilenceWatch::Watching { since: now };
-        }
+        self.last_speech = now;
     }
 
     /// Whether the microphone should close now, and why. The time cap is
@@ -102,10 +81,8 @@ impl Deadlines {
         if now.duration_since(self.opened) >= TIME_CAP {
             return Some(Expiry::TimeCap);
         }
-        if let SilenceWatch::Watching { since } = self.silence {
-            if now.duration_since(since) >= SILENCE_CAP {
-                return Some(Expiry::Silence);
-            }
+        if now.duration_since(self.last_speech) >= SILENCE_CAP {
+            return Some(Expiry::Silence);
         }
         None
     }
@@ -123,7 +100,11 @@ mod tests {
     fn the_time_cap_fires_at_five_minutes_and_not_before() {
         // covers: AC-8, the 5 minute half.
         let opened = Instant::now();
-        let caps = Deadlines::without_deepgram(opened);
+        let mut caps = Deadlines::watching_for_silence(opened);
+        // Someone talking throughout, so only the hard ceiling can end this.
+        for second in 0..300 {
+            caps.speech_heard(at(opened, second));
+        }
 
         assert_eq!(caps.expired(at(opened, 299)), None, "4:59 is still going");
         assert_eq!(
@@ -134,23 +115,8 @@ mod tests {
     }
 
     #[test]
-    fn the_silence_cap_never_fires_while_it_is_unarmed() {
-        // covers: AC-8, the deferred 30 second half. This is the property that
-        // keeps milestone 2 honest: with nothing able to report speech, the
-        // silence cap must stay quiet rather than close the pill after 30
-        // seconds of somebody talking.
-        let opened = Instant::now();
-        let caps = Deadlines::without_deepgram(opened);
-
-        assert_eq!(caps.expired(at(opened, 30)), None);
-        assert_eq!(caps.expired(at(opened, 120)), None);
-        // ...right up to the moment the other cap takes over.
-        assert_eq!(caps.expired(at(opened, 299)), None);
-    }
-
-    #[test]
     fn the_silence_cap_fires_at_thirty_seconds_once_armed() {
-        // covers: AC-8, the 30 second half, as milestone 4 will run it.
+        // covers: AC-8, the 30 second half.
         let opened = Instant::now();
         let caps = Deadlines::watching_for_silence(opened);
 
@@ -182,16 +148,6 @@ mod tests {
 
         caps.speech_heard(at(opened, 299));
         assert_eq!(caps.expired(at(opened, 300)), Some(Expiry::TimeCap));
-    }
-
-    #[test]
-    fn speech_heard_is_ignored_while_the_watch_is_unarmed() {
-        // Milestone 4 wiring this up early must not accidentally arm the cap.
-        let opened = Instant::now();
-        let mut caps = Deadlines::without_deepgram(opened);
-
-        caps.speech_heard(at(opened, 10));
-        assert_eq!(caps.expired(at(opened, 299)), None);
     }
 
     #[test]

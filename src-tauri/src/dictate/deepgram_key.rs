@@ -58,9 +58,25 @@ const CHECK_TIMEOUT: Duration = Duration::from_secs(10);
 /// shorter than this; the cap is here so nothing unbounded reaches a header.
 const MAX_KEY_LENGTH: usize = 512;
 
-/// Every way the key can be wrong, and nothing else. Four kinds, four codes,
-/// four sentences, fixed by the answers of 2026-08-30. Two of the codes were
-/// already drawn in `design/registry.md` and are unchanged.
+/// Every way Deepgram can stop dictation, and nothing else. Six kinds, six
+/// codes, six sentences. The first four were fixed by the answers of
+/// 2026-08-30 and two of their codes were already drawn in
+/// `design/registry.md`. The last two were added for milestone 4 and are
+/// recorded in
+/// `docs/evidence/dictate-with-a-hotkey/milestone-4-decisions-owed.md`, points
+/// 3 and 4, until `/architect` carries them into record 0002.
+///
+/// **The name is now narrower than the type.** Four of these really are ways a
+/// key can be wrong. `ConnectionLost` is not about the key at all. They live
+/// together anyway because record 0002 asks for one thing in particular: the
+/// sentences are "held in one place in Rust so no screen can invent its own",
+/// and splitting them by cause would give two places to look and two places to
+/// drift.
+///
+/// **Which of these can reach which screen is not decided here.** The setup
+/// screen can only ever show what `from_status` produces from
+/// `GET /v1/auth/token`, which is the first four. The last two arise only on a
+/// live stream and cannot reach it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyError {
     /// Deepgram refused the key. 401.
@@ -82,6 +98,22 @@ pub enum KeyError {
     /// somebody their key is bad when Deepgram was rate limiting them sends
     /// them to replace a key that was fine.
     CheckFailed,
+    /// The key is real, and Deepgram accepted it at the setup screen, but it is
+    /// not allowed to open a transcription stream.
+    ///
+    /// This is the gap record 0002 names in its Still open section and hands to
+    /// milestone 4 in as many words: `GET /v1/auth/token` proves a key exists,
+    /// never that it has the scope to stream. It is a kind of its own rather
+    /// than a fold into `Rejected` for the reason this file already applies
+    /// twice: Deepgram did accept this key, so saying it did not sends the
+    /// person to replace something that was never the problem.
+    ///
+    /// **Its wording is settled. Its trigger is not.** See `from_stream_status`.
+    KeyNotAllowed,
+    /// The connection to Deepgram dropped mid dictation and the one reconnect
+    /// attempt AC-14 allows did not get it back. Nothing to do with the key,
+    /// and its sentence never mentions one.
+    ConnectionLost,
 }
 
 impl KeyError {
@@ -92,6 +124,8 @@ impl KeyError {
             KeyError::NoAllowance => "deepgram_no_allowance",
             KeyError::Unreachable => "deepgram_unreachable",
             KeyError::CheckFailed => "deepgram_check_failed",
+            KeyError::KeyNotAllowed => "deepgram_key_not_allowed",
+            KeyError::ConnectionLost => "deepgram_connection_lost",
         }
     }
 
@@ -104,6 +138,8 @@ impl KeyError {
             KeyError::NoAllowance => "DEEPGRAM_NO_ALLOWANCE",
             KeyError::Unreachable => "DEEPGRAM_UNREACHABLE",
             KeyError::CheckFailed => "DEEPGRAM_CHECK_FAILED",
+            KeyError::KeyNotAllowed => "DEEPGRAM_KEY_NOT_ALLOWED",
+            KeyError::ConnectionLost => "DEEPGRAM_CONNECTION_LOST",
         }
     }
 
@@ -119,6 +155,10 @@ impl KeyError {
             }
             KeyError::CheckFailed => {
                 "The check did not succeed and Deepgram did not say why. Nothing was saved."
+            }
+            KeyError::KeyNotAllowed => "This key is not allowed to transcribe live audio.",
+            KeyError::ConnectionLost => {
+                "Dictation stopped because the connection to Deepgram was lost."
             }
         }
     }
@@ -136,6 +176,15 @@ impl KeyError {
             // The only step that helps: top up, or make a new key.
             KeyError::NoAllowance => "open_deepgram_console",
             KeyError::Unreachable | KeyError::CheckFailed => "try_again",
+            // A key's permissions are changed in Deepgram's console and
+            // nowhere else. Replace key opens a paste field, which is the
+            // right door only for somebody making a whole new key; ticking a
+            // permission on the key they already have is shorter and starts in
+            // the same place.
+            KeyError::KeyNotAllowed => "open_deepgram_console",
+            // Nothing about the key is wrong, so the step is simply to go
+            // again. It goes through `try_start`, like every other way in.
+            KeyError::ConnectionLost => "try_again",
         }
     }
 
@@ -151,6 +200,34 @@ impl KeyError {
             401 => Some(KeyError::Rejected),
             402 => Some(KeyError::NoAllowance),
             _ => Some(KeyError::CheckFailed),
+        }
+    }
+
+    /// What Deepgram refusing a *streaming* connection means. A different
+    /// mapping from `from_status` above, because the two requests do not fail
+    /// in the same ways: the check cannot produce 402 at all, and only the
+    /// stream can produce a scope failure.
+    ///
+    /// **One arm of this is decided but unproven, and must not be read as
+    /// settled.** Deepgram uses 401 for two different things, an invalid key
+    /// and a key whose permissions do not cover the request, and their error
+    /// reference documents no websocket behaviour whatsoever (checked
+    /// 2026-08-30). So 403 is mapped to `KeyNotAllowed`, on their documented
+    /// meaning for it, "project does not have access to the requested model",
+    /// and 401 stays `Rejected`. If a scope-limited key turns out to produce
+    /// 401 instead, this arm is wrong and a person with a working key is told
+    /// it was refused.
+    ///
+    /// Spike 1 in
+    /// `docs/evidence/dictate-with-a-hotkey/milestone-4-decisions-owed.md`
+    /// settles it, by pointing a deliberately narrow key at the stream and
+    /// recording what came back. Milestone 4 is not done until it has run.
+    pub fn from_stream_status(status: u16) -> KeyError {
+        match status {
+            401 => KeyError::Rejected,
+            402 => KeyError::NoAllowance,
+            403 => KeyError::KeyNotAllowed,
+            _ => KeyError::CheckFailed,
         }
     }
 }
