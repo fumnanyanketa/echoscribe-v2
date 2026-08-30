@@ -50,9 +50,10 @@ sign-in by name.
 Done when: I press the hotkey, speak a sentence, and it appears as
 typed text exactly where my cursor was, in any app.
 
-- [x] Design it: [0002-dictate-with-a-hotkey](decisions/0002-dictate-with-a-hotkey.md), 27 acceptance criteria
+- [x] Design it: [0002-dictate-with-a-hotkey](decisions/0002-dictate-with-a-hotkey.md), 31 acceptance criteria
 - [x] The hotkey and the pill · `src-tauri/src/dictate/`, `src/dictate/` · built, awaiting `/check verify` (live two-monitor, focus and sound proof)
-- [x] The microphone and the waveform · `src-tauri/src/dictate/microphone.rs`, `src-tauri/src/dictate/limits.rs`, `src/dictate/` · built, awaiting `/check verify`. Two parts held back on purpose: AC-8's 30 second silence cap waits for Deepgram, and where AC-15's message is read is owed to `/architect`. See `docs/evidence/dictate-with-a-hotkey/milestone-2-decisions-owed.md`
+- [x] The microphone and the waveform · `src-tauri/src/dictate/microphone.rs`, `src-tauri/src/dictate/limits.rs`, `src/dictate/` · built, awaiting `/check verify`. AC-8's 30 second silence cap is built and deliberately unarmed until milestone 4 arms it. See `docs/evidence/dictate-with-a-hotkey/milestone-2-decisions-owed.md`
+- [ ] Somewhere to read a microphone error · step 2a in the record · AC-28, AC-29, AC-31. `/canvas` first: there is no drawn comp for a microphone error on the EchoScribe window, and the registry's "Error pill" line needs correcting from one action to none. Settled by the fourth amendment of 2026-08-30
 - [ ] The Deepgram key
 - [ ] Transcription and typing
 - [ ] History and settings

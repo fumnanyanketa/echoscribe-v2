@@ -17,6 +17,12 @@ focus, and does, on a plain single click. This amendment closes both
 spikes, keeps the no focus refusal exactly as written, and replaces the
 mechanism the record named for it, which has been disproved live. No
 criterion is renumbered, reworded or added. The count stays at 27.
+**Amended:** 2026-08-30. Milestone 2 left three things owed. This amendment
+settles where a person reads a microphone error, given that the pill cannot be
+clicked; blesses a fourth microphone error kind this record never named; and
+writes down which microphone the feature uses. It adds AC-28 to AC-31 and takes
+the count to 31. No existing criterion is renumbered or reworded. Evidence:
+`docs/evidence/dictate-with-a-hotkey/milestone-2-decisions-owed.md`.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -116,6 +122,20 @@ great.
 - **AC-27**: Clicking or dragging the pill never moves my typing cursor.
   I can drag it mid dictation and the words that follow still land in the
   app I was already typing into, and my place in that app is not lost.
+- **AC-28**: If the microphone will not open, the EchoScribe window comes to
+  the front saying what went wrong: a short code, one sentence naming the
+  cause, and exactly one action. No pill appears and neither sound plays.
+- **AC-29**: When Windows is blocking microphone access, that one action opens
+  the Windows microphone privacy page itself. On every other microphone
+  failure the one action is Try again, and pressing it starts dictation there
+  and then if the microphone now opens.
+- **AC-30**: Nothing in dictation ever asks me to click the pill. When
+  something goes wrong while the microphone is open, the pill says so in words
+  and closes, and if there is anything I can do about it the EchoScribe window
+  comes forward carrying that one action.
+- **AC-31**: Dictation uses whichever microphone Windows is set to. Changing
+  the Windows default and dictating again uses the new one, and there is
+  nowhere in EchoScribe to choose a microphone.
 
 ## The decision
 
@@ -197,6 +217,86 @@ making the pill inert to the mouse is a real option, weighed below, and
 taking it is the user's call in a fresh conversation, not a fallback taken
 on the way past.
 
+**Where a person reads an error, settled 2026-08-30.** Milestone 2 found two
+decided things that looked as though they could not both hold. The design
+system puts errors in the pill, and the amendment above takes the pill out of
+the mouse's path everywhere except its grip, so the pill has no surface that
+can carry AC-15's link to the Windows privacy setting.
+
+They can both hold, because they were never about the same error. AC-15's own
+words are that the pill never appears. The pill on screen is the one visible
+sign that the microphone is open, which is the whole of the no silent
+listening rule, so a pill may not appear when the microphone did not open. An
+error that happens before there is a pill was never a pill error.
+
+So the rule, for every error in this feature and not only AC-15:
+
+- **The pill states what happened, in words, and never asks to be clicked.**
+  It is a sign, not a control. This holds for errors that arrive mid
+  dictation too, AC-13 and AC-14, where the pill does exist.
+- **Every action a person can take lives in the EchoScribe window**, which
+  takes clicks and always has. On a microphone failure that window is brought
+  to the front carrying a short code, one sentence of cause, and exactly one
+  action. That is the same shape AC-9 already uses when the hotkey is pressed
+  with no Deepgram key saved: a hotkey press that cannot start dictation, and
+  a window that says why.
+
+The cost is named rather than hidden. Bringing that window forward moves the
+focused window away from the app the person was typing in. That is a real
+interruption, it is the same one AC-9 already accepts, and it is only ever the
+answer to a hotkey the person just pressed and got nothing from. Nothing is
+brought forward that the person did not ask for.
+
+**There is no drawn comp for this screen.** The EchoScribe window shows the
+sign-in screen and nothing else today, so a microphone error is the first
+screen in it that is not sign in. `design/registry.md` has to gain it before
+it is built, which is `/canvas` work and the next session either way. Two
+things are owed there: the microphone error state on the EchoScribe window,
+and the registry's own "Error pill" line, which says an error pill has
+"exactly one action" and must now say it has none. This record does not draw
+either and must not be read as having done so.
+
+**The four microphone errors, their wording and their one action.** `/develop`
+wrote all four sentences during milestone 2 and was right to say the wording
+was not its to choose. Three are confirmed exactly as written, one is changed,
+and each is paired with the single action AC-29 requires.
+
+| Kind | Sentence | The one action |
+|---|---|---|
+| `microphone_blocked_by_windows` | Windows is not letting EchoScribe use the microphone. | Opens the Windows microphone privacy page |
+| `microphone_in_use_by_another_app` | Another app is using the microphone right now. | Try again |
+| `no_microphone_found` | Windows cannot find a microphone. | Try again |
+| `microphone_unavailable` | The microphone could not be opened. | Try again |
+
+"No microphone is plugged in", which `/develop` wrote for the third, is
+replaced. A laptop's microphone is built in and was never plugged in, so that
+sentence sends a laptop user looking for a cable that does not exist.
+
+**The fourth kind is blessed.** This record's interface surface named three
+microphone errors. cpal can fail in ways that are none of them, an unsupported
+stream configuration among them, and `microphone.rs` maps those to a fourth
+kind rather than dressing one of the three up to fit. That is right, and it is
+right for this record's own reason: each error reads differently because each
+has a different next step, and telling somebody another app has their
+microphone when it does not sends them to the wrong place entirely. A
+catch-all that admits it does not know is honest and still actionable, because
+Try again is a real next step for a transient failure. The fourth kind is
+named here so it is a decision rather than an implementation detail, and so
+nothing later collapses it into one of the three.
+
+**Which microphone is used.** Whichever one Windows is already set to. This
+record names no microphone anywhere: no device column, no device field in
+`dictation_setting`, no device command, and until now no criterion. That was
+never an omission to be filled in during a build, and AC-31 writes it down so
+it stops looking like one. `design/registry.md` does draw a device row for
+dictation settings, which means a picker exists somewhere in the product's
+future. It is not in this record and it is not milestone 5's to slip in.
+A picker needs a device list, a stored device against the account, what
+happens when that device is gone, and a live input level in a settings screen,
+which would open the microphone from a second place in the app and touch the
+no silent listening rule. That is a feature with its own risk, so it gets its
+own record when it is wanted, not a settings row here.
+
 ## What else was considered
 
 | Option | Why not |
@@ -223,6 +323,10 @@ on the way past.
 | Moving the pill only from a settings screen | Keeps a way out while the pill is never touchable during dictation, which is the only time focus matters. The settings screen does not exist until milestone 5 and AC-24 is a milestone 1 promise, so this leaves the pill unmovable for four milestones. |
 | Treating the hotkey stalling after a click as the same bug as the focus theft | They appear together and one fix might well cover both. The hook is a machine wide one that is called whatever window is focused, so the link is a guess. Fixing on the guess and proving once would let a second fault ship behind a passing check. They are investigated together and proved separately. |
 | Leaving history entirely to plan row 5 | Keeps this feature to the bare tracer bullet, but row 5 would then have to reach back into dictation code to start recording, which is exactly the cross feature edit the architecture rules forbid. |
+| Giving the pill one more clickable area, so it can carry the privacy link | Keeps every error where the design system first put it, and the pill is already the thing the person is looking at. It reopens the fix for the AC-27 focus defect, whose most important layer has no automated test, to buy a surface for a message that AC-15 says must appear when there is no pill at all. Expensive, and aimed at the wrong error. |
+| An error pill with no action, and the instruction in words only | Cheapest of the four, and it keeps the pill inert. It costs AC-15's link outright, and it puts a pill on screen when the microphone did not open, which breaks the one thing the pill means. |
+| A Windows notification for the microphone error | Needs no screen and survives the person not looking at the app. AGENTS.md puts notifications out of scope, so this is a different decision wearing a small hat. |
+| A microphone picker in this record | The device row is already drawn, so it looks like a small addition. It needs a device list, a device stored against the account, a rule for when that device is gone, and a live input level in settings, which opens the microphone from a second place in the app. That is a feature with its own risk section, not a settings row. |
 
 ## Data model
 
@@ -289,6 +393,11 @@ One migration, creating all three tables.
 | Microphone unavailable, and why | AC-15 | The error the audio layer returns when opening the device, mapped to a named cause. |
 | Start time of a dictation | AC-17 | The moment the microphone opened, taken in Rust as UTC. |
 | Duration | AC-17 | The moment the microphone closed, minus the start time. |
+| Which microphone is opened | AC-1, AC-15, AC-31 | Whichever input device Windows is set to as its default, asked of the system at the moment the microphone opens. This record stores no device and offers no way to choose one. |
+| Which of the four microphone errors it is | AC-15, AC-28, AC-29 | The error the audio layer returns when opening the device, mapped to one of four named kinds. Anything that is none of the three known causes is the fourth, `microphone_unavailable`, and is never dressed up as one of the others. |
+| The sentence shown for each microphone error | AC-15, AC-28 | This record, the four sentence table in The decision. Fixed wording, not a setting, and it never carries a device name, a path, or anything from the audio. |
+| Where a microphone error is read | AC-15, AC-28, AC-30 | This record. The EchoScribe window, brought to the front. Never the pill, which has no action and never appears when the microphone did not open. |
+| The Windows microphone privacy page | AC-15, AC-29 | A fixed literal address held in Rust, `ms-settings:privacy-microphone`, opened through the Windows shell with the already approved `windows` crate. The interface never supplies or sees it, and it is never built from anything. |
 
 ## Interface surface
 
@@ -316,6 +425,13 @@ from the session. Every command refuses when nobody is signed in.
   the position ever crosses into the interface as a number.
 - `get_dictation_state()` returns idle, listening, or stopped with a
   reason. Lets the pill recover its state after a reload.
+- `open_microphone_privacy_settings()` opens the Windows microphone privacy
+  page. It takes nothing and returns nothing. The address is a fixed literal
+  in Rust, so the interface can ask for that one page and no other.
+- `retry_dictation()` tries to open the microphone again and starts dictation
+  if it opens, or comes back with the same named error if it does not. It is
+  the Try again action on three of the four microphone errors, and it goes
+  through the same path the hotkey does, so there is only ever one way in.
 
 Rust sends these events out to the pill. None carries audio or the key.
 
@@ -331,7 +447,17 @@ Rust sends these events out to the pill. None carries audio or the key.
 Errors that matter and must each read differently: no key saved, key
 rejected, allowance exhausted, cannot reach Deepgram, connection lost mid
 dictation, microphone blocked by Windows, microphone in use by another
-app, no microphone found, not signed in.
+app, no microphone found, the microphone failing for some other reason, not
+signed in.
+
+**Where each of those is read, settled 2026-08-30.** The pill says what
+happened, in words, and carries no action, because nothing but its grip
+answers the mouse. Every action lives in the EchoScribe window, which Rust
+brings to the front when it has something the person must act on. A
+microphone error is read there and nowhere else, because AC-15 forbids a pill
+appearing at all when the microphone did not open. `dictation:error` already
+goes to every window, so the EchoScribe window receives it on the capability
+it has today and nothing needs widening.
 
 ## Risk
 
@@ -374,6 +500,12 @@ call for it.**
   Tested live on 2026-08-29 and found broken. The refusal is unchanged by
   that. The fix has to achieve it rather than soften it, and a grace period
   in which focus moves and is then put back does not count as meeting it.
+- Put a device name, a file path, or anything drawn from the audio into an
+  error message, an event or a log. A microphone error says which of four
+  things went wrong and nothing else about the machine.
+- Show a pill when the microphone is not open. The pill is the one visible
+  sign that it is, so an error that happens before it opens is read in the
+  EchoScribe window instead, never on a pill.
 - Treat transcribed text as anything but characters to type. It is
   outside input and is never interpreted.
 
@@ -422,7 +554,33 @@ re-verify that follows must cover, in one sitting:
 2. **The microphone and the waveform.** Live capture feeding a loudness
    number to the pill, silence and time cap closing it on their own, and
    every microphone failure reading correctly. Audio is discarded and
-   nothing leaves the machine.
+   nothing leaves the machine. **Built on 2026-08-29 except the reading
+   correctly half**, which had nowhere to be read. See 2a. AC-8's silence cap
+   is built, tested and deliberately unarmed until milestone 4 arms it, which
+   is what `limits.rs` and its `without_deepgram` constructor are for.
+
+**Step 2a, added 2026-08-30: somewhere to read a microphone error.** Milestone
+2 is not finished until AC-15 holds, and AC-15 cannot hold while its message
+reaches only an event and the dev console. `/canvas` goes first, because there
+is no drawn comp for a microphone error on the EchoScribe window and none may
+be invented during a build. Then AC-28, AC-29 and AC-31, in this order:
+
+- `/canvas` adds the microphone error state on the EchoScribe window to
+  `design/registry.md`, and corrects the registry's "Error pill" line, which
+  says an error pill has "exactly one action" and must now say it has none.
+- The four sentences in `microphone.rs::MicError::message` are made to match
+  the table in The decision. Three are already right. `no_microphone_found`
+  changes to "Windows cannot find a microphone."
+- The EchoScribe window is brought to the front on a microphone failure,
+  showing the code, the sentence and the one action.
+- `open_microphone_privacy_settings()` and `retry_dictation()`.
+- Proved live, all four kinds. Blocked is provable by switching microphone
+  access off in Windows privacy settings; no microphone found by unplugging
+  or disabling every input device. Prove the pill does not appear and neither
+  sound plays in each case, and that Try again starts dictation once the cause
+  is fixed. AC-30's mid dictation half cannot be proved until milestone 4, so
+  it is proved there, not assumed here.
+
 3. **The Deepgram key.** The guided setup screen, checking a key against
    Deepgram, storing it in Credential Manager, the masked display in
    settings, and every key related error reading correctly.
@@ -466,6 +624,16 @@ re-verify that follows must cover, in one sitting:
 - **The Deepgram setup step stands between a new person and their first
   word.** Decision 0001 already flagged this. AC-9 through AC-11 make that
   screen load bearing.
+- **The pill is a sign and never a control, so every action costs a window.**
+  Anything a person can do about an error has to be somewhere they can click,
+  and that is the EchoScribe window coming to the front. Each new error worth
+  acting on is therefore a screen `/canvas` has to draw, not a line of text
+  added to the pill. That is the price of the pill never taking focus, and it
+  is paid every time, not once.
+- **Bringing the window forward interrupts the app the person was in.** It is
+  only ever done in answer to a hotkey they just pressed that produced
+  nothing, so it is never a surprise, but it does move focus out of their
+  document. Nothing else in this feature may bring a window forward.
 - **The pill refusing focus is not free, and now never will be.** This
   record first wrote it down as one window style set once, and it turned out
   to need care at three separate layers. Any future change to the pill, its
