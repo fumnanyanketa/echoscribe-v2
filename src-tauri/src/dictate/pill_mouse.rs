@@ -302,4 +302,239 @@ mod tests {
         assert!(!grip_contains(1.0, 20, 15));
         assert!(!grip_contains(1.0, 20, 60));
     }
+
+    // ---- Regression tests for the focus fault of 2026-08-29 ----
+    //
+    // These run against real Windows windows, created here and thrown away
+    // again, because what is under test are answers Windows itself gives.
+    //
+    // What they cannot reach, and why. The window procedure `pill_proc` is not
+    // called by any test in this file. Calling it links the Tauri runtime into
+    // the unit-test binary, by way of `end_drag` saving the pill's spot, and
+    // that binary then will not start at all: it picks up an import of
+    // `TaskDialogIndirect` from Tauri's menu crate, which needs the Common
+    // Controls version 6 manifest that only the app binary gets. So the pieces
+    // the window procedure calls are tested directly instead, and the
+    // procedure's own dispatch is left to the live pass. This was measured, not
+    // assumed; see the hand-off notes for 2026-08-29.
+
+    use std::sync::{Mutex, Once};
+    use windows::core::{w, PCWSTR};
+    use windows::Win32::Foundation::HINSTANCE;
+    use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+    use windows::Win32::UI::Input::KeyboardAndMouse::IsWindowEnabled;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        CreateWindowExW, DefWindowProcW, DestroyWindow, RegisterClassW, WINDOW_EX_STYLE, WNDCLASSW,
+        WS_CHILD, WS_POPUP,
+    };
+
+    /// A drag is held in process-wide state, so the tests that start one run
+    /// one at a time.
+    static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
+    static TEST_CLASS: Once = Once::new();
+    const TEST_CLASS_NAME: PCWSTR = w!("EchoScribeTestPillFrame");
+
+    fn serially() -> std::sync::MutexGuard<'static, ()> {
+        let guard = ONE_AT_A_TIME.lock().unwrap_or_else(|e| e.into_inner());
+        // A test that panicked mid-drag would otherwise leave this set and make
+        // the next one fail for the wrong reason.
+        DRAGGING.store(false, Ordering::SeqCst);
+        guard
+    }
+
+    /// The stock window procedure, wrapped so it has the calling convention a
+    /// window class asks for.
+    unsafe extern "system" fn stock_proc(
+        hwnd: HWND,
+        msg: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> LRESULT {
+        DefWindowProcW(hwnd, msg, wparam, lparam)
+    }
+
+    fn test_instance() -> HINSTANCE {
+        HINSTANCE(
+            unsafe { GetModuleHandleW(None) }
+                .expect("a module handle")
+                .0,
+        )
+    }
+
+    /// A real, hidden Windows window the size of the pill's frame.
+    fn a_real_window(parent: Option<HWND>) -> HWND {
+        TEST_CLASS.call_once(|| {
+            let class = WNDCLASSW {
+                lpfnWndProc: Some(stock_proc),
+                hInstance: test_instance(),
+                lpszClassName: TEST_CLASS_NAME,
+                ..Default::default()
+            };
+            assert!(
+                unsafe { RegisterClassW(&class) } != 0,
+                "could not register the test window class"
+            );
+        });
+        let style = if parent.is_some() { WS_CHILD } else { WS_POPUP };
+        unsafe {
+            CreateWindowExW(
+                WINDOW_EX_STYLE(0),
+                TEST_CLASS_NAME,
+                w!("echoscribe test"),
+                style,
+                100,
+                100,
+                264,
+                76,
+                parent,
+                None,
+                Some(test_instance()),
+                None,
+            )
+        }
+        .expect("could not create a test window")
+    }
+
+    fn destroy(hwnd: HWND) {
+        let _ = unsafe { DestroyWindow(hwnd) };
+    }
+
+    fn cursor() -> POINT {
+        let mut point = POINT::default();
+        let _ = unsafe { GetCursorPos(&mut point) };
+        point
+    }
+
+    /// Whether `value` sits between two readings of the pointer taken either
+    /// side of the move, give or take a pixel of rounding.
+    fn between(value: i32, first: i32, second: i32) -> bool {
+        value >= first.min(second) - 1 && value <= first.max(second) + 1
+    }
+
+    // (50, 50) is inside the grip at every screen scale from 1.0 to 3.0, and
+    // (200, 50) is outside it at every one of them: the grip runs from 16 to 60
+    // logical pixels in from the window's top-left, so 50 clears 16 x 3 and
+    // stays short of 60 x 1, while 200 clears 60 x 3. That keeps the two tests
+    // below true whichever monitor they happen to run on.
+    const IN_THE_GRIP: (i32, i32) = (50, 50);
+    const ON_THE_WORDS: (i32, i32) = (200, 50);
+
+    #[test]
+    fn the_web_view_is_taken_out_of_the_mouse_path() {
+        // covers: AC-27. Layer 2 of the three in record 0002. A click must never
+        // reach Chromium, because Chromium focuses itself, and focusing a child
+        // activates its top-level parent, walking straight past the
+        // non-activating style. Disabling the child is what stops that.
+        let frame = a_real_window(None);
+        let web_view = a_real_window(Some(frame));
+        assert!(
+            unsafe { IsWindowEnabled(web_view) }.as_bool(),
+            "a fresh child window starts enabled, so the next assertion means something"
+        );
+
+        keep_mouse_out_of_the_web_view(frame);
+
+        assert!(
+            !unsafe { IsWindowEnabled(web_view) }.as_bool(),
+            "the pill's child window can still receive the mouse, so Chromium can \
+             focus itself and take the person's typing cursor with it"
+        );
+        destroy(frame);
+    }
+
+    #[test]
+    fn the_tripwire_notices_the_non_activating_style_going_missing() {
+        // covers: AC-27. The standing window style is Tauri's to keep and no
+        // test can see it; the source guards in pill_window.rs are the nearest
+        // thing. What can be proved is that the run-time tripwire watching that
+        // style really does read the right bit, in both directions. If this were
+        // wrong the style could be lost live and nothing would say so, which is
+        // exactly what happened on 2026-08-29.
+        let window = a_real_window(None);
+        assert!(
+            !refuses_activation(window),
+            "a window created without WS_EX_NOACTIVATE was reported as refusing \
+             activation, so the tripwire would stay silent while the pill stole focus"
+        );
+
+        unsafe {
+            let existing = GetWindowLongPtrW(window, GWL_EXSTYLE);
+            SetWindowLongPtrW(window, GWL_EXSTYLE, existing | WS_EX_NOACTIVATE.0 as isize);
+        }
+
+        assert!(
+            refuses_activation(window),
+            "a window carrying WS_EX_NOACTIVATE was reported as activatable, so the \
+             tripwire would cry wolf on every open"
+        );
+        destroy(window);
+    }
+
+    #[test]
+    fn the_grip_is_hit_tested_at_the_windows_own_screen_scale() {
+        // covers: AC-27. The four tests above pin the grip's geometry at scales
+        // chosen by hand. This one goes through `in_grip`, which asks Windows
+        // for the scale of the screen the window is actually on, so a wrong
+        // reading of the scale is caught as well as a wrong rectangle.
+        let window = a_real_window(None);
+        assert!(
+            in_grip(window, IN_THE_GRIP.0, IN_THE_GRIP.1),
+            "the middle of the grip was not treated as the grip, so the pill \
+             cannot be dragged"
+        );
+        assert!(
+            !in_grip(window, ON_THE_WORDS.0, ON_THE_WORDS.1),
+            "the words were treated as the grip, so the surface that answers the \
+             mouse is wider than the one part of the pill meant to"
+        );
+        destroy(window);
+    }
+
+    #[test]
+    fn a_drag_is_moved_by_this_code_and_never_by_windows_own_move_loop() {
+        // covers: AC-5. The hotkey went dead after the pill was touched because
+        // the drag used Windows' own move loop. That loop is modal: it takes
+        // over the thread it runs on and does not hand it back until the mouse
+        // comes up, and the pill's thread is not free to do anything else
+        // meanwhile. The replacement is these two calls, which move the window
+        // and return. This walks them and checks the window really did move to
+        // keep the grabbed point under the pointer.
+        let _serial = serially();
+        let window = a_real_window(None);
+
+        begin_drag(window, IN_THE_GRIP.0, IN_THE_GRIP.1);
+        assert!(
+            DRAGGING.load(Ordering::SeqCst),
+            "grabbing the grip did not start a drag this code owns"
+        );
+
+        let before = cursor();
+        follow_the_pointer(window);
+        let after = cursor();
+
+        let (left, top) = window_topleft(window).expect("the test window has a position");
+        // The pointer is read either side of the move as well as inside it, so
+        // a real hand nudging the mouse mid-test cannot make this flap.
+        assert!(
+            between(left + IN_THE_GRIP.0, before.x, after.x),
+            "the window was not moved to keep the grabbed point under the pointer: \
+             its left edge was {left}, and the pointer was at x {} then {}",
+            before.x,
+            after.x
+        );
+        assert!(
+            between(top + IN_THE_GRIP.1, before.y, after.y),
+            "the window was not moved to keep the grabbed point under the pointer: \
+             its top edge was {top}, and the pointer was at y {} then {}",
+            before.y,
+            after.y
+        );
+
+        // `end_drag` cannot be called from here: it reaches back into the app to
+        // save the spot, which would link the Tauri runtime into this binary and
+        // stop it starting. Undo by hand instead.
+        DRAGGING.store(false, Ordering::SeqCst);
+        let _ = unsafe { ReleaseCapture() };
+        destroy(window);
+    }
 }

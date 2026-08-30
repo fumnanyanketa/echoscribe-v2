@@ -314,4 +314,114 @@ mod tests {
         assert_eq!(sx - 1920, px);
         assert_eq!(sy, py);
     }
+
+    // ---- Source guards for the focus fault of 2026-08-29 ----
+    //
+    // Read this before trusting them. These are NOT behaviour tests. They read
+    // this feature's own source text and check that the shape of the fix is
+    // still there. They cannot run the app, cannot build a real pill, and
+    // cannot see the window style Windows ends up with.
+    //
+    // They exist because the fault they guard has no honest automated test.
+    // The style is put on a real window by Tauri, at run time, and it was lost
+    // silently: Tauri rewrites a window's whole style word from its own flags
+    // whenever any flag changes, and showing the pill changes one, so the style
+    // that was set by hand at startup was wiped on every open. Proving the
+    // style is present needs a real pill from a real Tauri app, which a unit
+    // test cannot make. So there are three layers instead, and this is the
+    // weakest of them:
+    //
+    //   1. Live, and the only real proof: click the pill with the caret in a
+    //      text editor and check the next thing typed lands in the editor.
+    //      Manual, and owed by record 0002's step 1a.
+    //   2. Run time: `open` calls `pill_mouse::refuses_activation` after every
+    //      show and shouts if the style has gone. That check is tested for real
+    //      in pill_mouse.rs.
+    //   3. These: if someone deletes `focusable(false)` or goes back to setting
+    //      the style by hand, the suite goes red at once rather than at the
+    //      next live run.
+
+    /// This feature's source, minus its own tests, so a guard cannot be
+    /// satisfied by the test that checks it.
+    fn source_without_tests(whole: &str) -> &str {
+        whole
+            .split("#[cfg(test)]")
+            .next()
+            .expect("a source file always has a first part")
+    }
+
+    /// Whitespace removed and anything non-ASCII dropped, so a guard survives
+    /// `cargo fmt` moving a call across lines.
+    fn flattened(source: &str) -> String {
+        source
+            .chars()
+            .filter(|c| c.is_ascii() && !c.is_ascii_whitespace())
+            .collect()
+    }
+
+    fn this_file() -> &'static str {
+        source_without_tests(include_str!("pill_window.rs"))
+    }
+
+    fn the_mouse_file() -> &'static str {
+        source_without_tests(include_str!("pill_mouse.rs"))
+    }
+
+    #[test]
+    fn the_pill_asks_tauri_for_the_non_activating_window_style() {
+        // covers: AC-27, as a source guard only. `focusable(false)` is what
+        // makes the style Tauri's own, and so what makes it survive every open.
+        // Removing it brings back the fault of 2026-08-29 in full: a single
+        // click on the pill takes the typing cursor and the keystrokes that
+        // follow are lost.
+        assert!(
+            flattened(this_file()).contains(".focusable(false)"),
+            "the pill window is no longer built with focusable(false). Tauri is \
+             then free to give it an activating style, and clicking the pill will \
+             take the person's typing cursor (record 0002 AC-27)"
+        );
+    }
+
+    #[test]
+    fn the_non_activating_style_is_never_set_by_hand() {
+        // covers: AC-27, as a source guard only. Setting the extended window
+        // style directly is the exact thing that did not work: Tauri rewrites
+        // the whole style word from its own flags on every change, so a
+        // hand-set style is wiped on every single open, silently.
+        for (name, source) in [
+            ("pill_window.rs", this_file()),
+            ("pill_mouse.rs", the_mouse_file()),
+        ] {
+            let flat = flattened(source);
+            let by_hand = flat.match_indices("GWL_EXSTYLE").any(|(index, _)| {
+                let look_back = index.saturating_sub(40);
+                flat[look_back..index].contains("SetWindowLong")
+            });
+            assert!(
+                !by_hand,
+                "{name} writes the extended window style by hand. Tauri wipes that \
+                 on the next open and the pill starts taking focus again; the style \
+                 has to come from focusable(false) instead (record 0002 AC-27)"
+            );
+        }
+    }
+
+    #[test]
+    fn the_style_tripwire_runs_after_the_pill_is_shown_not_before() {
+        // covers: AC-27, as a source guard only. Showing the window is the
+        // moment the style used to be lost, so a check made before the show
+        // would pass every time while the pill stole focus every time.
+        let flat = flattened(this_file());
+        let shown = flat
+            .find("window.show()")
+            .expect("open() still shows the pill window");
+        let checked = flat
+            .find("refuses_activation")
+            .expect("open() still checks that the pill refuses activation");
+        assert!(
+            checked > shown,
+            "the non-activating style is checked before the pill is shown. That is \
+             the one order in which the check cannot see the fault it exists for"
+        );
+    }
 }
