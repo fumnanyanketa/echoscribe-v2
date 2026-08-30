@@ -52,7 +52,7 @@ typed text exactly where my cursor was, in any app.
 
 - [x] Design it: [0002-dictate-with-a-hotkey](decisions/0002-dictate-with-a-hotkey.md), 27 acceptance criteria
 - [x] The hotkey and the pill · `src-tauri/src/dictate/`, `src/dictate/` · built, awaiting `/check verify` (live two-monitor, focus and sound proof)
-- [ ] The microphone and the waveform
+- [x] The microphone and the waveform · `src-tauri/src/dictate/microphone.rs`, `src-tauri/src/dictate/limits.rs`, `src/dictate/` · built, awaiting `/check verify`. Two parts held back on purpose: AC-8's 30 second silence cap waits for Deepgram, and where AC-15's message is read is owed to `/architect`. See `docs/evidence/dictate-with-a-hotkey/milestone-2-decisions-owed.md`
 - [ ] The Deepgram key
 - [ ] Transcription and typing
 - [ ] History and settings

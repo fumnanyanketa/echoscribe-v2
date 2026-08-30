@@ -1,10 +1,16 @@
 /* The floating pill.
  *
- * Milestone 1 shows one state: the microphone is open, no speech yet. The
- * breathing violet ring and the literal words MIC OPEN are two independent
- * signals for the same fact, so someone who cannot tell violet from grey still
- * reads it (design/design-system.md). Off is the pill absent from the screen
- * entirely, so there is no idle-looking form to mistake for it.
+ * Milestone 2 shows one state: the microphone is open, with a live level.
+ * Three independent signals say the same fact, so someone who cannot tell
+ * violet from grey, or who has animation switched off, still reads it
+ * (design/design-system.md):
+ *
+ *   1. the literal words MIC OPEN,
+ *   2. the breathing violet ring,
+ *   3. the level meter moving when sound arrives.
+ *
+ * Off is the pill absent from the screen entirely, so there is no idle-looking
+ * form to mistake for it.
  *
  * The window behind this page is larger than the pill, with a transparent
  * margin, so the pill's shadow has room to render. All values come from
@@ -67,11 +73,51 @@
   background: var(--color-ink-grip);
 }
 
+/* The level meter: 18 bars, amplitude only, never a spectrogram, flat at
+ * silence (design/registry.md, design/design-system.md). It means exactly one
+ * thing, that sound is arriving, and it is never a reading of quality.
+ *
+ * Each bar is scaled from the middle, so silence is a thin level line rather
+ * than nothing at all: an empty gap would read as broken, a flat line reads as
+ * a quiet instrument. Rust sends one number every 60 ms and pill.js shifts it
+ * in from the right, so the 18 bars are the last second or so of loudness. */
+/* The meter takes whatever width is left once the grip, the divider and the
+ * words have theirs, so the pill fills its fixed 232px edge to edge with no
+ * dead space, and so a wider fallback font shrinks the meter rather than
+ * pushing MIC OPEN out of the pill. */
+.pill__meter {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 1;
+  min-width: 44px;
+  height: 22px;
+}
+
+.pill__meter i {
+  flex: 1;
+  height: 100%;
+  border-radius: var(--radius-xs);
+  background: var(--color-accent);
+  transform: scaleY(var(--bar, 0.08));
+  /* Glide between the 60 ms updates instead of stepping. styles.css already
+   * collapses every transition to 1ms under prefers-reduced-motion, which
+   * leaves the meter reading correctly and simply not easing. The meter is
+   * information, not decoration, so it keeps updating either way. */
+  transition: transform var(--meter-interval) linear;
+}
+
+.pill__divider {
+  align-self: stretch;
+  width: 1px;
+  margin: var(--space-3) var(--space-2);
+  background: var(--color-pill-border);
+}
+
 .pill__signal {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding-left: var(--space-1);
 }
 
 .pill__ring {

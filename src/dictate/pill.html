@@ -15,6 +15,15 @@
           <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
         </span>
       </div>
+      <!-- 18 bars, amplitude only, flat at silence (design/registry.md). It is
+           a third signal for a fact the ring and the words already carry, so it
+           is hidden from screen readers rather than read out sixty times a
+           second. -->
+      <div class="pill__meter" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <span class="pill__divider" aria-hidden="true"></span>
       <div class="pill__signal">
         <span class="pill__ring" aria-hidden="true"></span>
         <span class="pill__label" role="status">MIC OPEN</span>

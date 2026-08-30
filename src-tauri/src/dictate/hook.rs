@@ -15,8 +15,10 @@
 //!
 //! The hook is installed once, on the first sign-in of a run, and then stays
 //! installed for the life of the process; signing out only disarms it. On a
-//! clean double tap the callback sends one unit on a channel; the consumer
-//! thread in `mod.rs` turns that into "toggle dictation".
+//! clean double tap the callback sends `Command::Toggle` on a channel; the
+//! consumer thread in `mod.rs` acts on it. That is the whole of what leaves
+//! this file: one message saying the double tap happened, carrying nothing
+//! about which keys were involved.
 
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
@@ -33,6 +35,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::machine::{Class, Machine};
+use super::Command;
 
 /// The chosen modifier, as the two settings values map to it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,13 +58,13 @@ thread_local! {
     /// The double-tap recogniser. Only ever touched on the hook thread.
     static MACHINE: RefCell<Machine> = RefCell::new(Machine::default());
     /// Where a completed double tap is announced. Set once when the thread starts.
-    static TOGGLE_TX: RefCell<Option<Sender<()>>> = const { RefCell::new(None) };
+    static TOGGLE_TX: RefCell<Option<Sender<Command>>> = const { RefCell::new(None) };
 }
 
 /// Start the hook thread if it is not already running, and hand it the channel
 /// a double tap is announced on. Safe to call more than once; only the first
 /// call does anything.
-pub fn install(toggle_tx: Sender<()>) {
+pub fn install(toggle_tx: Sender<Command>) {
     if INSTALLED.set(()).is_err() {
         return;
     }
@@ -83,7 +86,7 @@ pub fn disarm() {
     ARMED.store(false, Ordering::SeqCst);
 }
 
-fn run(toggle_tx: Sender<()>) {
+fn run(toggle_tx: Sender<Command>) {
     TOGGLE_TX.with(|slot| *slot.borrow_mut() = Some(toggle_tx));
 
     let hmod = unsafe { GetModuleHandleW(None) }.expect("module handle for the hook");
@@ -144,7 +147,7 @@ unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARA
     if fired {
         TOGGLE_TX.with(|slot| {
             if let Some(tx) = slot.borrow().as_ref() {
-                let _ = tx.send(());
+                let _ = tx.send(Command::Toggle);
             }
         });
     }
