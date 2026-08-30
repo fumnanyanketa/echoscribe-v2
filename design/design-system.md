@@ -115,7 +115,10 @@ history both show non-Latin text.
 
 Error states keep **the exact geometry of the working pill**. Only the
 violet channel is swapped for one coloured edge. Each carries, in order: a
-mono code, one sentence of plain cause, and exactly one action.
+mono code and one sentence of plain cause, and no action at all. The pill
+is a sign, never a control, and nothing but its grip answers the mouse.
+Every action a person can take lives in the EchoScribe window instead
+(record 0002, amended 2026-08-30, AC-30).
 
 When a connection drops, the pill states **what it managed to keep**.
 Silent loss is the worst failure a dictation tool can have, and a user who
