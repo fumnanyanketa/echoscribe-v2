@@ -16,6 +16,10 @@ const { listen } = window.__TAURI__.event;
 const app = document.getElementById("app");
 
 let currentUnmount = null;
+// Which screen is mounted. A signal that clears one screen must never clear
+// another, so every mount below names itself here and the clearing listener
+// checks the name before it acts (record 0002 AC-32).
+let currentScreen = null;
 // Set by the auth:signed_out event so the next sign-in screen can say why the
 // person is back on it.
 let pendingNotice = null;
@@ -34,16 +38,19 @@ async function render() {
 
   if (state.state === "signed_in" || state.state === "signed_in_offline") {
     currentUnmount = mountSignedIn(app, state);
+    currentScreen = "signed-in";
   } else {
     currentUnmount = await mountSignIn(app, {
       startInWaiting: state.state === "signing_in",
       returnedReason: pendingNotice,
     });
+    currentScreen = "sign-in";
     pendingNotice = null;
   }
 }
 
 function unmountCurrent() {
+  currentScreen = null;
   if (currentUnmount) {
     currentUnmount();
     currentUnmount = null;
@@ -73,7 +80,9 @@ listen("auth:signed_out", (event) => {
 // The microphone would not open (record 0002 AC-28). Rust brings this window
 // to the front; this mounts the screen with the code, the sentence and the one
 // action. Only the four microphone kinds are this screen's to show. The screen
-// is left when Try again succeeds, or when an auth change re-renders the shell.
+// is left when Try again succeeds, when the microphone opens by any other
+// route (the listener below, AC-32), or when an auth change re-renders the
+// shell.
 listen("dictation:error", (event) => {
   const payload = event.payload || {};
   if (!MIC_ERROR_KINDS.includes(payload.kind)) return;
@@ -83,6 +92,33 @@ listen("dictation:error", (event) => {
     message: payload.message,
     onCleared: () => render(),
   });
+  currentScreen = "mic-error";
+});
+// The microphone opened (record 0002 AC-32, and the clearing table in the
+// record's "The decision"). A microphone error still on screen is a claim that
+// dictation cannot start, and this is that claim's own proof that it can, so
+// the screen clears itself and the window shows whatever is ordinarily true.
+// That is the same ending a successful Try again already has, drawn as
+// "Microphone error, retried" in design/registry.md; the button is no longer
+// the only door into it.
+//
+// It clears quietly. Nothing here shows, hides, focuses or moves the window:
+// the person is dictating into another app, and this record brings a window
+// forward for one reason only, a hotkey press that produced nothing.
+//
+// Only the four microphone kinds clear on this signal, which is why it checks
+// the mounted screen rather than clearing whatever is there. An open
+// microphone is no proof that a Deepgram allowance is back, so the spent
+// allowance error clears on the first finalised words instead, in milestone 4.
+// Its kind is deliberately not named anywhere in this file: a source guard in
+// src-tauri/src/dictate/mod.rs keeps it out, so nobody can quietly widen this
+// listener to cover it.
+listen("dictation:opened", () => {
+  if (currentScreen !== "mic-error") return;
+  // Claimed here, before the await inside render, so a second opening cannot
+  // start a second render of the same screen.
+  currentScreen = null;
+  render();
 });
 // The hotkey was pressed with no Deepgram key saved (record 0002 AC-9). The
 // microphone did not open, no pill appeared and neither sound played; Rust
@@ -94,6 +130,7 @@ listen("dictation:needs_key", () => {
   currentUnmount = mountKeySetup(app, {
     onSaved: () => render(),
   });
+  currentScreen = "key-setup";
 });
 // The core reached the point of knowing it cannot reach Clerk this launch. The
 // screen is already showing the stored identity; this makes sure the "working

@@ -31,6 +31,14 @@
 //! key against Deepgram, storing it in Windows Credential Manager and the fixed
 //! wording for every key error all live in `deepgram_key.rs`.
 //!
+//! Step 3a: clearing an error the person has already fixed (AC-32, settled by
+//! the sixth amendment of 2026-08-30). An error screen is a claim that
+//! dictation cannot happen, and the person can make that claim untrue without
+//! touching EchoScribe at all. So each error clears on its own proof that the
+//! thing it named now works: the four microphone kinds on `dictation:opened`,
+//! which is why that event is broadcast rather than sent to the pill alone. It
+//! clears quietly, so nothing on this path brings the window forward.
+//!
 //! Still to come: transcription and typing at the cursor (milestone 4), history
 //! and settings (milestone 5). AC-8's 30 second silence cap is built and
 //! deliberately unarmed until milestone 4 arms it, because its only named
@@ -512,5 +520,86 @@ pub(super) fn remember_pill_spot(app: &AppHandle) {
     let now = crate::sign_in::clock::now_iso8601();
     if let Err(e) = state.store.save_pill_spot(&account_id, x, y, &now) {
         eprintln!("dictate: could not remember where the pill was left: {e}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /// Whitespace removed and anything non-ASCII dropped, so a guard survives a
+    /// formatter moving a call across lines.
+    fn flattened(source: &str) -> String {
+        source
+            .chars()
+            .filter(|c| c.is_ascii() && !c.is_ascii_whitespace())
+            .collect()
+    }
+
+    /// The interface shell, which owns which screen is on the EchoScribe window
+    /// and so owns the clearing half of AC-32.
+    const SHELL: &str = include_str!("../../../src/main.js");
+
+    /// The pill window's source, minus its own tests, so a guard cannot be
+    /// satisfied by a test that quotes the thing it is checking for.
+    fn the_pill_window_file() -> &'static str {
+        include_str!("pill_window.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("a source file always has a first part")
+    }
+
+    #[test]
+    fn the_microphone_opening_reaches_the_echoscribe_window_and_not_only_the_pill() {
+        // covers: AC-32, as a source guard only. An error screen clears itself
+        // the moment the thing it complained about is shown to work, and for
+        // the four microphone errors that proof is `dictation:opened`. Sent to
+        // the pill alone it never reaches the window holding the error, and the
+        // screen sits there saying dictation cannot start while it is running.
+        let flat = flattened(the_pill_window_file());
+        assert!(
+            flat.contains(r#"app.emit("dictation:opened""#),
+            "`dictation:opened` is no longer broadcast to every window. The \
+             EchoScribe window then never learns the microphone opened and a \
+             microphone error stays on screen after the person has fixed it \
+             (record 0002 AC-32)"
+        );
+    }
+
+    #[test]
+    fn the_allowance_error_is_not_cleared_by_the_microphone_opening() {
+        // covers: AC-32. The clearing table gives each error its own proof. An
+        // open microphone is not proof that a Deepgram allowance is back, so
+        // wiring `deepgram_no_allowance` to it would take the message away
+        // while the problem was still there. That kind clears on the first
+        // finalised words, in milestone 4, and nowhere in the shell before it.
+        assert!(
+            !flattened(SHELL).contains("deepgram_no_allowance"),
+            "src/main.js now knows about `deepgram_no_allowance`. Its only \
+             clearing trigger is the first finalised words from Deepgram \
+             (record 0002, the clearing table), never the microphone opening"
+        );
+    }
+
+    #[test]
+    fn clearing_an_error_never_moves_the_echoscribe_window() {
+        // covers: AC-32. It clears quietly: the window does not come to the
+        // front, does not hide itself and does not move. This record brings a
+        // window forward for one reason only, a hotkey press that produced
+        // nothing, and that call lives in `bring_window_forward` here in Rust.
+        // The shell has no business reaching for a window at all.
+        let flat = flattened(SHELL);
+        for forbidden in [
+            "getCurrentWindow",
+            "getCurrentWebviewWindow",
+            "setFocus",
+            ".hide(",
+            ".setPosition(",
+        ] {
+            assert!(
+                !flat.contains(forbidden),
+                "src/main.js now mentions `{forbidden}`. Clearing an error is \
+                 quiet: the person is dictating into another app, and the \
+                 window must not come forward, hide or move (record 0002 AC-32)"
+            );
+        }
     }
 }

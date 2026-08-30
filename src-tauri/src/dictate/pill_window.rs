@@ -136,7 +136,14 @@ pub fn open(app: &AppHandle, setting: &DictationSetting) {
             );
         }
     }
-    let _ = app.emit_to(LABEL, "dictation:opened", json!({}));
+    // Broadcast, not sent to the pill alone. The EchoScribe window listens for
+    // this too: a microphone error it is still showing is a claim that the
+    // microphone cannot open, and this is the proof that it can (record 0002
+    // AC-32, and the clearing table in The decision). It goes out on the
+    // capability that window already has, so nothing widens for it. The window
+    // is not shown, focused or moved by this: the person is dictating into
+    // another app, and this record brings a window forward for one reason only.
+    let _ = app.emit("dictation:opened", json!({}));
 }
 
 /// Hide the pill and tell the interface why it closed.

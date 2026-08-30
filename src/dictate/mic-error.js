@@ -7,6 +7,13 @@
 // here: the four sentences are fixed by the record and live in one place,
 // microphone.rs. The code shown is the error kind itself, uppercased, so a
 // person can quote it.
+//
+// The screen is a claim that the microphone cannot open, so it does not wait to
+// be dismissed: it leaves the moment the microphone is shown to open (AC-32).
+// Try again is one door into that and is handled here. The other is the person
+// fixing the cause in Windows and pressing the hotkey again, which the shell
+// handles on `dictation:opened`. Both reach the same drawn ending,
+// design/registry.md "Microphone error, retried".
 
 const { invoke } = window.__TAURI__.core;
 
