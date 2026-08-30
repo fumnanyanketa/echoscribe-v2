@@ -23,6 +23,15 @@ clicked; blesses a fourth microphone error kind this record never named; and
 writes down which microphone the feature uses. It adds AC-28 to AC-31 and takes
 the count to 31. No existing criterion is renumbered or reworded. Evidence:
 `docs/evidence/dictate-with-a-hotkey/milestone-2-decisions-owed.md`.
+**Amended:** 2026-08-30, second of the day. Step 2a's build went up and the live
+check found blocked-by-Windows reading as the catch-all. The mechanism this
+record named for telling the four errors apart was disproved: cpal on Windows
+never returns the permission-denied kind the mapping relied on. A privacy block
+arrives as the catch-all kind with the Windows access-denied code in its
+message, proven by probe on 2026-08-30 with the machine-wide microphone toggle
+off. This amendment replaces the detection mechanism for that one kind and
+touches nothing else. No criterion is renumbered, reworded or added. The count
+stays at 31.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -284,6 +293,30 @@ Try again is a real next step for a transient failure. The fourth kind is
 named here so it is a decision rather than an implementation detail, and so
 nothing later collapses it into one of the three.
 
+**How blocked-by-Windows is detected, settled 2026-08-30.** This record used
+to assume the audio layer would say "permission denied" when the privacy
+setting was the cause, and the code mapped that kind to
+`microphone_blocked_by_windows`. Disproved live: cpal on Windows never
+produces that kind for anything. Its own error table has no arm for access
+denied, so a privacy block falls into its catch-all, and on 2026-08-30 the
+error screen showed `MICROPHONE_UNAVAILABLE` with a Try again button while
+the real cause was the machine-wide microphone toggle being off.
+
+The replacement: when the microphone fails to open and the failure is not one
+of the two kinds the audio layer does name reliably (device busy, no device),
+EchoScribe asks Windows directly whether microphone access is switched off.
+It reads, and only ever reads, the same three switches the Windows privacy
+page writes: the machine-wide microphone toggle, the per-user toggle, and the
+per-user toggle for desktop apps. If any of the three says deny, the error is
+`microphone_blocked_by_windows`. If all say allow, or the switches cannot be
+read at all, the error stays the honest catch-all, because a switch that
+cannot be read is not evidence of blocking. Those switches are a Windows
+convention, not a contract; if a future Windows moves them, the failure
+degrades to the catch-all with Try again, which is wrong-but-safe rather than
+wrong-and-misleading. The check is read only, forever: EchoScribe never
+changes a privacy setting, it only reads the state and opens the page for the
+person to decide.
+
 **Which microphone is used.** Whichever one Windows is already set to. This
 record names no microphone anywhere: no device column, no device field in
 `dictation_setting`, no device command, and until now no criterion. That was
@@ -326,6 +359,8 @@ own record when it is wanted, not a settings row here.
 | Giving the pill one more clickable area, so it can carry the privacy link | Keeps every error where the design system first put it, and the pill is already the thing the person is looking at. It reopens the fix for the AC-27 focus defect, whose most important layer has no automated test, to buy a surface for a message that AC-15 says must appear when there is no pill at all. Expensive, and aimed at the wrong error. |
 | An error pill with no action, and the instruction in words only | Cheapest of the four, and it keeps the pill inert. It costs AC-15's link outright, and it puts a pill on screen when the microphone did not open, which breaks the one thing the pill means. |
 | A Windows notification for the microphone error | Needs no screen and survives the person not looking at the app. AGENTS.md puts notifications out of scope, so this is a different decision wearing a small hat. |
+| Matching the Windows access-denied code inside the error message | The failure message carries the access-denied number, and that number is stable across languages. But it depends on the wording format of a library this project does not control, and the same number can occasionally mean an access problem that is not the privacy setting, which would send someone to a settings page that has nothing wrong on it. |
+| Matching the code and reading the switches, either one counts | Slightly more robust against Windows or the library changing. Two mechanisms to keep correct instead of one, for a case the switch check already catches, including the machine-toggle case the live run actually hit. |
 | A microphone picker in this record | The device row is already drawn, so it looks like a small addition. It needs a device list, a device stored against the account, a rule for when that device is gone, and a live input level in settings, which opens the microphone from a second place in the app. That is a feature with its own risk section, not a settings row. |
 
 ## Data model
@@ -394,7 +429,8 @@ One migration, creating all three tables.
 | Start time of a dictation | AC-17 | The moment the microphone opened, taken in Rust as UTC. |
 | Duration | AC-17 | The moment the microphone closed, minus the start time. |
 | Which microphone is opened | AC-1, AC-15, AC-31 | Whichever input device Windows is set to as its default, asked of the system at the moment the microphone opens. This record stores no device and offers no way to choose one. |
-| Which of the four microphone errors it is | AC-15, AC-28, AC-29 | The error the audio layer returns when opening the device, mapped to one of four named kinds. Anything that is none of the three known causes is the fourth, `microphone_unavailable`, and is never dressed up as one of the others. |
+| Which of the four microphone errors it is | AC-15, AC-28, AC-29 | The error the audio layer returns when opening the device, mapped to one of four named kinds. Anything that is none of the three known causes is the fourth, `microphone_unavailable`, and is never dressed up as one of the others. Until 2026-08-30 this row said the blocked kind came from the audio layer's permission-denied kind; disproved live, cpal on Windows never produces it. Blocked is now detected by reading the Windows microphone consent switches, see the detection paragraph in The decision. |
+| Whether Windows has microphone access switched off | AC-15, AC-29 | The three consent switches the Windows privacy page writes, read directly from Windows by Rust, read only, and only after the microphone has already failed to open for no named reason. Deny on any of the three means blocked; anything else, including the switches being unreadable, does not. Never stored, never logged beyond the named error kind, never shown to the interface as anything but the kind. |
 | The sentence shown for each microphone error | AC-15, AC-28 | This record, the four sentence table in The decision. Fixed wording, not a setting, and it never carries a device name, a path, or anything from the audio. |
 | Where a microphone error is read | AC-15, AC-28, AC-30 | This record. The EchoScribe window, brought to the front. Never the pill, which has no action and never appears when the microphone did not open. |
 | The Windows microphone privacy page | AC-15, AC-29 | A fixed literal address held in Rust, `ms-settings:privacy-microphone`, opened through the Windows shell with the already approved `windows` crate. The interface never supplies or sees it, and it is never built from anything. |
@@ -500,6 +536,9 @@ call for it.**
   Tested live on 2026-08-29 and found broken. The refusal is unchanged by
   that. The fix has to achieve it rather than soften it, and a grace period
   in which focus moves and is then put back does not count as meeting it.
+- Write to a Windows privacy setting, ever. The consent switches are read to
+  name an error and for nothing else. Changing them is the person's act, on
+  the Windows settings page this app can open for them, never the app's.
 - Put a device name, a file path, or anything drawn from the audio into an
   error message, an event or a log. A microphone error says which of four
   things went wrong and nothing else about the machine.
@@ -580,6 +619,18 @@ be invented during a build. Then AC-28, AC-29 and AC-31, in this order:
   sound plays in each case, and that Try again starts dictation once the cause
   is fixed. AC-30's mid dictation half cannot be proved until milestone 4, so
   it is proved there, not assumed here.
+
+**Step 2b, added 2026-08-30: telling blocked-by-Windows apart for real.** Step
+2a was built and its screen is right, but the blocked kind never fires: the
+mapping it relied on was disproved the same day. Replace the classification so
+that a failure which is not device-busy and not no-device asks the Windows
+consent switches, per the detection paragraph in The decision. Read only. The
+switches live behind the already approved `windows` crate, which needs its
+registry feature switched on; that is a feature of an approved library, not a
+new one. Step 2a's live proof then covers this too: with the machine-wide
+microphone toggle off, the screen must say `MICROPHONE_BLOCKED_BY_WINDOWS`
+with Open Windows settings as the one action, and the same again with only
+the desktop-apps toggle off.
 
 3. **The Deepgram key.** The guided setup screen, checking a key against
    Deepgram, storing it in Credential Manager, the masked display in

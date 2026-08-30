@@ -83,7 +83,11 @@ impl MicError {
         match self {
             MicError::BlockedByWindows => "Windows is not letting EchoScribe use the microphone.",
             MicError::InUseByAnotherApp => "Another app is using the microphone right now.",
-            MicError::NoMicrophoneFound => "No microphone is plugged in.",
+            // "No microphone is plugged in" was the first wording and is
+            // replaced by the record: a laptop's microphone is built in and was
+            // never plugged in, so that sentence sends a laptop user looking
+            // for a cable that does not exist.
+            MicError::NoMicrophoneFound => "Windows cannot find a microphone.",
             MicError::Unavailable => "The microphone could not be opened.",
         }
     }
@@ -313,11 +317,17 @@ fn level_from_rms(rms: f64) -> f32 {
     (((dbfs - FLOOR_DBFS) / (CEIL_DBFS - FLOOR_DBFS)).clamp(0.0, 1.0)) as f32
 }
 
-/// Map cpal's failure onto one of record 0002's named causes (AC-15).
+/// Map cpal's failure onto record 0002's named causes (AC-15).
+///
+/// Only two kinds are named here, because they are the only two cpal reports
+/// reliably on Windows. Blocked-by-Windows never arrives from cpal at all,
+/// proven live on 2026-08-30: a privacy block lands in the catch-all, and
+/// `consent::refine` is what tells it apart, by reading the consent switches
+/// the Windows privacy page writes (record 0002, step 2b). So even a
+/// permission-denied kind, should some platform ever produce one, stays the
+/// catch-all here and lets the consent check decide.
 fn classify(kind: ErrorKind) -> MicError {
     match kind {
-        // Windows' microphone privacy setting lands here.
-        ErrorKind::PermissionDenied => MicError::BlockedByWindows,
         ErrorKind::DeviceBusy => MicError::InUseByAnotherApp,
         ErrorKind::DeviceNotAvailable | ErrorKind::HostUnavailable => MicError::NoMicrophoneFound,
         _ => MicError::Unavailable,
@@ -387,18 +397,23 @@ mod tests {
     }
 
     #[test]
-    fn windows_refusing_access_is_not_reported_as_a_missing_microphone() {
+    fn the_two_causes_cpal_names_reliably_are_kept_apart() {
         // covers: AC-15. These send a person to completely different places:
-        // one to the privacy setting, one to a cable, one to another app.
-        assert_eq!(
-            classify(ErrorKind::PermissionDenied),
-            MicError::BlockedByWindows
-        );
+        // one to another app, one to a cable or a setting.
         assert_eq!(classify(ErrorKind::DeviceBusy), MicError::InUseByAnotherApp);
         assert_eq!(
             classify(ErrorKind::DeviceNotAvailable),
             MicError::NoMicrophoneFound
         );
+    }
+
+    #[test]
+    fn a_permission_error_is_left_for_the_consent_check() {
+        // covers: AC-15, AC-29. cpal on Windows never produces this kind,
+        // proven live 2026-08-30, so mapping it to blocked was dead code that
+        // made the feature look covered. Blocked is decided by consent.rs
+        // reading the Windows switches, and only from the catch-all.
+        assert_eq!(classify(ErrorKind::PermissionDenied), MicError::Unavailable);
     }
 
     #[test]

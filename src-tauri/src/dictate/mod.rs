@@ -12,13 +12,24 @@
 //! the microphone will not open, the pill never appears and the cause is named
 //! (AC-15). Audio is discarded as it arrives and nothing leaves the machine.
 //!
+//! Step 2a: somewhere to read a microphone error (AC-28, AC-29, AC-31, settled
+//! by the record's fourth amendment of 2026-08-30). When the microphone will
+//! not open, the EchoScribe window is brought to the front carrying a short
+//! code, one sentence of cause, and exactly one action. The pill is a sign,
+//! never a control: it never appears when the microphone did not open, and no
+//! error ever asks for a click on it.
+//!
+//! Step 2b: telling blocked-by-Windows apart for real (settled by the fifth
+//! amendment of 2026-08-30). cpal never reports a privacy block on Windows, so
+//! a failure with no named cause asks the Windows consent switches, read only,
+//! in `consent.rs`.
+//!
 //! Still to come: Deepgram, transcription and typing at the cursor (milestones
-//! 3 and 4), history and settings (milestone 5). Two parts of milestone 2 are
-//! deliberately unfinished and are recorded as such in
-//! `docs/evidence/dictate-with-a-hotkey/`: AC-8's 30 second silence cap, whose
-//! only named source is Deepgram's final results, and where a person reads
-//! AC-15's message, which collides with the pill being unclickable by design.
+//! 3 and 4), history and settings (milestone 5). AC-8's 30 second silence cap
+//! is built and deliberately unarmed until milestone 4 arms it, because its
+//! only named source is Deepgram's final results.
 
+mod consent;
 mod hook;
 mod limits;
 mod machine;
@@ -74,6 +85,10 @@ pub enum DictationState {
 pub struct Dictate {
     store: Store,
     listening: Mutex<Option<Microphone>>,
+    /// A handle onto the command channel, so `retry_dictation` can build the
+    /// same level sink the hotkey path builds. Behind a mutex only because a
+    /// channel sender cannot be shared between threads without one.
+    commands: Mutex<Sender<Command>>,
 }
 
 /// Open this feature's database connection, create the pill window, start the
@@ -81,17 +96,19 @@ pub struct Dictate {
 pub fn init(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let handle = app.handle().clone();
 
+    // One consumer thread handles every command, in the order they arrive.
+    let (commands, command_rx) = mpsc::channel::<Command>();
+
     let dir = app.path().app_data_dir()?;
     let store = Store::open(&dir.join(DB_FILE))?;
     app.manage(Dictate {
         store,
         listening: Mutex::new(None),
+        commands: Mutex::new(commands.clone()),
     });
 
     pill_window::create(&handle)?;
 
-    // One consumer thread handles every command, in the order they arrive.
-    let (commands, command_rx) = mpsc::channel::<Command>();
     let consumer_handle = handle.clone();
     let consumer_commands = commands.clone();
     std::thread::Builder::new()
@@ -160,35 +177,64 @@ fn on_double_tap(app: &AppHandle, commands: &Sender<Command>) {
     };
     let setting = state.store.setting_for(&account_id).unwrap_or_default();
 
+    {
+        let mut listening = state
+            .listening
+            .lock()
+            .expect("dictate listening mutex poisoned");
+
+        if let Some(mic) = listening.take() {
+            // Shut the device before anything on screen changes, so the pill
+            // never outlives the microphone in either direction.
+            mic.stop();
+            pill_window::close(app, "you_stopped_it");
+            sound::play_close(setting.sounds_enabled);
+            return;
+        }
+    }
+
+    if let Err(e) = try_start(app, commands) {
+        report_microphone_error(app, e);
+    }
+}
+
+/// Open the microphone and put the pill up. The one way into dictation: the
+/// hotkey lands here, and so does `retry_dictation` (record 0002 AC-29), so
+/// they can never drift apart. Does nothing when already listening or when
+/// nobody is signed in; both callers have their own guard for the latter.
+///
+/// AC-15, and the "no silent listening" rule in AGENTS.md: the microphone is
+/// opened first and the pill only goes up once it is genuinely capturing. A
+/// pill that appeared first would be claiming the microphone was open before
+/// anyone knew whether it was, and on a failure it would be a plain lie. On
+/// an error nothing is shown here at all: no pill and no sound, because both
+/// of those mean "the microphone is on".
+fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), MicError> {
+    let Some(account_id) = crate::sign_in::account_id_from(app) else {
+        return Ok(());
+    };
+    let Some(state) = app.try_state::<Dictate>() else {
+        return Ok(());
+    };
+    let setting = state.store.setting_for(&account_id).unwrap_or_default();
+
     let mut listening = state
         .listening
         .lock()
         .expect("dictate listening mutex poisoned");
-
-    if let Some(mic) = listening.take() {
-        // Shut the device before anything on screen changes, so the pill never
-        // outlives the microphone in either direction.
-        mic.stop();
-        pill_window::close(app, "you_stopped_it");
-        sound::play_close(setting.sounds_enabled);
-        return;
+    if listening.is_some() {
+        return Ok(());
     }
 
-    // AC-15, and the "no silent listening" rule in AGENTS.md: the microphone is
-    // opened first and the pill only goes up once it is genuinely capturing. A
-    // pill that appeared first would be claiming the microphone was open before
-    // anyone knew whether it was, and on a failure it would be a plain lie.
-    match microphone::open(level_sink(app, commands)) {
-        Ok(mic) => {
-            *listening = Some(mic);
-            pill_window::open(app, &setting);
-            sound::play_open(setting.sounds_enabled);
-        }
-        Err(e) => {
-            // No pill and no sound. Both of those mean "the microphone is on".
-            report_microphone_error(app, e);
-        }
-    }
+    // `consent::refine` is step 2b: a failure with no named cause asks the
+    // Windows consent switches, read only, and becomes blocked-by-Windows if
+    // any of the three says deny. It sits here so the hotkey and Try again
+    // share it, the same as they share everything else on this path.
+    let mic = microphone::open(level_sink(app, commands)).map_err(consent::refine)?;
+    *listening = Some(mic);
+    pill_window::open(app, &setting);
+    sound::play_open(setting.sounds_enabled);
+    Ok(())
 }
 
 /// The callback the microphone calls every 60 ms with one loudness number.
@@ -219,24 +265,110 @@ fn level_sink(app: &AppHandle, commands: &Sender<Command>) -> Box<dyn Fn(f32) + 
     })
 }
 
-/// Say why the microphone would not open (record 0002 AC-15).
+/// Say why the microphone would not open, where a person can actually read it
+/// (record 0002 AC-15, AC-28, settled by the fourth amendment of 2026-08-30).
 ///
-/// Where a person reads this is not settled. The record wants the message to
-/// carry a link straight to the Windows microphone privacy setting, and the
-/// design system puts errors in the pill; but the pill deliberately takes no
-/// mouse input outside its grip, so it has nothing that can be clicked. That
-/// conflict is owed to `/architect`. Until it is settled the cause is named on
-/// the event and printed, so nothing is silently swallowed.
+/// The pill is a sign, never a control, and it never appears when the
+/// microphone did not open. So the message is read in the EchoScribe window,
+/// which is brought to the front carrying the code, the sentence and the one
+/// action. Bringing it forward moves focus out of whatever the person was in;
+/// the record accepts that cost because this only ever answers a hotkey they
+/// just pressed that produced nothing.
 fn report_microphone_error(app: &AppHandle, e: MicError) {
     eprintln!(
         "dictate: the microphone did not open: {} ({:?})",
         e.message(),
         e
     );
+    // The event goes to every window, so the main window receives it on the
+    // capability it already has. Emitted before the window comes forward so
+    // the screen is mounting as it arrives.
     let _ = app.emit(
         "dictation:error",
         json!({ "kind": e.kind(), "message": e.message() }),
     );
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+/// The Windows microphone privacy page, as a fixed literal. The interface can
+/// ask for this one page and no other; nothing is ever built from anything
+/// (record 0002, value sourcing).
+const MIC_PRIVACY_PAGE: windows::core::PCWSTR = windows::core::w!("ms-settings:privacy-microphone");
+
+/// What a failed `retry_dictation` hands back to the interface: the same named
+/// kind and fixed sentence that ride on `dictation:error`, and nothing else.
+#[derive(Debug, Clone, Serialize)]
+pub struct DictationErrorPayload {
+    kind: &'static str,
+    message: &'static str,
+}
+
+impl From<MicError> for DictationErrorPayload {
+    fn from(e: MicError) -> Self {
+        Self {
+            kind: e.kind(),
+            message: e.message(),
+        }
+    }
+}
+
+/// Open the Windows microphone privacy page. The one action on a
+/// `microphone_blocked_by_windows` error (record 0002 AC-29). Takes nothing,
+/// returns nothing, and refuses when nobody is signed in, like every command
+/// on this surface.
+#[tauri::command]
+pub async fn open_microphone_privacy_settings(app: AppHandle) -> Result<(), &'static str> {
+    if crate::sign_in::account_id_from(&app).is_none() {
+        return Err("not_signed_in");
+    }
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+    let launched = unsafe {
+        ShellExecuteW(
+            None,
+            windows::core::w!("open"),
+            MIC_PRIVACY_PAGE,
+            None,
+            None,
+            SW_SHOWNORMAL,
+        )
+    };
+    // ShellExecuteW reports success as a value above 32.
+    if launched.0 as isize <= 32 {
+        eprintln!("dictate: Windows would not open the microphone privacy page");
+        return Err("could_not_open_settings");
+    }
+    Ok(())
+}
+
+/// Try again: the one action on the other three microphone errors (record 0002
+/// AC-29). Goes through the same path the hotkey does, so there is only ever
+/// one way into dictation. Starts dictation there and then if the microphone
+/// now opens, or comes back with the same named error if it does not.
+#[tauri::command]
+pub async fn retry_dictation(app: AppHandle) -> Result<(), DictationErrorPayload> {
+    if crate::sign_in::account_id_from(&app).is_none() {
+        return Err(DictationErrorPayload {
+            kind: "not_signed_in",
+            message: "",
+        });
+    }
+    let commands = {
+        let Some(state) = app.try_state::<Dictate>() else {
+            return Err(DictationErrorPayload::from(MicError::Unavailable));
+        };
+        let sender = state
+            .commands
+            .lock()
+            .expect("dictate commands mutex poisoned")
+            .clone();
+        sender
+    };
+    try_start(&app, &commands).map_err(DictationErrorPayload::from)
 }
 
 /// Close the microphone and the pill if they are open. Safe to call when they

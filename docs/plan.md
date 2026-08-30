@@ -53,7 +53,8 @@ typed text exactly where my cursor was, in any app.
 - [x] Design it: [0002-dictate-with-a-hotkey](decisions/0002-dictate-with-a-hotkey.md), 31 acceptance criteria
 - [x] The hotkey and the pill · `src-tauri/src/dictate/`, `src/dictate/` · built, awaiting `/check verify` (live two-monitor, focus and sound proof)
 - [x] The microphone and the waveform · `src-tauri/src/dictate/microphone.rs`, `src-tauri/src/dictate/limits.rs`, `src/dictate/` · built, awaiting `/check verify`. AC-8's 30 second silence cap is built and deliberately unarmed until milestone 4 arms it. See `docs/evidence/dictate-with-a-hotkey/milestone-2-decisions-owed.md`
-- [ ] Somewhere to read a microphone error · step 2a in the record · AC-28, AC-29, AC-31. `/canvas` first: there is no drawn comp for a microphone error on the EchoScribe window, and the registry's "Error pill" line needs correcting from one action to none. Settled by the fourth amendment of 2026-08-30
+- [x] Somewhere to read a microphone error · step 2a in the record · AC-28, AC-29, AC-31. `src-tauri/src/dictate/mod.rs`, `src-tauri/src/dictate/microphone.rs`, `src/dictate/mic-error.js` · built 2026-08-30, awaiting `/check verify` (the live proof of all four error kinds; AC-30's mid-dictation half waits for milestone 4). The design half landed first: registry gained the six "Microphone error" rows and the "Error pill" correction
+- [x] Telling blocked-by-Windows apart for real · step 2b in the record · AC-15, AC-29. `src-tauri/src/dictate/consent.rs`, `src-tauri/src/dictate/microphone.rs` · built 2026-08-30, awaiting `/check verify` (step 2a's live proof covers it: machine-wide toggle off, then desktop-apps toggle off, each must read `MICROPHONE_BLOCKED_BY_WINDOWS` with Open Windows settings). Reads the three Windows consent switches, read only, when the failure has no named cause. Settled by the fifth amendment of 2026-08-30
 - [ ] The Deepgram key
 - [ ] Transcription and typing
 - [ ] History and settings

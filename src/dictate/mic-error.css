@@ -1,0 +1,118 @@
+/* The microphone error screen (design/registry.md "Microphone error").
+ * Reuses the sign-in and onboarding window shell exactly: the dark window
+ * field comes from #app (--color-onboarding), one centered column, no nav
+ * rail. Every value here is a token from styles.css.
+ *
+ * These rules mirror the sign-in screen's on purpose and are not imported
+ * from it: feature folders do not import from each other, and a shape two
+ * features share moves to a shared module only when a third needs it.
+ */
+
+.micerr {
+  margin: auto;
+  width: 100%;
+  max-width: 24rem;
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+}
+
+.micerr__brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+}
+
+.micerr__brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+}
+
+.micerr__brand-word {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-ink-on-dark-heading);
+}
+
+/* design/registry.md "Microphone error line": a mono code, one plain sentence,
+   the one action beneath. Code and left edge in the danger colour; two signals
+   and words are one of them, so the colour never carries the meaning alone. */
+.micerr__error {
+  margin-bottom: var(--space-5);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-danger-on-dark);
+  text-align: left;
+}
+
+.micerr__error-code {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  color: var(--color-danger-on-dark);
+}
+
+.micerr__error-text {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--color-ink-on-dark-secondary);
+}
+
+.micerr__action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.micerr__btn {
+  min-width: 12rem;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  border: var(--border-width) solid transparent;
+}
+
+.micerr__btn--primary {
+  background: var(--color-ink-on-dark-heading);
+  color: var(--color-onboarding);
+}
+
+/* design/registry.md "Microphone error, waiting": the "Primary button, on
+   dark, busy" primitive unchanged. Same geometry, label swapped, light fill
+   breathing on the 1.4s cadence. Never violet: violet only ever means an open
+   microphone. */
+.micerr__btn--busy {
+  cursor: default;
+  animation: micerr-btn-busy 1.4s var(--ease-standard) infinite;
+}
+
+@keyframes micerr-btn-busy {
+  0%,
+  100% {
+    background: var(--color-ink-on-dark-heading);
+  }
+  50% {
+    background: var(--color-ink-on-dark-secondary);
+  }
+}
+
+/* The label carries the state on its own, so with reduced motion the fill
+   holds at the dim rung rather than the bright one, which would read as not
+   busy at all. */
+@media (prefers-reduced-motion: reduce) {
+  .micerr__btn--busy {
+    background: var(--color-ink-on-dark-secondary);
+  }
+}

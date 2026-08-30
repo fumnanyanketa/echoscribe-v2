@@ -7,6 +7,7 @@
 // sign-in screen (record 0003 AC-1).
 
 import { mountSignIn, mountSignedIn } from "./sign-in/sign-in.js";
+import { mountMicError, MIC_ERROR_KINDS } from "./dictate/mic-error.js";
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -67,6 +68,20 @@ listen("auth:signed_in", () => render());
 listen("auth:signed_out", (event) => {
   pendingNotice = (event.payload && event.payload.reason) || null;
   render();
+});
+// The microphone would not open (record 0002 AC-28). Rust brings this window
+// to the front; this mounts the screen with the code, the sentence and the one
+// action. Only the four microphone kinds are this screen's to show. The screen
+// is left when Try again succeeds, or when an auth change re-renders the shell.
+listen("dictation:error", (event) => {
+  const payload = event.payload || {};
+  if (!MIC_ERROR_KINDS.includes(payload.kind)) return;
+  unmountCurrent();
+  currentUnmount = mountMicError(app, {
+    kind: payload.kind,
+    message: payload.message,
+    onCleared: () => render(),
+  });
 });
 // The core reached the point of knowing it cannot reach Clerk this launch. The
 // screen is already showing the stored identity; this makes sure the "working
