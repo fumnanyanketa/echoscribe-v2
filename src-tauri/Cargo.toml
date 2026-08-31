@@ -40,6 +40,10 @@ windows = { version = "0.61", features = [
     "Win32_UI_Accessibility",
     "Win32_System_Com",
     "Win32_System_Variant",
+    # Record 0002's tenth amendment: recognising a collapse list receiver by
+    # the package family name of the process behind the focused window.
+    "Win32_Storage_Packaging_Appx",
+    "Win32_System_Threading",
 ] }
 cpal = "0.18.2"
 # Record 0002's New libraries table, approved with the decision. Deepgram's own

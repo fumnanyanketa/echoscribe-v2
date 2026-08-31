@@ -23,13 +23,30 @@
 //! everywhere UI Automation is unsure would break dictation in ordinary apps,
 //! which is most of them. How wide the gap actually is, is spike 2, which the
 //! record asks milestone 4 to run and record.
+//!
+//! **Two mechanisms, one door, and a list deciding between them** (record
+//! 0002, "How characters reach a focused window", settled 2026-08-31).
+//! Simulated keystrokes are the default for every app. Receivers proven to
+//! collapse backlogged injected keystrokes, held in `collapse_list.rs`, get
+//! the direct channel instead: each character posted straight to the focused
+//! text box, skipping the shared input queue where the backlog builds. Both
+//! run the password check first, both carry characters and never keys, and
+//! neither touches the clipboard. The channel was proved before it was wired
+//! in, by the spike test at the bottom of this file: the finding's own 205
+//! character burst arrived intact in the new Notepad, exact string match, on
+//! 2026-08-31.
 
+use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::System::Com::{
     CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
 };
 use windows::Win32::UI::Accessibility::{CUIAutomation, IUIAutomation};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE,
+};
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetForegroundWindow, GetGUIThreadInfo, GetWindowThreadProcessId, PostMessageW, GUITHREADINFO,
+    WM_CHAR,
 };
 
 /// How many UTF-16 units go in one `SendInput` call.
@@ -98,6 +115,23 @@ pub fn type_at_cursor(text: &str) -> Typed {
     if focused_field_is_a_password() {
         return Typed::RefusedPasswordField;
     }
+    // The collapse list decides which mechanism runs, per phrase, because
+    // AC-7 lets focus move between phrases. On the list and addressable
+    // means the direct channel; everything else, including every flavour of
+    // cannot tell, means the proven default keystrokes.
+    if super::collapse_list::focused_window_collapses_injected_keystrokes() {
+        if let Some(text_box) = focused_text_box() {
+            if !post_chars(text_box, text) {
+                // Counts nothing and names nothing: the words themselves may
+                // never appear here (see the guards below).
+                eprintln!(
+                    "dictate: Windows refused a posted character, so part of a phrase may not \
+                     have reached the focused window"
+                );
+            }
+            return Typed::AtTheCursor;
+        }
+    }
     send(text);
     Typed::AtTheCursor
 }
@@ -138,10 +172,6 @@ fn focused_field_is_a_password() -> bool {
 /// as two, in order, which is what Windows expects.
 fn send(text: &str) {
     let units: Vec<u16> = text.encode_utf16().collect();
-    // PROBE START: temporary, added 2026-08-30. Three running totals and the
-    // one line at the end of this function. Counts only, never the characters.
-    let (mut handed, mut accepted, mut batches) = (0usize, 0usize, 0usize);
-    // PROBE END
     let mut first = true;
     for chunk in units.chunks(BATCH) {
         // The pause sits between calls, never before the first or after the
@@ -156,11 +186,6 @@ fn send(text: &str) {
             inputs.push(key_event(*unit, true));
         }
         let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
-        // PROBE START
-        handed += inputs.len();
-        accepted += sent as usize;
-        batches += 1;
-        // PROBE END
         // Record 0002's own lesson, now standing rule 14 in AGENTS.md: the real
         // effect of this call happens in another program, so the return value
         // says how many events Windows accepted and never that anything was
@@ -176,12 +201,64 @@ fn send(text: &str) {
             );
         }
     }
-    // PROBE START: remove these three lines and the two blocks above.
-    eprintln!(
-        "dictate probe: typed a phrase, handed windows {handed} key events in {batches} calls, \
-         windows accepted {accepted}"
-    );
-    // PROBE END
+}
+
+/// Find the text box that has focus inside the foreground window.
+///
+/// The direct channel needs an exact address in a way `SendInput` never did:
+/// simulated keystrokes go into the shared input queue and Windows routes
+/// them to whatever has focus, but a posted character message goes to one
+/// window and no other. Asking Windows which control holds focus, rather
+/// than settling for the top level window, is what keeps "wherever the
+/// cursor already was" true on this path too. `None` when Windows will not
+/// say, and the caller treats that as cannot tell.
+fn focused_text_box() -> Option<HWND> {
+    unsafe {
+        let window = GetForegroundWindow();
+        if window.is_invalid() {
+            return None;
+        }
+        let thread = GetWindowThreadProcessId(window, None);
+        if thread == 0 {
+            return None;
+        }
+        let mut info = GUITHREADINFO {
+            cbSize: std::mem::size_of::<GUITHREADINFO>() as u32,
+            ..Default::default()
+        };
+        GetGUIThreadInfo(thread, &mut info).ok()?;
+        if info.hwndFocus.is_invalid() {
+            None
+        } else {
+            Some(info.hwndFocus)
+        }
+    }
+}
+
+/// The direct channel (record 0002, "How characters reach a focused window",
+/// settled 2026-08-31): post one phrase straight to the focused text box,
+/// one character message per UTF-16 unit, skipping the shared input queue
+/// where a stalled receiver's backlog builds and collapses.
+///
+/// It is still a character and never a key: `WM_CHAR` carries the character
+/// in full and nothing here can press Ctrl, Alt, Enter or a function key.
+/// The clipboard is never touched. Runs only for receivers on the collapse
+/// list, which the record grows by amendment and evidence, never from here.
+///
+/// `false` means Windows refused a post, which the caller reports the same
+/// way it reports a partly accepted `SendInput`: the call was refused, so
+/// part of the phrase may not have arrived.
+fn post_chars(text_box: HWND, text: &str) -> bool {
+    for unit in text.encode_utf16() {
+        // Repeat count 1 in the message's low bits, matching what a real
+        // keystroke's character message carries.
+        if unsafe { PostMessageW(Some(text_box), WM_CHAR, WPARAM(unit as usize), LPARAM(1)) }
+            .is_err()
+        {
+            return false;
+        }
+    }
+    true
 }
 
 /// One key event carrying a character rather than a key.
@@ -210,6 +287,21 @@ fn key_event(unit: u16, up: bool) -> INPUT {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The finding's own burst: the four phrases the 2026-08-31 sitting
+    /// typed, 205 characters in all, the comparability anchor record 0002's
+    /// step 4a names. The ghost probe below types them through `SendInput`;
+    /// the spike posts them through the direct channel. Same burst, so the
+    /// two proofs stay comparable. The last phrase is deliberately long,
+    /// because the collapse observed on 2026-08-31 was timing dependent and
+    /// the hardest case has to be in the burst or a clean run proves little.
+    const FINDING_BURST: [&str; 4] = [
+        "Hello. Hello. Hello.",
+        "In the country of the blind,",
+        "a one eyed man is the king.",
+        "The quick brown fox jumps over the lazy dog, while a second fox \
+         waits its turn behind the fence and a third one watches them both.",
+    ];
 
     /// This module's own source, minus its tests.
     fn this_file() -> &'static str {
@@ -296,6 +388,23 @@ mod tests {
     }
 
     #[test]
+    fn nothing_here_can_read_the_receiving_document() {
+        // covers: AGENTS.md data rules. The direct channel hands this file
+        // the address of a text box in somebody else's program. Writing to
+        // it is this file's whole job; reading from it would be this app
+        // looking at a document it was never given. No production line here
+        // may ever fetch text back out of a window.
+        let source = this_file();
+        for forbidden in ["WM_GETTEXT", "GetWindowText", "EM_GETTEXT"] {
+            assert!(
+                !source.contains(forbidden),
+                "typing.rs now mentions `{forbidden}`. This file types into \
+                 the focused window and must never read out of one"
+            );
+        }
+    }
+
+    #[test]
     fn a_phrase_longer_than_one_batch_is_still_all_sent() {
         // covers: AC-3. Guards the chunking arithmetic rather than the send: a
         // phrase of 100 characters is 200 key events, which is more than one
@@ -322,37 +431,93 @@ mod tests {
         assert_eq!(text_units.len(), 4, "an accented character is one unit");
     }
 
-    // PROBE START: temporary, the second instrument, added 2026-08-31. A
-    // dictation with Deepgram removed: three fixed phrases, the same shapes as
-    // the garbled sitting, through the exact live path, prepare_thread then
-    // type_at_cursor. Fixed strings, so no transcript is involved. Run with
-    //
-    //   cargo test --no-default-features probe_typing -- --ignored --nocapture
-    //
-    // from src-tauri, then click into Notepad within ten seconds. Corrupted
-    // in Notepad means typing corrupts on its own, with Deepgram exonerated.
-    // Clean means the corruption needs the live pipeline, or the text arrived
-    // already wrong. Delete this whole test to remove it.
+    /// Step 4a's spike (record 0002, "How characters reach a focused
+    /// window"). Proves the direct channel delivers the finding's own burst
+    /// intact into the new Windows Notepad, before the channel is wired into
+    /// `type_at_cursor`. Run from src-tauri, with EchoScribe not running and
+    /// an empty new Notepad tab focused:
+    ///
+    ///   cargo test --no-default-features spike_direct_channel -- --ignored --nocapture
+    ///
+    /// It waits up to thirty seconds for the new Notepad to hold focus,
+    /// proven by the recogniser the tenth amendment named rather than by a
+    /// window title. It requires the focused tab to be empty, so nobody's
+    /// own words are ever read or printed. Then it posts the burst, reads
+    /// the tab back, and compares exact strings, the same proof the finding
+    /// used. Intact means build the channel. Anything else means stop and
+    /// take the choice back to the user, per the record.
     #[test]
     #[ignore]
-    fn probe_typing_three_fixed_phrases_wherever_the_cursor_is() {
-        std::thread::sleep(std::time::Duration::from_secs(10));
-        prepare_thread();
-        for phrase in [
-            "Hello. Hello. Hello.",
-            "In the country of the blind,",
-            "a one eyed man is the king.",
-            // Deliberately long, to stress the pacing: the collapse observed
-            // on 2026-08-31 was timing dependent, so the hardest case has to
-            // be in the probe or a clean run proves little.
-            "The quick brown fox jumps over the lazy dog, while a second fox \
-             waits its turn behind the fence and a third one watches them both.",
-        ] {
-            let _ = type_at_cursor(phrase);
+    fn spike_direct_channel_the_findings_burst_into_the_new_notepad() {
+        use windows::Win32::UI::WindowsAndMessaging::{
+            SendMessageW, WM_CLEAR, WM_GETTEXT, WM_GETTEXTLENGTH,
+        };
+        // The edit control's select-all message, 0x00B1. The windows crate
+        // files it under a feature this project does not otherwise need, and
+        // it is only used to clean up the spike's own scratch.
+        const EM_SETSEL: u32 = 0x00B1;
+
+        let burst_length: usize = FINDING_BURST.iter().map(|p| p.len()).sum();
+        assert_eq!(burst_length, 205, "the burst must stay the finding's own");
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        while !super::super::collapse_list::focused_window_collapses_injected_keystrokes() {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the new Notepad never took focus, so nothing was posted"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(250));
+        }
+
+        let text_box = focused_text_box().expect("Notepad is focused but no text box is");
+
+        let read_back = |hwnd: HWND| -> String {
+            unsafe {
+                let length = SendMessageW(hwnd, WM_GETTEXTLENGTH, None, None).0 as usize;
+                let mut buffer = vec![0u16; length + 1];
+                let copied = SendMessageW(
+                    hwnd,
+                    WM_GETTEXT,
+                    Some(WPARAM(buffer.len())),
+                    Some(LPARAM(buffer.as_mut_ptr() as isize)),
+                )
+                .0 as usize;
+                String::from_utf16_lossy(&buffer[..copied])
+            }
+        };
+
+        let before = read_back(text_box);
+        assert!(
+            before.is_empty(),
+            "the focused tab already holds {} characters; give the spike an \
+             empty tab so it never reads anybody's words",
+            before.encode_utf16().count()
+        );
+
+        for phrase in FINDING_BURST {
+            assert!(post_chars(text_box, phrase), "Windows refused a post");
             std::thread::sleep(std::time::Duration::from_millis(600));
         }
+        // Give the receiver a moment to translate everything before reading.
+        std::thread::sleep(std::time::Duration::from_secs(2));
+
+        let after = read_back(text_box);
+        let expected: String = FINDING_BURST.concat();
+        println!(
+            "spike: expected {} characters, the tab holds {}",
+            expected.encode_utf16().count(),
+            after.encode_utf16().count()
+        );
+        assert_eq!(after, expected, "the burst did not arrive intact");
+        println!("spike: intact, exact string match, 205 of 205");
+
+        // Leave nothing behind on success. On failure everything stays on
+        // screen as evidence.
+        unsafe {
+            SendMessageW(text_box, EM_SETSEL, Some(WPARAM(0)), Some(LPARAM(-1)));
+            SendMessageW(text_box, WM_CLEAR, None, None);
+        }
     }
-    // PROBE END
 
     #[test]
     fn the_two_outcomes_are_distinct() {

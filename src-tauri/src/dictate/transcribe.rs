@@ -236,6 +236,10 @@ async fn run(
     let mut held_samples: usize = 0;
     let hold_cap = sample_rate as usize * RECONNECT_WINDOW.as_secs() as usize;
 
+    // Whether this dictation has typed anything yet. It is what decides that
+    // a joining space belongs in front of the next finalised phrase.
+    let mut typed_something = false;
+
     loop {
         let mut dropped = false;
 
@@ -254,7 +258,7 @@ async fn run(
                     // The microphone closed. Ask Deepgram for whatever it is
                     // still holding, take those last words, and finish. This is
                     // an ordinary ending and `on_end` is not called.
-                    finish(&mut handle, &app, &deadlines, &on_end).await;
+                    finish(&mut handle, &app, &deadlines, &on_end, &mut typed_something).await;
                     return;
                 }
             }
@@ -264,7 +268,9 @@ async fn run(
         if !dropped {
             match tokio::time::timeout(POLL, handle.receive()).await {
                 Ok(Some(Ok(response))) => {
-                    if let Some(ended) = on_response(response, &app, &deadlines) {
+                    if let Some(ended) =
+                        on_response(response, &app, &deadlines, &mut typed_something)
+                    {
                         on_end(ended);
                         return;
                     }
@@ -398,6 +404,7 @@ async fn finish(
     app: &AppHandle,
     deadlines: &Arc<Mutex<Deadlines>>,
     on_end: &(dyn Fn(Ended) + Send),
+    typed_something: &mut bool,
 ) {
     if handle.finalize().await.is_err() {
         return;
@@ -412,7 +419,7 @@ async fn finish(
         match tokio::time::timeout(POLL, handle.receive()).await {
             Ok(Some(Ok(StreamResponse::TerminalResponse { .. }))) | Ok(None) => return,
             Ok(Some(Ok(response))) => {
-                if let Some(ended) = on_response(response, app, deadlines) {
+                if let Some(ended) = on_response(response, app, deadlines, typed_something) {
                     on_end(ended);
                     return;
                 }
@@ -428,6 +435,7 @@ fn on_response(
     response: StreamResponse,
     app: &AppHandle,
     deadlines: &Arc<Mutex<Deadlines>>,
+    typed_something: &mut bool,
 ) -> Option<Ended> {
     let StreamResponse::TranscriptResponse {
         is_final, channel, ..
@@ -462,11 +470,22 @@ fn on_response(
         caps.speech_heard(Instant::now());
     }
 
-    // PROBE: temporary, remove with the block below and the one in typing.rs.
-    probe_shape(text);
+    // A single space joins consecutive finalised phrases (record 0002,
+    // settled 2026-08-31). Deepgram hands every phrase over trimmed, so
+    // without this two phrases collide into one word at the cursor. The
+    // space rides in front of the phrase through the same one door, so the
+    // password check covers it too. Nothing goes in front of a dictation's
+    // first phrase, and the events below carry the phrase exactly as it
+    // arrived.
+    let mut to_type = String::with_capacity(text.len() + 1);
+    if *typed_something {
+        to_type.push(' ');
+    }
+    to_type.push_str(text);
 
-    match typing::type_at_cursor(text) {
+    match typing::type_at_cursor(&to_type) {
         Typed::AtTheCursor => {
+            *typed_something = true;
             // Broadcast rather than sent to the pill alone. Record 0002's
             // clearing table gives a spent allowance one proof that it is over,
             // the first finalised words, and the window holding that message
@@ -487,42 +506,6 @@ fn on_response(
         }
     }
 }
-
-// PROBE START: temporary diagnostic, added 2026-08-30 to find where the
-// garbled dictation is introduced. Delete this whole block, and the one call to
-// `probe_shape` above, to remove it.
-//
-/// Report the *shape* of a finalised phrase as it arrived from Deepgram, before
-/// typing has touched it. Counts by character class, never the characters.
-///
-/// This exists to answer one question the other measurements cannot: whether
-/// the text handed to `typing.rs` was already wrong. A count on its own cannot,
-/// because "Deepgram sent forty dots" and "we turned forty letters into forty
-/// dots" are the same count. A histogram tells those apart, and it stays inside
-/// AGENTS.md's data rules, because class totals cannot be turned back into the
-/// words the way a length plus a log line eventually can.
-fn probe_shape(text: &str) {
-    let (mut letters, mut digits, mut spaces, mut marks, mut other) = (0, 0, 0, 0, 0);
-    for c in text.chars() {
-        if c.is_alphabetic() {
-            letters += 1;
-        } else if c.is_numeric() {
-            digits += 1;
-        } else if c.is_whitespace() {
-            spaces += 1;
-        } else if c.is_ascii_punctuation() {
-            marks += 1;
-        } else {
-            other += 1;
-        }
-    }
-    eprintln!(
-        "dictate probe: deepgram final, {} utf16 units: {letters} letters, {digits} digits, \
-         {spaces} spaces, {marks} punctuation, {other} other",
-        text.encode_utf16().count()
-    );
-}
-// PROBE END
 
 /// Signed 16-bit samples, little endian, which is what `Encoding::Linear16`
 /// means.

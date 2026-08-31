@@ -88,6 +88,17 @@ simulated character keystrokes stay the default everywhere else, and the
 batch and pause pacing in `typing.rs` is ratified as a mitigation, never a
 cure. Both of this record's original spikes stay open and are re-pointed,
 because milestone 4 was to settle them and did not.
+**Amended:** 2026-08-31, the tenth. `/develop`'s gate stopped on step 4a:
+the collapse list names the new Windows Notepad, and no row named the
+property the running code reads to recognise it in the focused window at
+typing time. This amendment settles it as the Store package identity, the
+package family name `Microsoft.WindowsNotepad_8wekyb3d8bbwe`, read from
+this machine on 2026-08-31 rather than assumed, with cannot tell meaning
+the default keystrokes run. It also carries in the one line the user
+decided the same day and `/debug` had deliberately held: consecutive
+finalised phrases within one dictation are joined by a single space before
+typing. No criterion is renumbered, reworded or added. The count stays
+at 33.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -738,6 +749,31 @@ nowhere else, as a hard limit. Accepting the collapse as a documented limit
 was refused because the failure lands in the default editor of Windows 11
 and garbles the very words this app exists to get right.
 
+**The property that recognises a receiver on the collapse list, settled
+2026-08-31, the tenth amendment.** The Store package identity of the
+application about to receive the phrase, called the package family name:
+Windows keeps one permanent name for every packaged app, and the new
+Windows Notepad's is `Microsoft.WindowsNotepad_8wekyb3d8bbwe`, read from
+this machine on 2026-08-31 rather than assumed. The code asks it of the
+process behind the focused window at the moment of typing, the same moment
+the password check already asks its question. It was chosen over the
+program file name, which the old and the new Notepad share and any program
+may take, and over the text box's class name, which other applications may
+share; either one lets the list grow silently, which this record forbids.
+When Windows will not answer, the receiver is treated as not on the list
+and the default keystrokes run: cannot tell means the normal, proven path,
+the same rule the password check follows.
+
+**What separates two finalised phrases at the cursor, decided by the user
+2026-08-31 and carried in by the tenth amendment.** A single space, typed
+before every finalised phrase after a dictation's first, through the same
+one door as the phrase itself, so the password check covers it too.
+Deepgram's phrases arrive trimmed, so without this consecutive phrases
+collide into one word. Nothing is typed before the first phrase, and the
+pill's events are unchanged. This was held during the `/debug` sitting of
+2026-08-31 on purpose, so every test there ran against unchanged typing;
+that hold ended with the sitting.
+
 ## What else was considered
 
 | Option | Why not |
@@ -877,6 +913,8 @@ One migration, creating all three tables.
 | What the pill shows when typing is refused | AC-20 | This record: `BLOCKED_PASSWORD_FIELD` and its one sentence, no action, and the EchoScribe window stays where it is. Settled 2026-08-31. |
 | How characters reach the focused window | AC-3, AC-7 | This record, settled 2026-08-31: simulated character keystrokes by default, with the ratified batch of 8 and 10 millisecond pause as mitigation; the direct character channel for receivers on the collapse list. Both run the password check first, and neither ever touches the clipboard. |
 | Which receivers are on the collapse list | AC-3 | This record. Exactly one today, the new Windows Notepad. A receiver joins by amendment carrying evidence in the finding's shape, never by a quick addition in code. |
+| How a focused receiver is matched against the collapse list | AC-3 | This record, settled 2026-08-31: the package family name of the process behind the focused window, read at the moment of typing. The new Windows Notepad's is `Microsoft.WindowsNotepad_8wekyb3d8bbwe`, read from the machine rather than assumed. Cannot tell means not on the list, so the default keystrokes run. |
+| What separates two finalised phrases at the cursor | AC-3, AC-4 | This record, decided by the user 2026-08-31: a single space, typed before every finalised phrase after a dictation's first, through the same one door and behind the same password check. Nothing before the first phrase, and the pill's events are unchanged. |
 
 ## Interface surface
 

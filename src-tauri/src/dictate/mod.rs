@@ -48,6 +48,16 @@
 //! because Deepgram's final results are the first thing on this machine that can
 //! honestly say a person spoke.
 //!
+//! Step 4a: typing that survives a stalling receiver (record 0002, "How
+//! characters reach a focused window", settled 2026-08-31). The new Windows
+//! Notepad collapses backlogged injected keystrokes, so receivers proven to
+//! collapse, held in `collapse_list.rs`, are typed to through a direct
+//! channel in `typing.rs` instead of simulated keystrokes. The channel was
+//! proved by spike before it was wired in: the finding's own 205 character
+//! burst arrived intact, exact string match. A single space now joins
+//! consecutive finalised phrases, which `transcribe.rs` used to lose to
+//! Deepgram's trimming.
+//!
 //! **Milestone 4 is not finished.** Everything a person can read when Deepgram
 //! or the microphone ends a dictation mid flow is owed a drawn state that
 //! `design/registry.md` does not hold, so it is not built and was not invented:
@@ -58,6 +68,7 @@
 //!
 //! Still to come: history and settings (milestone 5).
 
+mod collapse_list;
 mod consent;
 pub mod deepgram_key;
 mod hook;
