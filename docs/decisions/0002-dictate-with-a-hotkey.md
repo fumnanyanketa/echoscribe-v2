@@ -69,6 +69,25 @@ own. Evidence:
 `docs/evidence/dictate-with-a-hotkey/AC-2-sound-fallback-never-fires.md`,
 `AC-27-pill-no-longer-takes-focus.md` and
 `finding-microphone-dies-mid-dictation.md`.
+**Amended:** 2026-08-31, the ninth. Milestone 4, streaming and typing, was
+built and run live, committed at `64bf2c7`, against six decisions this record
+named and never settled. All six were answered by the user on 2026-08-30 and
+written up in
+`docs/evidence/dictate-with-a-hotkey/milestone-4-decisions-owed.md`; this
+amendment carries them in, most into Value sourcing, and records a seventh
+found fact, that the Windows property naming a password field is `IsPassword`.
+One of the six is a visible promise no criterion covered, the pill's grey
+unfinished wording, which becomes AC-33 and takes the count to 33. The other
+five land under AC-14, AC-20 and AC-30, by the fifth amendment's own
+reasoning: what was missing was this record's list of causes, not a promise.
+This amendment also settles the decision the live run forced, evidence in
+`docs/evidence/dictate-with-a-hotkey/finding-new-notepad-collapses-injected-unicode.md`:
+the new Windows Notepad collapses backlogged injected keystrokes, so typing
+gains a per application direct channel for receivers proven to collapse,
+simulated character keystrokes stay the default everywhere else, and the
+batch and pause pacing in `typing.rs` is ratified as a mitigation, never a
+cure. Both of this record's original spikes stay open and are re-pointed,
+because milestone 4 was to settle them and did not.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -186,6 +205,11 @@ great.
   successfully, the EchoScribe window is no longer showing that error. It
   clears on its own, quietly: the window does not come to the front, does not
   hide itself, and does not move.
+- **AC-33**: While I am still speaking, the pill shows the wording Deepgram
+  has not yet settled, in grey, and replaces it as I go. Those unfinished
+  words appear on the pill and nowhere else: they are never typed at my
+  cursor, never saved, and when the final wording comes out differently
+  nothing at my cursor has to be taken back.
 
 ## The decision
 
@@ -503,6 +527,10 @@ can invent its own. Two of these codes were already drawn in
 No sentence carries anything read off the pasted key, and no sentence blames
 the key when the network was the cause.
 
+**A fifth kind exists since 2026-08-31**, `deepgram_key_not_allowed`, for a
+key that is real but not allowed to stream. It is settled below with
+milestone 4's decisions, and the four above are unchanged.
+
 **AC-13's two next steps.** AC-13 asks for the matching next step for each of
 its two causes, and the two genuinely differ.
 
@@ -559,6 +587,157 @@ No new event carries this. `dictation:opened` and `dictation:text` already
 exist and already reach every window, the same way `dictation:error` does.
 Nothing in `src-tauri/capabilities/` widens for it.
 
+**What is asked of Deepgram on the stream, settled 2026-08-31.** The model is
+`nova-3`, Deepgram's current general model, chosen over `nova-2` and over
+`flux-general-en`. Accuracy is the one thing this app must do well and the
+model is the largest single lever on it; Deepgram's own published figure for
+nova-3 is a 54.2% reduction in word error rate on streaming. It also supports
+70+ languages against nova-2's 40+, and plan row 4, speak in your language,
+inherits whatever is chosen here. It costs more per minute than the legacy
+models, and that is spent from the person's own Deepgram allowance, never the
+project's. The stream asks for English, fixed here because Still open already
+hands the language to plan row 4; punctuation on, because the words go
+straight into a document and a person adding every full stop by hand has not
+saved any time; and interim results on, which the next block is for.
+
+**Unfinished wording on the pill, settled 2026-08-31, and it is AC-33.** This
+resolved a disagreement between two locked documents. `design/registry.md`
+draws a transcript line on the pill, final text ink, interim grey with a
+dotted rule. This record's interface surface carried exactly one event with
+text on it, `dictation:text`, with one finalised phrase, so nothing could
+ever have fed the grey half. Neither half had been built, so neither had been
+caught. The drawn design wins: a second event, `dictation:interim`, now
+carries the wording Deepgram has not yet settled, and the pill draws it grey.
+
+What does not change: only wording Deepgram marks as final is ever typed,
+AC-4 is untouched, and nothing typed is ever taken back. The grey line is a
+sign on the pill and never a keystroke.
+
+What this costs, named rather than hidden: a partial transcript now crosses
+into the interface, which nothing in this feature did before. The data rules
+hold, because they forbid a partial transcript being written to any table,
+any log or any file, and this is none of those. It is still more transcript
+surface than existed yesterday, so the grey line must never be stored, never
+be logged, and never be read by anything but the pill that draws it. That is
+now a refusal in Risk, not only a sentence here.
+
+**A key that is not allowed to stream, settled 2026-08-31.** A fifth key
+kind of its own, not folded into `deepgram_key_rejected`:
+
+| Kind | Code | Sentence | The one action |
+|---|---|---|---|
+| `deepgram_key_not_allowed` | `DEEPGRAM_KEY_NOT_ALLOWED` | This key is not allowed to transcribe live audio. | Open Deepgram console |
+
+The pill shows the code and the sentence, then closes, and the closing sound
+plays. The EchoScribe window comes forward carrying the one action, because
+there is something the person can do. The action is Open Deepgram console
+and not Replace key, because a key's permissions are changed in Deepgram's
+console and nowhere else; pasting a new key is the right door only for
+somebody making a whole new key. It reuses `open_deepgram_console()`, so no
+new outside address is approved. It is not folded into rejected on the same
+grounds this record has already refused two folds: Deepgram accepted this
+key at the setup screen, and saying it did not sends the person off to
+replace a key that was never the problem. This names the scope failure
+state the sixth amendment handed milestone 4 in as many words. Its wording
+is decided; its live trigger is not, because how Deepgram actually reports
+it has never been seen. That is the first spike in Still open, and until it
+runs the mapping in `deepgram_key.rs` is a documented guess.
+
+**The connection dropping, settled 2026-08-31.**
+
+| Kind | Code | Sentence | The one action |
+|---|---|---|---|
+| `deepgram_connection_lost` | `DEEPGRAM_CONNECTION_LOST` | Dictation stopped because the connection to Deepgram was lost. | Try again |
+
+The same shape as every other mid dictation ending: the pill says so and
+closes, the closing sound plays, and the EchoScribe window comes forward
+with Try again, which goes through `try_start` like every other way into
+dictation. Words already typed stay exactly where they are, which AC-14
+requires outright. Reusing `DEEPGRAM_UNREACHABLE` was weighed and rejected:
+its sentence ends "the key was not checked. Nothing was saved.", which is
+false about a connection that dropped mid sentence, and changing that
+sentence would break it on the setup screen where it is already right.
+
+**Speech during the one reconnect attempt, settled 2026-08-31.** Held in
+memory and sent once the connection is back. The microphone stays open for
+the attempt, so the pill does not flicker and the person is not interrupted
+for a blip that fixed itself. The audio is held in memory only, never on
+disk and never in a log; the data rules are unchanged, captured, sent,
+discarded. The attempt is capped at 5 seconds and the held audio is capped
+at the same 5 seconds, one cap used twice, so a long outage can never grow
+a buffer. When the cap is reached the reconnect has failed, and the
+connection lost ending above is what happens next.
+
+**Typing refused into a password field, settled 2026-08-31.**
+
+| Code | Sentence |
+|---|---|
+| `BLOCKED_PASSWORD_FIELD` | EchoScribe will not type into a password field. |
+
+The pill shows both, in the registry's already drawn Error pill shape, a
+mono code and one sentence and no action at all. Then dictation stops and
+the pill closes. The EchoScribe window deliberately does not come forward:
+AC-30 brings it forward only when there is something the person can do,
+there is nothing to do here except not dictate into a password box, and
+moving somebody's focus while they are on a password field would be the
+single worst moment in the app to do it. Dictation stopping rather than
+merely skipping keystrokes was never this decision's to make; the Risk
+section already fixes it.
+
+**The property that names a password field, recorded 2026-08-31.** Windows
+UI Automation's `IsPassword`, asked of the focused element. There is no
+second candidate, so this was found rather than decided. How widely it
+actually reaches is still the second spike in Still open.
+
+**How characters reach a focused window, settled 2026-08-31.** The live run
+after milestone 4 proved three things at once, evidence in
+`docs/evidence/dictate-with-a-hotkey/finding-new-notepad-collapses-injected-unicode.md`:
+EchoScribe's typing is character perfect, the same burst arrives 205 of 205
+in a classic edit control, and the new Windows Notepad collapses backlogged
+injected keystrokes, delivering every keystroke that queued during a stall
+as a copy of the newest one. The line in What this makes harder that "a
+small number of apps handle fast simulated input badly" came true through
+its own remedy, finding by use, and the set it called small now contains
+the default editor of Windows 11, the first app most people will try
+dictation in. Pacing was tried live and honestly judged insufficient: any
+receiver stall longer than the pause rebuilds the backlog, so no pace
+reaches zero.
+
+The decision is a cure, applied per application, not a documented limit:
+
+- **Simulated character keystrokes stay the default for every app.** Every
+  property AC-3 rests on is unchanged: characters and never keys, the
+  password check first, nothing interpreted.
+- **The batch of 8 UTF-16 units with a 10 millisecond pause between calls
+  is ratified**, as exactly what `typing.rs` labels it: a mitigation for
+  marginal receivers, never a cure.
+- **Receivers proven to collapse backlogged injected keystrokes get a
+  direct channel instead.** Each character is posted straight to the
+  focused text box as a character message, skipping the shared input queue
+  where the backlog builds. It is still a character and never a key, the
+  password check still runs first, and nothing touches the clipboard, so
+  AC-20 and the data rules are untouched.
+- **The list of receivers on that channel is this record's, and it starts
+  with exactly one entry: the new Windows Notepad.** A receiver joins the
+  list by amendment, carrying evidence of the same shape as the finding
+  above, never by a quick addition on the way past a bug.
+- **A spike proves the channel before it is built.** Post the finding's own
+  205 character burst into the new Notepad through the direct channel and
+  compare exact strings, the same proof the finding used, with EchoScribe
+  not running. If it does not arrive intact, the channel is not built, and
+  the choice comes back to the user as clipboard against documented limit,
+  because those are the two options left and each costs something only the
+  user can spend.
+
+Clipboard paste was weighed and refused, both for the bad apps alone and
+for everywhere. It is fast, atomic and known to work, and it puts the
+dictated words in a third place: the clipboard is readable by any clipboard
+tool and feeds Windows clipboard history and cloud sync unless flagged, and
+the data rules say the words go to the cursor and the local history and
+nowhere else, as a hard limit. Accepting the collapse as a documented limit
+was refused because the failure lands in the default editor of Windows 11
+and garbles the very words this app exists to get right.
+
 ## What else was considered
 
 | Option | Why not |
@@ -599,6 +778,17 @@ Nothing in `src-tauri/capabilities/` widens for it.
 | Clearing every error the moment the microphone opens | One trigger and one rule, the simplest thing to build and to read. An open microphone does not prove a Deepgram allowance is back, so it would take the allowance message away while the problem was still there. |
 | Hiding the EchoScribe window once the error clears | Tidier, and the person is dictating in another app anyway. It moves a window they may have deliberately left open, which is an act they did not ask for, and this record only ever brings a window forward in answer to a hotkey that produced nothing. |
 | A short note saying dictation is working now, in place of the cleared error | Confirms the fix worked, which is friendly after a person has gone off to Windows or Deepgram to sort something out. It is a component the design system does not hold, so it would owe `/canvas` a drawn row, to say something the words already arriving at their cursor say better. |
+| `nova-2` as the model | Cheaper per minute and longer established. Fewer languages, 40+ against nova-3's 70+, which narrows plan row 4 before it has even been looked at, and a worse published streaming error rate, which spends the one thing this app must do well. |
+| `flux-general-en` as the model | Built for voice agents, with turn detection built in. Turn detection decides when a person has finished speaking in a conversation, which is the wrong instinct entirely for somebody dictating a paragraph: it would cut them off mid thought. |
+| No unfinished wording on the pill, ever | Less transcript surface and nothing new crossing into the interface. It makes the drawn transcript line in `design/registry.md` a lie, and a pill that shows nothing through a long sentence looks dead. The registry drew the grey line on purpose, and the drawn design won. |
+| Folding the not-allowed key into `deepgram_key_rejected` | One fewer kind and one fewer sentence. Deepgram accepted this key at the setup screen, so saying it was rejected is false and sends the person off to replace a key that was never the problem. The same fold this record has already refused twice. |
+| Reusing `DEEPGRAM_UNREACHABLE` for a dropped connection | One fewer code. Its sentence ends "the key was not checked. Nothing was saved.", which is false about a connection that dropped mid sentence, and changing it breaks the setup screen where it is already right. |
+| Dropping the held audio during the reconnect attempt | The structurally safer reading of audio is transient, and simpler. It costs a silent hole in the middle of a sentence with nothing on screen saying where the words went, on a connection that recovered fine. The 5 second cap buys the safety without the hole. |
+| Bringing the EchoScribe window forward on a password refusal | Every other mid dictation ending does it. There is nothing here for the person to do, and moving their focus while they are on a password field is the single worst moment in the app to do it. |
+| Clipboard paste for the collapsing receivers only | Fast, atomic and known to land intact in the new Notepad. The dictated words would transit the clipboard, a third place any clipboard tool can read, feeding Windows clipboard history and cloud sync unless flagged, against a data rule AGENTS.md holds as a hard limit. Refused 2026-08-31. |
+| Clipboard paste everywhere | One typing mechanism instead of two. The same clipboard cost on every dictation, and Ctrl V does not mean paste in every app, so it fixes the new Notepad by breaking apps that keystrokes already handle correctly. |
+| Accepting the Notepad collapse as a documented limit | No new code and no second mechanism to own. The failure lands in the default editor of Windows 11, the first app most people will try, and it garbles the very words the app exists to get right. |
+| Slower pacing and smaller batches | Already tried live: batches cut from 32 units to 8 with 10 millisecond pauses still collapsed a long phrase. Any receiver stall longer than the pause rebuilds the backlog, so no pace reaches zero. Kept only as the ratified mitigation for marginal receivers. |
 
 ## Data model
 
@@ -659,7 +849,7 @@ One migration, creating all three tables.
 | A dragged position | AC-24 | The pill window's own position, read from Windows by Rust when the drag ends and converted to fractions of that screen's working area before it is stored. The interface reports that a drag finished. It never computes or sends coordinates. |
 | Which words are final | AC-3, AC-4 | Deepgram's own final flag on each streamed result. Nothing else counts as final. |
 | Where the text is typed | AC-3, AC-7 | The window that has focus at the moment each phrase is ready, asked of Windows each time. |
-| Whether the focused field is a password field | AC-20 | Windows UI Automation, asked of the focused element at the moment of typing. Best effort, see Still open. |
+| Whether the focused field is a password field | AC-20 | Windows UI Automation, asked of the focused element at the moment of typing. The property is `IsPassword`, recorded 2026-08-31; there is no second candidate. Best effort, see Still open. |
 | 30 second silence, 5 minute cap | AC-8 | This record. Fixed, not settings. Silence means no final wording from Deepgram in that period. |
 | Rejected key versus allowance exhausted | AC-11, AC-13 | The error Deepgram returns, distinguished by its own response. The mapping is fixed in The decision: 401 `INVALID_AUTH` is rejected, 402 `ASR_PAYMENT_REQUIRED` is the allowance, no answer at all is unreachable, and anything else is the honest catch-all `deepgram_check_failed`, which names no cause. Until 2026-08-30 this row named the source and stopped there, which could not be acted on. 402 is only ever returned for a transcription request, so the allowance case can never arrive at the setup screen; it is a milestone 4 state. |
 | Microphone unavailable, and why | AC-15 | The error the audio layer returns when opening the device, mapped to a named cause. |
@@ -679,6 +869,14 @@ One migration, creating all three tables.
 | The one next step for each of AC-13's two causes | AC-13 | This record, the two step table in The decision. Replace key on a rejected key, which opens the AC-9 setup screen. Open Deepgram console on a spent allowance, which opens the address below. |
 | The Deepgram console page | AC-13 | This record. A fixed literal held in Rust beside the signup page, `https://console.deepgram.com`, opened through the system browser by `open_deepgram_console`, which takes nothing. The second and last Deepgram address this feature opens, and the third and last outside address of any kind, the Windows privacy page being the other. The interface never supplies or sees it. |
 | What clears an error screen once the cause is fixed | AC-28, AC-30, AC-32 | This record, the clearing table in The decision. Each error's own proof that the thing it complained about now works: the microphone opening for the four microphone errors, a key being accepted for the three setup screen key errors, the first finalised words for a spent allowance. Never a timer, never one blanket signal, and never the interface deciding on its own. |
+| What is asked of Deepgram on the stream | AC-3, AC-4, AC-33 | This record: `nova-3`, English, punctuation on, interim results on. Settled 2026-08-31. The language stays plan row 4's to widen, per Still open. |
+| Unfinished wording on the pill | AC-33 | Deepgram's interim results on the live stream, carried to the pill by `dictation:interim` and read by nothing else. Never typed, never stored, never logged. |
+| The sentence and action for a key not allowed to stream | AC-30, AC-32 | This record: the fifth key kind table in The decision, `deepgram_key_not_allowed`. The action reuses `open_deepgram_console()`, so no new outside address. Its live trigger is undecided until the first spike in Still open runs; the 403 mapping in `deepgram_key.rs` is a documented guess until then. |
+| The sentence and action for a lost connection | AC-14, AC-30 | This record: the `deepgram_connection_lost` table in The decision. Try again goes through `try_start`, the one way into dictation. |
+| Speech during the one reconnect attempt | AC-14 | Held in memory only, capped at 5 seconds, the same cap as the attempt itself, then discarded. Never on disk, never in a log. Settled 2026-08-31. |
+| What the pill shows when typing is refused | AC-20 | This record: `BLOCKED_PASSWORD_FIELD` and its one sentence, no action, and the EchoScribe window stays where it is. Settled 2026-08-31. |
+| How characters reach the focused window | AC-3, AC-7 | This record, settled 2026-08-31: simulated character keystrokes by default, with the ratified batch of 8 and 10 millisecond pause as mitigation; the direct character channel for receivers on the collapse list. Both run the password check first, and neither ever touches the clipboard. |
+| Which receivers are on the collapse list | AC-3 | This record. Exactly one today, the new Windows Notepad. A receiver joins by amendment carrying evidence in the finding's shape, never by a quick addition in code. |
 
 ## Interface surface
 
@@ -738,6 +936,11 @@ Rust sends these events out to the pill. None carries audio or the key.
 - `dictation:opened`
 - `dictation:level` with a single loudness number, many times a second
 - `dictation:text` with one finalised phrase
+- `dictation:interim` with the wording Deepgram has not yet settled, for the
+  pill's grey line and for nothing else. **Added 2026-08-31, and it is what
+  AC-33 rides on.** It exists because `design/registry.md` drew a grey
+  interim line that no event here could ever have fed. It is never typed,
+  never stored, never logged, and never read by anything but the pill.
 - `dictation:closed` with why it closed: you stopped it, silence, the time
   cap, or an error
 - `dictation:blocked` when typing was refused, currently only a password
@@ -753,7 +956,8 @@ Rust sends these events out to the pill. None carries audio or the key.
   `docs/evidence/dictate-with-a-hotkey/report.md`.
 
 Errors that matter and must each read differently: no key saved, key
-rejected, allowance exhausted, cannot reach Deepgram, the key check failing
+rejected, the key not allowed to transcribe live audio, allowance exhausted,
+cannot reach Deepgram, the key check failing
 for some other reason, connection lost mid dictation, microphone blocked by
 Windows, microphone in use by another app, no microphone found, the microphone
 failing for some other reason, not signed in. The two "for some other reason"
@@ -837,6 +1041,17 @@ call for it.**
   claim that dictation cannot happen, so it clears itself the moment the thing
   it named is shown to work. It never clears on a timer, and it never clears
   on a signal that does not actually prove the cause is gone.
+- Store, log, or hand an unfinished transcript to anything but the pill.
+  `dictation:interim` is drawn grey and then gone. It never enters a table, a
+  file, a log, the history, or the typed output, and no future feature may
+  read it. Added 2026-08-31 with AC-33.
+- Hold reconnect audio beyond its 5 second cap, or hold it anywhere but
+  memory. A dropped connection is never a reason a person's voice touches a
+  disk or a log. Added 2026-08-31.
+- Put the dictated words on the clipboard. Typing is simulated character
+  keystrokes or the direct character channel, never paste, settled
+  2026-08-31. A future request for paste is a new decision against a data
+  rule AGENTS.md holds as a hard limit, not a tuning.
 
 ## Build plan
 
@@ -989,6 +1204,27 @@ everything saying dictation cannot start while it is running.
    its one action. Switch access back on, press the hotkey, and the error must
    clear itself, which is AC-32's path and costs nothing extra in the same
    sitting. All of it is part of AC-30's proof, not a criterion of its own.
+
+**Step 4a, added 2026-08-31: typing that survives a stalling receiver.** The
+live run proved the new Windows Notepad collapses backlogged injected
+keystrokes, evidence in
+`docs/evidence/dictate-with-a-hotkey/finding-new-notepad-collapses-injected-unicode.md`,
+and The decision now holds the cure, under "How characters reach a focused
+window". In order:
+
+- The spike first: post the finding's own 205 character burst into the new
+  Notepad through the direct channel and compare exact strings, the same
+  proof the finding used, with EchoScribe not running. Intact means build it.
+  Anything else means stop and take the choice back to the user, because the
+  two options left, clipboard and documented limit, each cost something only
+  the user can spend.
+- Then the channel itself, behind the same one door typing already has, with
+  the receiver list from The decision deciding which mechanism runs, and the
+  password check first on both, exactly as today.
+- Proved live the way the fault was found: one real dictation into the new
+  Notepad and the same one into a classic edit control, both arriving
+  character perfect, compared as strings and not by eye.
+
 5. **History and settings.** The three tables and their migration, saving
    each finished dictation against the account, per account separation, the
    two hotkey choices as a list in settings, and the sound switch. Both
@@ -1019,7 +1255,23 @@ everything saying dictation cannot start while it is running.
   never taking typed text back.
 - **Simulated keystrokes are slower than pasting** and a small number of
   apps handle fast simulated input badly. Those apps will need finding by
-  use, not by reading code.
+  use, not by reading code. **Come true, 2026-08-31.** Finding by use found
+  the first one, and it is the new Windows Notepad, the default editor of
+  Windows 11. The cure is the per application direct channel in The
+  decision. This line stays, because the next such app is still found the
+  same way, and it now has somewhere to go when found: the collapse list,
+  joined by amendment.
+- **Typing now has two mechanisms, and a list deciding between them.**
+  Simulated keystrokes by default, the direct character channel for
+  receivers proven to collapse. Every future misbehaving receiver is a
+  diagnosis against evidence in the finding's shape and then an amendment,
+  never a quick addition to a list in code. Two paths also means two
+  proofs: any change to typing is proved in a classic edit control and in
+  the new Notepad, not one or the other.
+- **A partial transcript now crosses into the interface.** Only to the
+  pill, only to be drawn grey, and never stored or logged, but it is more
+  transcript surface than existed before AC-33, and every future change
+  near the pill inherits the duty to keep the grey line display only.
 - **The hook, the typing and the credential vault are Windows only.** The
   microphone, via cpal, and the database carry to Mac. The rest is a
   second implementation behind the platform boundary AGENTS.md requires.
@@ -1065,6 +1317,17 @@ everything saying dictation cannot start while it is running.
   types normally, because refusing everywhere it is unsure would break
   dictation in ordinary apps. Settle the real coverage by testing during
   milestone 4 and record what was found.
+
+  **Re-pointed 2026-08-31, still open.** That last instruction is stale:
+  milestone 4 is built and did not settle it. What milestone 4 did settle
+  is the property, `IsPassword`, recorded in The decision, and the refusal
+  itself, `BLOCKED_PASSWORD_FIELD`. The coverage half is genuinely
+  unanswered. What is owed is a live sitting with the user at the machine
+  and a list of real applications: Chrome, Edge, Firefox, a Windows
+  credential prompt, a password manager, and at least one older desktop
+  app. It changes no behaviour, because the rule for cannot tell is fixed;
+  it measures how often AC-20's promise actually holds, which is worth
+  knowing before anybody trusts it.
 - **Whether the pill needs its own design pass.** The locked design system
   covers ordinary screens. An always on top floating pill with a live
   waveform may not be covered by it. Settle when milestone 1 starts, and
@@ -1157,6 +1420,17 @@ everything saying dictation cannot start while it is running.
   not known. Settle it in milestone 4 by pointing a deliberately narrow key at
   the stream, and record what came back. Until then the setup screen's green
   light means the key is real, not that dictation will work.
+
+  **Re-pointed 2026-08-31, still open.** Milestone 4 is built and did not
+  settle this either. It built the kind, `deepgram_key_not_allowed`, its
+  code, its sentence and its action, and wired a trigger that is a
+  documented guess: `deepgram_key.rs` maps a 403 on the stream to it and
+  says in the code that it is a guess. Deepgram's own error page, checked
+  2026-08-30, documents 401 for both an invalid key and an insufficient
+  one, so whatever tells them apart has to be read off a live response.
+  Still owed, and it needs the user: a key deliberately made without
+  streaming permission in their own Deepgram console, pointed at the
+  stream, and what comes back recorded verbatim.
 - **The language the transcription runs in** is fixed to English here.
   Plan row 4 owns making it a choice, and will add a language field to
   `dictation`.
