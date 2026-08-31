@@ -33,3 +33,39 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    /// This file's own source, minus its tests, flattened so the guard
+    /// survives a formatter moving the builder call across lines.
+    fn this_file_flattened() -> String {
+        include_str!("lib.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("a source file always has a first part")
+            .chars()
+            .filter(|c| c.is_ascii() && !c.is_ascii_whitespace())
+            .collect()
+    }
+
+    #[test]
+    fn device_events_are_filtered_so_the_keyboard_hook_stays_alive() {
+        // covers: AC-1, AC-5, as a source guard only. Without this builder
+        // line the dictation hotkey goes dead exactly while an EchoScribe
+        // window is focused: Tauri's windowing layer registers for Windows
+        // raw input when one of its windows has focus, and that registration
+        // stops this process's low-level keyboard hook being called at all,
+        // proven live on 2026-08-30 (tauri-apps/tauri#13919). The behaviour
+        // itself needs a running app, a focused EchoScribe window and a real
+        // key press, so /check verify owns proving it live; this guard only
+        // stops the line being tidied away as boilerplate, which is exactly
+        // what it looks like.
+        assert!(
+            this_file_flattened()
+                .contains(".device_event_filter(tauri::DeviceEventFilter::Always)"),
+            "lib.rs no longer filters device events to Always. The dictation \
+             hotkey will go dead whenever an EchoScribe window has focus \
+             (2026-08-30, tauri-apps/tauri#13919)"
+        );
+    }
+}

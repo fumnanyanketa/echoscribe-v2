@@ -676,6 +676,49 @@ mod tests {
     }
 
     #[test]
+    fn choosing_the_cryptography_leaves_a_provider_installed() {
+        // covers: AC-3, and the crash fixed at 64bf2c7. Two versions of
+        // reqwest each switch on a different crypto provider feature of the
+        // shared rustls, rustls refuses to guess between two, and the very
+        // first websocket connect panicked, killing the transcription thread
+        // silently: pill up, meter moving, nothing typed, no error anywhere.
+        // The cure is one install before any connect. This calls the same
+        // function the worker thread calls, then asks rustls the question the
+        // connect would ask. Gut the install out of `choose_the_cryptography`
+        // and this fails, because nothing else in this crate installs a
+        // process default: sign-in's client names its provider per client.
+        choose_the_cryptography();
+        assert!(
+            rustls::crypto::CryptoProvider::get_default().is_some(),
+            "no process-default crypto provider is installed, so the first \
+             websocket connect will panic again (the crash of 2026-08-31, \
+             fixed at 64bf2c7)"
+        );
+    }
+
+    #[test]
+    fn the_worker_thread_still_chooses_the_cryptography() {
+        // covers: AC-3, as a source guard only. The test above keeps
+        // `choose_the_cryptography` correct, and by calling it, also keeps
+        // the compiler's dead code warning from ever noticing the call site
+        // going missing. So the call site needs its own watcher: this fails
+        // if the worker thread stops making the call. The panic it prevents
+        // only fires on a live connect to Deepgram, which no automated test
+        // reaches, which is why the call is guarded at the source. Flattened
+        // so a formatter moving the call across lines changes nothing.
+        let flat: String = this_file()
+            .chars()
+            .filter(|c| c.is_ascii() && !c.is_ascii_whitespace())
+            .collect();
+        assert!(
+            flat.contains("choose_the_cryptography();"),
+            "transcribe.rs no longer calls choose_the_cryptography() on the \
+             worker thread. The very first websocket connect will panic and \
+             the thread will die silently (fixed at 64bf2c7)"
+        );
+    }
+
+    #[test]
     fn the_reconnect_holds_no_more_than_it_waits() {
         // covers: AC-14. One number used twice is what makes the promise
         // checkable: the buffer can never outlast the attempt that justifies it.

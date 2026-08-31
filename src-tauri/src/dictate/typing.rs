@@ -405,6 +405,55 @@ mod tests {
     }
 
     #[test]
+    fn the_direct_channel_posts_characters_and_never_key_messages() {
+        // covers: AC-3, AC-20, as a source guard only. The record's channel
+        // row says both mechanisms carry characters and never keys. On the
+        // default path that is KEYEVENTF_UNICODE, asserted directly above. On
+        // the posted path it is WM_CHAR, and the equivalent betrayal would be
+        // a key message: a WM_KEYDOWN built from text would give some word
+        // the power to press Enter in somebody's document. The posting lands
+        // in another program, so only the ignored spike can watch it live;
+        // this guard watches the whole production source instead, and fails
+        // if any key message joins the character one.
+        let source = this_file();
+        for forbidden in [
+            "WM_KEYDOWN",
+            "WM_KEYUP",
+            "WM_SYSKEYDOWN",
+            "WM_SYSKEYUP",
+            "WM_SYSCHAR",
+            "keybd_event",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "typing.rs now mentions `{forbidden}`. The direct channel \
+                 posts characters and may never post a key (record 0002, How \
+                 characters reach a focused window)"
+            );
+        }
+    }
+
+    #[test]
+    fn neither_mechanism_can_touch_the_clipboard() {
+        // covers: AC-3, AC-7, as a source guard only. The record's channel
+        // row promises neither mechanism ever touches the clipboard, because
+        // paste is the classic shortcut for injecting text and it destroys
+        // whatever the person had copied. Every clipboard API and message
+        // carries the capital word, so watching the whole production source
+        // for it catches the entire family at once; prose here spells it in
+        // lowercase so the comments can keep saying the promise out loud.
+        let source = this_file();
+        for forbidden in ["Clipboard", "WM_PASTE", "WM_COPY", "WM_CUT"] {
+            assert!(
+                !source.contains(forbidden),
+                "typing.rs now mentions `{forbidden}`. Neither typing \
+                 mechanism may ever touch the clipboard (record 0002, How \
+                 characters reach a focused window)"
+            );
+        }
+    }
+
+    #[test]
     fn a_phrase_longer_than_one_batch_is_still_all_sent() {
         // covers: AC-3. Guards the chunking arithmetic rather than the send: a
         // phrase of 100 characters is 200 key events, which is more than one
@@ -429,6 +478,54 @@ mod tests {
         assert_eq!(units.len(), 2, "a surrogate pair, sent in order");
         let text_units: Vec<u16> = "café".encode_utf16().collect();
         assert_eq!(text_units.len(), 4, "an accented character is one unit");
+    }
+
+    #[test]
+    fn a_post_to_a_window_that_no_longer_exists_is_reported_as_a_refusal() {
+        // covers: AC-3. The direct channel's honesty check: `post_chars` says
+        // `false` when Windows refuses a post, and the caller turns that into
+        // the "part of a phrase may not have arrived" line. A message-only
+        // window stands in for the receiver: real enough that Windows accepts
+        // posts to it while it exists, invisible, and never focused, so
+        // nothing on the machine running the tests can be typed into. This
+        // fails if `post_chars` starts swallowing a refusal, which would turn
+        // a lost phrase into a claimed success, the exact shape of fault
+        // standing rule 14 exists for.
+        use windows::core::w;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            CreateWindowExW, DestroyWindow, HWND_MESSAGE, WINDOW_EX_STYLE, WINDOW_STYLE,
+        };
+
+        let window = unsafe {
+            CreateWindowExW(
+                WINDOW_EX_STYLE::default(),
+                w!("STATIC"),
+                w!("echoscribe post_chars test"),
+                WINDOW_STYLE::default(),
+                0,
+                0,
+                0,
+                0,
+                Some(HWND_MESSAGE),
+                None,
+                None,
+                None,
+            )
+        }
+        .expect("a message-only window for the test");
+
+        assert!(
+            post_chars(window, "ab"),
+            "a live window accepts posted characters"
+        );
+
+        unsafe { DestroyWindow(window) }.expect("the test window closes");
+
+        assert!(
+            !post_chars(window, "ab"),
+            "posting to a window that no longer exists must be reported as a \
+             refusal, never as success"
+        );
     }
 
     /// Step 4a's spike (record 0002, "How characters reach a focused

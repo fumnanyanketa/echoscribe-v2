@@ -129,4 +129,36 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn the_recogniser_never_matches_loosely() {
+        // covers: AC-3, as a source guard only. The record's matching row says
+        // cannot tell means not on the list, and the module notes say a loose
+        // match is how the list would grow silently: a substring, prefix or
+        // case-insensitive comparison would let an unproven receiver ride in
+        // on a proven receiver's name. The recogniser compares whole names for
+        // exact equality, and the comparison itself only shows against a live
+        // focused window, which is the ignored spike's job. So this guard
+        // watches the whole production source for any loosening instead. It
+        // fails the moment one of these appears here, whatever it was added
+        // for, and the right response is exact equality or an amendment.
+        let source = this_file();
+        for forbidden in [
+            "contains(",
+            "starts_with(",
+            "ends_with(",
+            "to_lowercase",
+            "to_ascii_lowercase",
+            "to_uppercase",
+            "eq_ignore_ascii_case",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "collapse_list.rs now mentions `{forbidden}`. The collapse \
+                 list is matched by whole-name exact equality only; anything \
+                 looser lets the list grow silently (record 0002, tenth \
+                 amendment)"
+            );
+        }
+    }
 }
