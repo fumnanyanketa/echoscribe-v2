@@ -34,12 +34,31 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 
 /// How many UTF-16 units go in one `SendInput` call.
 ///
-/// One call for a whole phrase is tidier, but record 0002 already names the
-/// risk: "a small number of apps handle fast simulated input badly". A batch
-/// this size is still one call for an ordinary phrase, and it keeps any single
-/// call small enough that an application which drops a burst loses part of a
-/// phrase rather than all of it.
-const BATCH: usize = 32;
+/// Small on purpose, and paired with [`BREATHER`]. Record 0002 names the risk,
+/// "a small number of apps handle fast simulated input badly", and on
+/// 2026-08-31 it was observed, not guessed: a 28 character phrase handed to
+/// Windows in one accepted call landed in the new Notepad as its first 3
+/// characters followed by 25 copies of its last character, with EchoScribe not
+/// even running. Windows loses nothing; the receiving application translates
+/// the backlog late, and every backlogged character resolves to the newest one
+/// instead of its own value. Keeping the backlog shallow, few characters per
+/// call with a pause between calls, makes that rarer. It cannot make it
+/// impossible, and the same sitting proved it: at this pace the new Notepad
+/// still collapsed a phrase whenever it stalled longer than the pause, while a
+/// classic edit control received every character of every burst intact. So
+/// this pace is a mitigation for slow receivers, not a cure, and the cure is a
+/// decision, not a tuning: see
+/// `docs/evidence/dictate-with-a-hotkey/finding-new-notepad-collapses-injected-unicode.md`.
+const BATCH: usize = 8;
+
+/// The pause between one `SendInput` call and the next, within one phrase.
+///
+/// What it buys is written on [`BATCH`]. What it costs is bounded and small: a
+/// 50 character phrase is 7 calls, so 6 pauses, roughly 60 ms added to words
+/// that already arrive a beat behind the voice (record 0002's Risk section
+/// accepts that beat). Dictation produces a phrase every second or two, never
+/// a stream of keystrokes, so this pace is invisible at the cursor.
+const BREATHER: std::time::Duration = std::time::Duration::from_millis(10);
 
 /// What happened when a phrase was handed to the cursor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -119,13 +138,29 @@ fn focused_field_is_a_password() -> bool {
 /// as two, in order, which is what Windows expects.
 fn send(text: &str) {
     let units: Vec<u16> = text.encode_utf16().collect();
+    // PROBE START: temporary, added 2026-08-30. Three running totals and the
+    // one line at the end of this function. Counts only, never the characters.
+    let (mut handed, mut accepted, mut batches) = (0usize, 0usize, 0usize);
+    // PROBE END
+    let mut first = true;
     for chunk in units.chunks(BATCH) {
+        // The pause sits between calls, never before the first or after the
+        // last, so a phrase shorter than one batch pays nothing.
+        if !first {
+            std::thread::sleep(BREATHER);
+        }
+        first = false;
         let mut inputs: Vec<INPUT> = Vec::with_capacity(chunk.len() * 2);
         for unit in chunk {
             inputs.push(key_event(*unit, false));
             inputs.push(key_event(*unit, true));
         }
         let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
+        // PROBE START
+        handed += inputs.len();
+        accepted += sent as usize;
+        batches += 1;
+        // PROBE END
         // Record 0002's own lesson, now standing rule 14 in AGENTS.md: the real
         // effect of this call happens in another program, so the return value
         // says how many events Windows accepted and never that anything was
@@ -141,6 +176,12 @@ fn send(text: &str) {
             );
         }
     }
+    // PROBE START: remove these three lines and the two blocks above.
+    eprintln!(
+        "dictate probe: typed a phrase, handed windows {handed} key events in {batches} calls, \
+         windows accepted {accepted}"
+    );
+    // PROBE END
 }
 
 /// One key event carrying a character rather than a key.
@@ -236,14 +277,20 @@ mod tests {
         // message this file prints has to be safe, which means none of them may
         // carry the text. A `{text}` in an error line would put a person's
         // words in stderr, and on a bad day in a support file.
-        for line in this_file().lines() {
-            let line = line.trim_start();
-            if !line.starts_with("eprintln!") && !line.starts_with("println!") {
-                continue;
-            }
+        //
+        // The whole source, with no line filter, the same way the two guards
+        // above it work. An earlier version of this test only inspected lines
+        // beginning with `eprintln!`, which in this file is always the macro on
+        // its own line and the message on the next, so the message was never
+        // the thing being read. It passed on every log line it existed to
+        // check. Scanning the source cannot miss that, and cannot be defeated
+        // by how a message happens to be wrapped.
+        let source = this_file();
+        for forbidden in ["{text}", "{unit}", "{units}", "{phrase}", "{chunk}"] {
             assert!(
-                !line.contains("{text}") && !line.contains("{unit}"),
-                "a log line in typing.rs now carries the transcribed text: {line}"
+                !source.contains(forbidden),
+                "typing.rs now mentions `{forbidden}`. The words a person spoke \
+                 may not reach stderr, and on a bad day a support file"
             );
         }
     }
@@ -256,7 +303,7 @@ mod tests {
         let text = "a".repeat(100);
         let units: Vec<u16> = text.encode_utf16().collect();
         let batches: Vec<_> = units.chunks(BATCH).collect();
-        assert_eq!(batches.len(), 4, "100 units at 32 a batch");
+        assert_eq!(batches.len(), 13, "100 units at 8 a batch");
         assert_eq!(
             batches.iter().map(|c| c.len()).sum::<usize>(),
             100,
@@ -274,6 +321,38 @@ mod tests {
         let text_units: Vec<u16> = "café".encode_utf16().collect();
         assert_eq!(text_units.len(), 4, "an accented character is one unit");
     }
+
+    // PROBE START: temporary, the second instrument, added 2026-08-31. A
+    // dictation with Deepgram removed: three fixed phrases, the same shapes as
+    // the garbled sitting, through the exact live path, prepare_thread then
+    // type_at_cursor. Fixed strings, so no transcript is involved. Run with
+    //
+    //   cargo test --no-default-features probe_typing -- --ignored --nocapture
+    //
+    // from src-tauri, then click into Notepad within ten seconds. Corrupted
+    // in Notepad means typing corrupts on its own, with Deepgram exonerated.
+    // Clean means the corruption needs the live pipeline, or the text arrived
+    // already wrong. Delete this whole test to remove it.
+    #[test]
+    #[ignore]
+    fn probe_typing_three_fixed_phrases_wherever_the_cursor_is() {
+        std::thread::sleep(std::time::Duration::from_secs(10));
+        prepare_thread();
+        for phrase in [
+            "Hello. Hello. Hello.",
+            "In the country of the blind,",
+            "a one eyed man is the king.",
+            // Deliberately long, to stress the pacing: the collapse observed
+            // on 2026-08-31 was timing dependent, so the hardest case has to
+            // be in the probe or a clean run proves little.
+            "The quick brown fox jumps over the lazy dog, while a second fox \
+             waits its turn behind the fence and a third one watches them both.",
+        ] {
+            let _ = type_at_cursor(phrase);
+            std::thread::sleep(std::time::Duration::from_millis(600));
+        }
+    }
+    // PROBE END
 
     #[test]
     fn the_two_outcomes_are_distinct() {

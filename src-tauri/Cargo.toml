@@ -51,4 +51,14 @@ cpal = "0.18.2"
 deepgram = { version = "=0.10.0", default-features = false, features = ["listen"] }
 # Required by the Deepgram SDK regardless. Only the pieces the stream needs.
 tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
+# Not a new library in the binary: rustls is already compiled in, pulled by both
+# reqwest 0.12 under sign-in and reqwest 0.13 under the Deepgram SDK. It is
+# named here only so this app can call `install_default` and choose which
+# cryptography the Deepgram websocket uses. Without that call rustls panics,
+# because the two reqwest versions switch on its `ring` and `aws-lc-rs` features
+# at once and it refuses to guess between them. `aws-lc-rs` matches what the
+# Deepgram SDK's own REST client picks for itself.
+# Defaults off so naming it here switches nothing else on: everything it needs
+# is already switched on by the two reqwest versions above it.
+rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs"] }
 

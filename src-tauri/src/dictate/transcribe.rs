@@ -28,7 +28,7 @@
 //! actually said a moment ago, rather than what a close code was guessed to
 //! mean.
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Once};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
@@ -155,6 +155,7 @@ pub fn start(
             // The typing happens on this thread, so this is where UI Automation
             // has to be made available.
             typing::prepare_thread();
+            choose_the_cryptography();
 
             let runtime = match tokio::runtime::Builder::new_current_thread()
                 .enable_io()
@@ -172,6 +173,31 @@ pub fn start(
         })?;
 
     Ok(Session { worker })
+}
+
+/// Say which of the two available cryptography libraries secures the connection
+/// to Deepgram, once for the life of the process.
+///
+/// **Without this the very first connection panics**, and this is the only
+/// place in the app that needs it. Two versions of `reqwest` are compiled in,
+/// one under sign-in and one under the Deepgram SDK, and each switches on a
+/// different provider feature of the shared `rustls`. Both features being on at
+/// once is exactly the case rustls refuses to guess about, so it panics rather
+/// than pick. Sign-in never met this because its own client names its provider
+/// outright; the websocket underneath the Deepgram SDK is the one caller that
+/// asks rustls to decide, so it is the one caller that has to be told.
+///
+/// `aws-lc-rs` because that is what the Deepgram SDK's own REST client selects
+/// for itself, so all traffic to Deepgram is secured the same way.
+///
+/// A second call cannot change what the first chose, which is why the result is
+/// ignored: `Once` already makes it a single call, and the ignored error is the
+/// harmless case of something else having installed a provider first.
+fn choose_the_cryptography() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    });
 }
 
 /// The whole life of one dictation's connection.
@@ -436,6 +462,9 @@ fn on_response(
         caps.speech_heard(Instant::now());
     }
 
+    // PROBE: temporary, remove with the block below and the one in typing.rs.
+    probe_shape(text);
+
     match typing::type_at_cursor(text) {
         Typed::AtTheCursor => {
             // Broadcast rather than sent to the pill alone. Record 0002's
@@ -458,6 +487,42 @@ fn on_response(
         }
     }
 }
+
+// PROBE START: temporary diagnostic, added 2026-08-30 to find where the
+// garbled dictation is introduced. Delete this whole block, and the one call to
+// `probe_shape` above, to remove it.
+//
+/// Report the *shape* of a finalised phrase as it arrived from Deepgram, before
+/// typing has touched it. Counts by character class, never the characters.
+///
+/// This exists to answer one question the other measurements cannot: whether
+/// the text handed to `typing.rs` was already wrong. A count on its own cannot,
+/// because "Deepgram sent forty dots" and "we turned forty letters into forty
+/// dots" are the same count. A histogram tells those apart, and it stays inside
+/// AGENTS.md's data rules, because class totals cannot be turned back into the
+/// words the way a length plus a log line eventually can.
+fn probe_shape(text: &str) {
+    let (mut letters, mut digits, mut spaces, mut marks, mut other) = (0, 0, 0, 0, 0);
+    for c in text.chars() {
+        if c.is_alphabetic() {
+            letters += 1;
+        } else if c.is_numeric() {
+            digits += 1;
+        } else if c.is_whitespace() {
+            spaces += 1;
+        } else if c.is_ascii_punctuation() {
+            marks += 1;
+        } else {
+            other += 1;
+        }
+    }
+    eprintln!(
+        "dictate probe: deepgram final, {} utf16 units: {letters} letters, {digits} digits, \
+         {spaces} spaces, {marks} punctuation, {other} other",
+        text.encode_utf16().count()
+    );
+}
+// PROBE END
 
 /// Signed 16-bit samples, little endian, which is what `Encoding::Linear16`
 /// means.
@@ -595,17 +660,27 @@ mod tests {
         // message this file prints goes to stderr and on a bad day into a
         // support file, so none of them may interpolate a secret or a person's
         // speech.
-        for line in this_file().lines() {
-            let line = line.trim_start();
-            if !line.starts_with("eprintln!") && !line.starts_with("println!") {
-                continue;
-            }
-            for forbidden in ["{key}", "{text}", "{chunk}", "{samples}", "{response}"] {
-                assert!(
-                    !line.contains(forbidden),
-                    "a log line in transcribe.rs now carries `{forbidden}`: {line}"
-                );
-            }
+        //
+        // The whole source, with no line filter, the same way the two guards
+        // above it work. An earlier version only inspected lines beginning with
+        // `eprintln!`, so a message wrapped onto the line below its macro was
+        // never read. Scanning the source cannot be defeated by how a message
+        // happens to be wrapped.
+        let source = this_file();
+        for forbidden in [
+            "{key}",
+            "{text}",
+            "{chunk}",
+            "{samples}",
+            "{response}",
+            "{transcript}",
+            "{alternative}",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "transcribe.rs now mentions `{forbidden}`. Neither the key, the \
+                 audio nor the words a person spoke may reach stderr"
+            );
         }
     }
 
