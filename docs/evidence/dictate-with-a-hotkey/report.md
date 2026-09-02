@@ -78,7 +78,7 @@ standing user decisions** (AC-29, AC-31), and **one is half forcible** (AC-13).
 | AC-27 clicking or dragging never moves my cursor | met | **re-run against the 472x52 pill**: inert click, grip click, 150 px drag, foreground never changed, all twelve characters landed in order (`AC-27-and-the-one-geometry.md`) |
 | AC-28 window forward with code, sentence, one action | met (standing) | 2026-08-30 for a microphone that would not open. The same shape was seen three times today on mid dictation endings |
 | AC-29 blocked opens privacy page, others Try again | blocked | labels met, and Try again seen as the one action twice today. The page opening and a successful Try again stay untested at the user's standing decision |
-| AC-30 nothing asks me to click the pill | **met** | mid dictation half met on a real, unstaged device death: `MIC STOPPED` on the pill, then the window forward with one action. No pill in this sitting ever carried an action |
+| AC-30 nothing asks me to click the pill | **met** | **re-proved 2026-09-02 on a staged revocation** (`AC-30-mid-dictation-device-death.md`), twice, through both Windows switches: pill live, then `MIC STOPPED` held 2,120 ms, then the window forward by handle with `MICROPHONE_BLOCKED_BY_WINDOWS` and one action, Open Windows settings. No pill in either sitting ever carried an action. **This row's first scoring was wrong**: it read the glitch bug's self-inflicted ending as a device death. See the correction note below |
 | AC-31 uses whichever microphone Windows is set to | blocked | "nowhere to choose one" met: no such control exists. The default-change half stays skipped at the user's decision |
 | AC-32 an error clears itself once fixed | met (standing) | `AC-32-error-clears-itself.md`, 2026-08-30. Not re-exercised today |
 | AC-33 unfinished wording on the pill, grey, never typed | **met** | grey tail with its dotted rule photographed at 5,539 ms, hardening into ink by 8,313 ms; never typed, never stored, never logged (`AC-33-and-AC-20-now-shown.md`) |
@@ -89,6 +89,37 @@ standing user decisions** (AC-29, AC-31), and **one is half forcible** (AC-13).
 The seven standing mets are listed as such on purpose. They were proved on
 earlier builds and were not driven again today, and saying so is more useful
 than implying a fresh observation.
+
+### Correction, 2026-09-02, later the same day, by `/check verify`
+
+**AC-30's mid dictation half was scored on the wrong event.** This report said
+it was proved by "a real, unstaged device death". There was no device death.
+That ending was the buffer under or overrun glitch, which `/debug` reproduced,
+proved and fixed the same day in `1a3b5ff`; the microphone had not stopped and
+the app ended the dictation itself. A fault the app inflicts on itself is not
+the state AC-30 describes, so the criterion was unproved and this row was
+wrong. `/debug` flagged it rather than editing it, because this row is
+`/check verify`'s.
+
+It has now been proved properly, in a sitting of its own, on the build at
+`08cd6e6` with the fix in it. A person switched Windows microphone access off
+with the pill up and the transcript growing, twice, once through each of the
+two switches that can revoke it. Both times the microphone genuinely died,
+`Access is denied.`, the pill said `MIC STOPPED` and held it about two seconds,
+and the EchoScribe window came forward with `MICROPHONE_BLOCKED_BY_WINDOWS` and
+one action. Evidence: `AC-30-mid-dictation-device-death.md` and the
+`AC-30-desktop-apps-*` and `AC-30-machine-wide-*` frames.
+
+The row above is corrected. **Nothing else in this report was re-scored**, and
+the counts are unchanged: the outcome was `met` before and is `met` now, on
+evidence that is worth something. The four `AC-30-*` frames from the original
+sitting are kept, unedited: they are honest photographs of a real ending, and
+the finding explains what actually caused it.
+
+Item 1 under "Found outside the criteria" is likewise closed rather than
+withdrawn. The microphone dying on its own was real as an observation, and its
+cause turned out to be this app's reading of a harmless report.
+`finding-microphone-dies-on-its-own.md` carries the whole of it.
 
 ## The eleventh amendment's 2 second hold
 

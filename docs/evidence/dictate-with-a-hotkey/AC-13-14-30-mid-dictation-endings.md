@@ -11,6 +11,18 @@ comes forward carrying exactly one action, unless there is nothing to do.
 
 ## AC-30's mid dictation half: met, on a real device death
 
+> **Corrected later on 2026-09-02, by `/check verify`. This heading is wrong and
+> everything under it is kept only as a record of what was seen.** The
+> microphone did not die. The ending below was the buffer under or overrun
+> glitch: a harmless report the app read as a death and ended a dictation on.
+> `/debug` reproduced it, proved it and fixed it the same day in `1a3b5ff`,
+> written up in `finding-microphone-dies-on-its-own.md`. That left AC-30's mid
+> dictation half unproved, and it was re-proved in a sitting of its own on the
+> fixed build, by a person switching Windows microphone access off with the pill
+> up. See `AC-30-mid-dictation-device-death.md`. The observations below are
+> accurate as observations; only their cause, and the conclusion drawn from
+> them, were wrong.
+
 Not staged. The microphone died on its own, 12 seconds into a dictation. The
 user was asked directly what they had done and answered: nothing.
 

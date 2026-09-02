@@ -147,6 +147,12 @@ Windows' desktop-apps microphone access off, which is exactly what milestone
 4's step already asks for. `/check verify` owns that row, so `/debug` has
 flagged it rather than edited it.
 
+> **Closed the same day, 2026-09-02, by `/check verify`.** The row is corrected
+> and the half is proved, on the fixed build at `08cd6e6`, by a person switching
+> Windows microphone access off with the pill up and a transcript growing on it.
+> Run twice, once through each of the two switches. Evidence:
+> `AC-30-mid-dictation-device-death.md`.
+
 **A gap this fix does not close, and did not open.** If a device ever stopped
 delivering audio while reporting nothing at all, the pill would still read
 `MIC OPEN` over a dead microphone, because a flat meter and a quiet room look
