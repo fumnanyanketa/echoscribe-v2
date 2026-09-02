@@ -49,6 +49,7 @@ PAIRS = [
     ("Warning label in pill", "--color-warning-on-dark", "--color-pill", "text"),
     ("Error label in pill", "--color-danger-on-dark", "--color-pill", "text"),
     ("Text in pill well", "--color-ink-on-dark", "--color-pill-raised", "text"),
+    ("Elapsed and word count chip", "--color-ink-on-dark-secondary", "--color-pill", "text"),
     ("Control edge in pill", "--color-pill-border-control", "--color-pill", "nontext"),
 
     ("Heading and body", "--color-ink", "--color-surface", "text"),

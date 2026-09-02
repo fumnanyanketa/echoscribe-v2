@@ -44,6 +44,7 @@
 //! hand us, and it means nothing the caller does in its callback can ever run
 //! on the audio thread and glitch the capture.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
@@ -105,6 +106,19 @@ impl MicError {
             MicError::Unavailable => "The microphone could not be opened.",
         }
     }
+
+    /// The same sentence, for a failure that arrived after the microphone had
+    /// opened. Three of the four hold either way; the catch-all's does not,
+    /// because "could not be opened" is false about a microphone that did open,
+    /// so it gets the record's second sentence. Same kind, same code, same one
+    /// action, never a fifth code (record 0002, the device settlement of
+    /// 2026-08-30).
+    pub fn message_mid_dictation(self) -> &'static str {
+        match self {
+            MicError::Unavailable => "The microphone stopped working.",
+            other => other.message(),
+        }
+    }
 }
 
 /// What the audio callback adds up between one 60 ms tick and the next. Two
@@ -162,8 +176,14 @@ impl Microphone {
 /// Open the default input device and start reporting loudness.
 ///
 /// `on_level` is called on the level thread roughly every 60 ms with a number
-/// from 0.0 (silence) to 1.0 (loud). It is the only thing that ever crosses out
-/// of this module, and it carries no audio.
+/// from 0.0 (silence) to 1.0 (loud).
+///
+/// `on_died` is called if the stream fails after it opened, with the failure
+/// already classified into the same four named kinds an open failure gets: the
+/// record's device settlement runs one classification, twice (record 0002,
+/// AC-30). It is called from the audio backend's own thread, so it must not
+/// block and must not touch this microphone; the caller sends a command and
+/// returns. Nothing about the failure but the kind ever leaves this module.
 ///
 /// Returns before the first tick, and only once the device is genuinely
 /// capturing: a failure comes back here rather than turning up later, which is
@@ -172,6 +192,7 @@ impl Microphone {
 pub fn open(
     on_level: Box<dyn Fn(f32) + Send>,
     on_audio: Box<dyn Fn(Vec<i16>) + Send>,
+    on_died: Arc<dyn Fn(MicError) + Send + Sync>,
 ) -> Result<Microphone, MicError> {
     let shared = Arc::new(Mutex::new(Loudness::default()));
 
@@ -182,7 +203,7 @@ pub fn open(
     let audio = spawn("echoscribe-dictate-audio", move || {
         // Everything to do with the stream happens here, on this one thread,
         // for the whole life of the stream. cpal owns it; we do not move it.
-        let (stream, sample_rate) = match build_stream(audio_shared, on_audio) {
+        let (stream, sample_rate) = match build_stream(audio_shared, on_audio, on_died) {
             Ok(built) => built,
             Err(e) => {
                 let _ = ready_tx.send(Err(e));
@@ -262,6 +283,7 @@ fn spawn(name: &str, body: impl FnOnce() + Send + 'static) -> Result<JoinHandle<
 fn build_stream(
     shared: Arc<Mutex<Loudness>>,
     on_audio: Box<dyn Fn(Vec<i16>) + Send>,
+    on_died: Arc<dyn Fn(MicError) + Send + Sync>,
 ) -> Result<(cpal::Stream, u32), MicError> {
     let host = cpal::default_host();
     let device = host
@@ -276,14 +298,14 @@ fn build_stream(
     let channels = config.channels as usize;
 
     let built = match format {
-        SampleFormat::F32 => capture::<f32>(&device, config, shared, channels, on_audio),
-        SampleFormat::F64 => capture::<f64>(&device, config, shared, channels, on_audio),
-        SampleFormat::I8 => capture::<i8>(&device, config, shared, channels, on_audio),
-        SampleFormat::I16 => capture::<i16>(&device, config, shared, channels, on_audio),
-        SampleFormat::I32 => capture::<i32>(&device, config, shared, channels, on_audio),
-        SampleFormat::U8 => capture::<u8>(&device, config, shared, channels, on_audio),
-        SampleFormat::U16 => capture::<u16>(&device, config, shared, channels, on_audio),
-        SampleFormat::U32 => capture::<u32>(&device, config, shared, channels, on_audio),
+        SampleFormat::F32 => capture::<f32>(&device, config, shared, channels, on_audio, on_died),
+        SampleFormat::F64 => capture::<f64>(&device, config, shared, channels, on_audio, on_died),
+        SampleFormat::I8 => capture::<i8>(&device, config, shared, channels, on_audio, on_died),
+        SampleFormat::I16 => capture::<i16>(&device, config, shared, channels, on_audio, on_died),
+        SampleFormat::I32 => capture::<i32>(&device, config, shared, channels, on_audio, on_died),
+        SampleFormat::U8 => capture::<u8>(&device, config, shared, channels, on_audio, on_died),
+        SampleFormat::U16 => capture::<u16>(&device, config, shared, channels, on_audio, on_died),
+        SampleFormat::U32 => capture::<u32>(&device, config, shared, channels, on_audio, on_died),
         _ => return Err(MicError::Unavailable),
     };
     built
@@ -309,12 +331,16 @@ fn capture<T>(
     shared: Arc<Mutex<Loudness>>,
     channels: usize,
     on_audio: Box<dyn Fn(Vec<i16>) + Send>,
+    on_died: Arc<dyn Fn(MicError) + Send + Sync>,
 ) -> Result<cpal::Stream, cpal::Error>
 where
     T: SizedSample,
     f32: FromSample<T>,
 {
     let channels = channels.max(1);
+    // Counted per dictation, so the rate limit below cannot be defeated by a
+    // long session and cannot carry over into the next one.
+    let glitches = AtomicU64::new(0);
     device.build_input_stream(
         config,
         move |data: &[T], _: &cpal::InputCallbackInfo| {
@@ -343,7 +369,30 @@ where
             // hands the chunk to a bounded queue and returns.
             on_audio(mono);
         },
-        |e| eprintln!("dictate: the microphone stream reported an error: {e}"),
+        // The stream died after it opened. Until 2026-08-30 this went to stderr
+        // and nowhere else, and a person watching the pill saw MIC OPEN over a
+        // dead device (record 0002, "The microphone dying after it opened").
+        // The same classification an open failure gets, then straight out to
+        // the caller, which ends the dictation before AC-8's silence cap can
+        // swallow the evidence. The error's text never leaves this line.
+        move |e| {
+            // Not every report here is a death, and reading them all as one is
+            // what ended three dictations by itself on 2026-09-02.
+            if !stopped_capturing(e.kind()) {
+                let n = glitches.fetch_add(1, Ordering::Relaxed) + 1;
+                // The first one, then every fiftieth. A busy machine can report
+                // dozens a second, and a log nobody can read is not a log.
+                if n == 1 || n.is_multiple_of(50) {
+                    eprintln!(
+                        "dictate: the microphone glitched, dropping a moment of \
+                         audio. Dictation continues. ({n} so far.)"
+                    );
+                }
+                return;
+            }
+            eprintln!("dictate: the microphone stream reported an error: {e}");
+            on_died(classify(e.kind()));
+        },
         None,
     )
 }
@@ -383,6 +432,35 @@ fn level_from_rms(rms: f64) -> f32 {
     }
     let dbfs = 20.0 * rms.log10();
     (((dbfs - FLOOR_DBFS) / (CEIL_DBFS - FLOOR_DBFS)).clamp(0.0, 1.0)) as f32
+}
+
+/// Whether a report from an open stream means the microphone has actually
+/// stopped capturing.
+///
+/// **cpal uses one callback for two different things**, and this is the
+/// distinction the code was missing. Most kinds arrive from the audio
+/// backend's run loop as it gives up, and after them no more audio comes. One
+/// kind, `Xrun`, is a *notification*: the sound card lost a moment of audio
+/// and Windows says so by raising a discontinuity flag on the very next packet
+/// it hands over. cpal reports it and keeps reading that packet and every one
+/// after it. Its own documentation says so in as many words: "causing a
+/// potential audio glitch", and for the same kind elsewhere, "audio will still
+/// play".
+///
+/// Measured on this machine on 2026-09-02, not assumed. With the audio thread
+/// starved by ordinary CPU load, the built-in Realtek array reported this 88
+/// times in 35 seconds and delivered 1,429,632 more frames after the first
+/// one. Idle for 45 seconds it reported none. Evidence:
+/// `docs/evidence/dictate-with-a-hotkey/finding-microphone-dies-on-its-own.md`.
+///
+/// Only `Xrun` is listed, and it is the only non-fatal kind Windows can
+/// produce. A default-device change looks similar and is not the same thing:
+/// cpal reports it as the stream being invalidated or the device being gone,
+/// the old device stays bound, and ending the dictation is the right answer
+/// (AC-31). `RealtimeDenied` is the other non-fatal kind in the library and
+/// cannot arrive at all: it needs cpal's `realtime` feature, which is off.
+fn stopped_capturing(kind: ErrorKind) -> bool {
+    !matches!(kind, ErrorKind::Xrun)
 }
 
 /// Map cpal's failure onto record 0002's named causes (AC-15).
@@ -484,6 +562,162 @@ mod tests {
         assert_eq!(classify(ErrorKind::PermissionDenied), MicError::Unavailable);
     }
 
+    /// The live proof, opposite the bug. Ignored by default because it opens
+    /// the real microphone and takes half a minute.
+    ///
+    ///   cargo test -- --ignored a_load_starved_microphone
+    ///
+    /// It starves the audio thread with ordinary CPU load, which is what the
+    /// harness-driven verify sitting of 2026-09-02 was doing without meaning
+    /// to, and then asserts the two things that were false that day: nothing
+    /// reports the microphone as dead, and audio keeps arriving throughout.
+    ///
+    /// **What it cannot prove on its own.** It cannot see the glitch count,
+    /// because that number stays inside the stream. A run where Windows
+    /// happens to report no glitch at all passes this test without testing
+    /// anything. The glitch count was measured separately, by a spike that
+    /// printed it: 88 reports in 35 seconds under this same load, and
+    /// 1,429,632 frames delivered after the first. Those numbers are in
+    /// `docs/evidence/dictate-with-a-hotkey/finding-microphone-dies-on-its-own.md`.
+    ///
+    /// **No audio is kept**, here least of all. The chunks are counted and
+    /// dropped, the same as everywhere else in this file.
+    #[test]
+    #[ignore]
+    fn a_load_starved_microphone_does_not_end_the_dictation() {
+        // covers: AC-30. 64 spinners on an 8 core machine was enough to make
+        // Windows report a glitch within 5 seconds, every time it was tried.
+        let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        for _ in 0..64 {
+            let stop = Arc::clone(&stop);
+            std::thread::spawn(move || {
+                let mut x = 0u64;
+                while !stop.load(Ordering::Relaxed) {
+                    x = x.wrapping_mul(6364136223846793005).wrapping_add(1);
+                    std::hint::black_box(x);
+                }
+            });
+        }
+
+        let died = Arc::new(Mutex::new(Vec::<MicError>::new()));
+        let frames = Arc::new(AtomicU64::new(0));
+        let chunks = Arc::new(AtomicU64::new(0));
+
+        let died_here = Arc::clone(&died);
+        let counted = Arc::clone(&frames);
+        let chunked = Arc::clone(&chunks);
+        let mic = microphone_or_skip(open(
+            Box::new(|_| {}),
+            Box::new(move |samples: Vec<i16>| {
+                counted.fetch_add(samples.len() as u64, Ordering::Relaxed);
+                chunked.fetch_add(1, Ordering::Relaxed);
+                // Dropped here, like everywhere else. Nothing is kept.
+            }),
+            Arc::new(move |e| {
+                died_here
+                    .lock()
+                    .expect("the death list mutex poisoned")
+                    .push(e);
+            }),
+        ));
+        let Some(mic) = mic else { return };
+
+        std::thread::sleep(Duration::from_secs(25));
+        let halfway = frames.load(Ordering::Relaxed);
+        std::thread::sleep(Duration::from_secs(5));
+
+        let total = frames.load(Ordering::Relaxed);
+        let deaths = died.lock().expect("the death list mutex poisoned").clone();
+        stop.store(true, Ordering::Relaxed);
+        mic.stop();
+
+        println!(
+            "30 s under load: {} chunks, {total} frames, {} reported deaths",
+            chunks.load(Ordering::Relaxed),
+            deaths.len()
+        );
+        assert!(
+            deaths.is_empty(),
+            "reported dead {} time(s) under nothing but CPU load: {deaths:?}. \
+             This is the bug of 2026-09-02 back again",
+            deaths.len()
+        );
+        assert!(
+            total > halfway,
+            "no audio arrived in the last 5 seconds, so the stream really did \
+             stop and the fix is hiding a genuine failure"
+        );
+    }
+
+    /// `None` when this machine has no microphone to test with, so the suite
+    /// stays runnable on a machine without one. A real failure to open still
+    /// fails the test: a blocked or busy microphone is a result, not an
+    /// absence.
+    fn microphone_or_skip(opened: Result<Microphone, MicError>) -> Option<Microphone> {
+        match opened {
+            Ok(mic) => Some(mic),
+            Err(MicError::NoMicrophoneFound) => {
+                println!("skipped: this machine has no input device");
+                None
+            }
+            Err(e) => panic!("the microphone would not open at all: {e:?}"),
+        }
+    }
+
+    #[test]
+    fn a_glitch_is_not_a_death() {
+        // covers: AC-30. The bug of 2026-09-02: three dictations ended on their
+        // own because every report from an open stream was read as the
+        // microphone stopping. `Xrun` is not that. Windows raises it on the
+        // next packet after the sound card loses a moment of audio, and it
+        // hands that packet over and every one after it. Measured live: 88
+        // reports in 35 seconds under load, 1,429,632 frames delivered after
+        // the first. Ending a dictation on one costs the person their sentence
+        // for a hiccup they would not otherwise have noticed.
+        assert!(
+            !stopped_capturing(ErrorKind::Xrun),
+            "a dropped moment of audio is a glitch, not a dead microphone"
+        );
+    }
+
+    #[test]
+    fn everything_else_from_an_open_stream_still_ends_the_dictation() {
+        // covers: AC-30. The other half, and the half that must not be lost to
+        // the fix above. After any of these no more audio arrives, so saying
+        // nothing would leave MIC OPEN over a dead device, which is exactly
+        // what the settlement of 2026-08-30 was written to stop.
+        for kind in [
+            ErrorKind::DeviceNotAvailable,
+            ErrorKind::DeviceBusy,
+            ErrorKind::HostUnavailable,
+            ErrorKind::StreamInvalidated,
+            ErrorKind::BackendError,
+            ErrorKind::PermissionDenied,
+            ErrorKind::Other,
+        ] {
+            assert!(
+                stopped_capturing(kind),
+                "{kind:?} means no more audio is coming and must end the dictation"
+            );
+        }
+    }
+
+    #[test]
+    fn a_default_device_change_is_not_treated_as_a_glitch() {
+        // covers: AC-30, AC-31. This is the near miss. Changing the Windows
+        // default mid dictation reports as the stream being invalidated, or as
+        // the device being gone when there is no replacement. cpal keeps its
+        // run loop alive there too, but the old device stays bound, so the
+        // person would go on dictating into the microphone they just stopped
+        // using. That is an ending, not a hiccup.
+        assert!(stopped_capturing(ErrorKind::StreamInvalidated));
+        assert!(stopped_capturing(ErrorKind::DeviceNotAvailable));
+        assert_eq!(
+            classify(ErrorKind::DeviceNotAvailable),
+            MicError::NoMicrophoneFound
+        );
+    }
+
     #[test]
     fn an_unrecognised_failure_is_not_dressed_up_as_a_named_one() {
         // covers: AC-15. Guessing "another app is using it" when we do not know
@@ -493,6 +727,26 @@ mod tests {
             MicError::Unavailable
         );
         assert_eq!(classify(ErrorKind::BackendError), MicError::Unavailable);
+    }
+
+    #[test]
+    fn only_the_catch_all_changes_its_sentence_mid_dictation() {
+        // covers: AC-30, the device settlement of 2026-08-30. "The microphone
+        // could not be opened." is false about a microphone that did open, so
+        // the catch-all gets the record's second sentence mid dictation. The
+        // other three sentences are true either way and must not change: same
+        // kinds, same codes, never a fifth.
+        assert_eq!(
+            MicError::Unavailable.message_mid_dictation(),
+            "The microphone stopped working."
+        );
+        for kind in [
+            MicError::BlockedByWindows,
+            MicError::InUseByAnotherApp,
+            MicError::NoMicrophoneFound,
+        ] {
+            assert_eq!(kind.message_mid_dictation(), kind.message());
+        }
     }
 
     #[test]

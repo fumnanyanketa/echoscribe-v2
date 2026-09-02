@@ -9,6 +9,9 @@
     <script type="module" src="pill.js"></script>
   </head>
   <body class="pill-body">
+    <!-- One shell, one geometry, every state (record 0002, twelfth amendment;
+         design/registry.md "Pill shell"). Which pieces show is decided by
+         data-state alone: open (before words), words, stopped, fault, idle. -->
     <div class="pill" data-state="idle">
       <div class="pill__grip" title="Drag to move">
         <span class="pill__grip-dots" aria-hidden="true">
@@ -24,10 +27,38 @@
         <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
       </div>
       <span class="pill__divider" aria-hidden="true"></span>
+      <!-- Before the first wording: the breathing ring, the literal words, and
+           the comp's hint (design/registry.md "Pill before words"). On MIC
+           STOPPED the ring goes, the label swaps, and the transcript's last
+           words stay beside it. -->
       <div class="pill__signal">
         <span class="pill__ring" aria-hidden="true"></span>
         <span class="pill__label" role="status">MIC OPEN</span>
+        <span class="pill__hint-divider" aria-hidden="true"></span>
+      </div>
+      <span class="pill__hint">go ahead</span>
+      <!-- The transcript line: final ink, interim grey with a dotted rule,
+           truncating from the left (design/registry.md; record 0002 AC-33).
+           Hidden from screen readers: the final words are already landing at
+           the person's own cursor, and the grey tail is unsettled by
+           definition. -->
+      <div class="pill__line" aria-hidden="true">
+        <div class="pill__line-inner">
+          <span class="pill__final"></span><span class="pill__interim"></span>
+          <span class="pill__caret"></span>
+        </div>
+      </div>
+      <!-- A word ending: a mono code over one sentence, and no action at all
+           (design/registry.md "Error pill"). aria-live so the ending is read
+           out during the two seconds it holds. -->
+      <div class="pill__fault" role="status" aria-atomic="true">
+        <span class="pill__fault-code"></span>
+        <span class="pill__fault-text"></span>
       </div>
     </div>
+    <!-- The counter band: part of the fixed footprint from the first moment,
+         empty until the elapsed and word count chip is built
+         (design/registry.md "Elapsed and word count"). Reserved by the window's
+         own height in pill_window.rs; nothing to draw yet. -->
   </body>
 </html>

@@ -58,15 +58,17 @@
 //! consecutive finalised phrases, which `transcribe.rs` used to lose to
 //! Deepgram's trimming.
 //!
-//! **Milestone 4 is not finished.** Everything a person can read when Deepgram
-//! or the microphone ends a dictation mid flow is owed a drawn state that
-//! `design/registry.md` does not hold, so it is not built and was not invented:
-//! the pill's words, the pill's `MIC STOPPED`, and the EchoScribe window's
-//! screen with its one action. The kinds, codes, sentences and actions all exist
-//! and ride on `dictation:error` already. See
-//! `docs/evidence/dictate-with-a-hotkey/milestone-4-decisions-owed.md`.
+//! Milestone 4's readable half (built 2026-08-31, after `/canvas` drew its
+//! states and the twelfth amendment settled the pill's one geometry): the pill
+//! renders its transcript line and every word ending, holds an ending for the
+//! eleventh amendment's 2 seconds, then closes; the microphone dying after it
+//! opened is an ending of its own (`Command::DeviceDied`), read as MIC STOPPED
+//! on the pill and as the microphone error screen with the catch-all's second
+//! sentence in the window; and a mid dictation Deepgram ending brings the
+//! EchoScribe window forward carrying its one action.
 //!
-//! Still to come: history and settings (milestone 5).
+//! Still to come: history and settings (milestone 5), and the pill's elapsed
+//! and word count chip, whose band is reserved in the footprint.
 
 mod collapse_list;
 mod consent;
@@ -86,7 +88,7 @@ mod typing;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use serde_json::json;
@@ -114,7 +116,17 @@ enum Command {
     /// Deepgram or a password field ended the dictation while the microphone
     /// was open (record 0002 AC-13, AC-14, AC-20, AC-30).
     EndedBy(transcribe::Ended),
+    /// The microphone died after it opened (record 0002 AC-30, the device
+    /// settlement of 2026-08-30). Already classified into the same four named
+    /// kinds an open failure gets; `consent::refine` runs here, on this
+    /// thread, not on the audio backend's.
+    DeviceDied(MicError),
 }
+
+/// How long the pill holds its last words before it closes, for every ending
+/// that puts words on it (record 0002, the eleventh amendment). Measured from
+/// the words being shown; then the pill closes and the closing sound plays.
+const WORD_ENDING_HOLD: Duration = Duration::from_secs(2);
 
 /// One dictation in progress: the open microphone and the live connection to
 /// Deepgram. Holding one is what "listening" means.
@@ -186,6 +198,7 @@ pub fn init(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                     Command::Toggle => on_double_tap(&consumer_handle, &consumer_commands),
                     Command::CloseBecause(reason) => close_if_listening(&consumer_handle, reason),
                     Command::EndedBy(ended) => on_ended(&consumer_handle, ended),
+                    Command::DeviceDied(e) => on_device_died(&consumer_handle, e),
                 }
             }
         })?;
@@ -342,9 +355,18 @@ fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), StartErr
     // Windows consent switches, read only, and becomes blocked-by-Windows if
     // any of the three says deny. It sits here so the hotkey and Try again
     // share it, the same as they share everything else on this path.
+    //
+    // The death report runs on the audio backend's thread, so it only sends a
+    // command and returns; the ending, the refine and the screens all happen on
+    // the command thread, where they cannot race the hotkey (record 0002
+    // AC-30, the device settlement).
+    let died_commands = commands.clone();
     let mic = microphone::open(
         level_sink(app, commands, Arc::clone(&deadlines)),
         Box::new(move |samples| feed.push(samples)),
+        Arc::new(move |e| {
+            let _ = died_commands.send(Command::DeviceDied(e));
+        }),
     )
     .map_err(consent::refine)?;
 
@@ -620,37 +642,19 @@ fn close_if_listening(app: &AppHandle, reason: &str) {
 /// open (record 0002 AC-13, AC-14, AC-20, AC-30).
 ///
 /// The ending the record fixes for every mid dictation failure, in its order:
-/// the microphone shuts at once, the pill says what happened in words, and then
-/// the pill closes and the closing sound plays. The pill carries no action,
-/// ever; it is a sign and never a control.
-///
-/// **Two halves of this are deliberately not here yet, and both are `/canvas`
-/// work.** The record has the pill say what happened in words, and brings the
-/// EchoScribe window forward carrying the one action. `design/registry.md`
-/// draws neither for a mid dictation Deepgram error: its "Error pill" row keeps
-/// the working pill's 232x44, which the decided sentences do not fit in, and it
-/// has no screen for this at all. Record 0002 says twice that `/canvas` goes
-/// first and that nothing here may be invented during a build, so this stops at
-/// closing cleanly and emitting the event. The event already carries the kind,
-/// the code, the sentence and the action, so the two screens are all that is
-/// owed.
+/// the microphone shuts at once, the pill says what happened in words and
+/// holds them for the eleventh amendment's 2 seconds, then the pill closes and
+/// the closing sound plays. The pill carries no action, ever; it is a sign and
+/// never a control. If there is something the person can do, the EchoScribe
+/// window then comes forward carrying the one action; on a password refusal it
+/// deliberately does not, because there is nothing to do and moving focus off
+/// a password field is the worst moment in the app to do it (AC-20).
 fn on_ended(app: &AppHandle, ended: transcribe::Ended) {
-    let Some(state) = app.try_state::<Dictate>() else {
-        return;
-    };
-
     // The device goes first, and immediately. Whatever went wrong, the
     // microphone has no business staying open while somebody reads about it.
-    {
-        let mut listening = state
-            .listening
-            .lock()
-            .expect("dictate listening mutex poisoned");
-        let Some(live) = listening.take() else {
-            // Something else already closed it. Nothing to say twice.
-            return;
-        };
-        live.close();
+    if !take_and_close_live(app) {
+        // Something else already closed it. Nothing to say twice.
+        return;
     }
 
     match ended {
@@ -662,7 +666,8 @@ fn on_ended(app: &AppHandle, ended: transcribe::Ended) {
             );
             // Broadcast, the same way every other error on this feature is, so
             // the window receives it on the capability it already has and
-            // nothing in `src-tauri/capabilities/` widens.
+            // nothing in `src-tauri/capabilities/` widens. The pill draws the
+            // code and the sentence from this same event.
             let _ = app.emit(
                 "dictation:error",
                 json!({
@@ -680,22 +685,89 @@ fn on_ended(app: &AppHandle, ended: transcribe::Ended) {
         }
     }
 
-    // The pill goes at once, rather than holding for a beat so the words can be
-    // read. That is not what record 0002 asks for, and it is deliberate: the
-    // pill has no error state built, because the one `design/registry.md` draws
-    // is the working pill's own geometry and the decided sentences do not fit
-    // in it. Holding the pill here would leave it saying MIC OPEN over a
-    // microphone that just closed, which is exactly the lie on screen this
-    // record refuses everywhere else. So it closes honestly and says nothing,
-    // and the pause comes back with the drawn state. See the milestone 4
-    // decisions file, "What is still blocked".
+    // Every Deepgram ending has something the person can do, so the window
+    // comes forward once the pill has closed. The password refusal has
+    // nothing, so it must not (record 0002, AC-20 and AC-30).
+    let forward = matches!(ended, transcribe::Ended::Deepgram(_));
+    hold_then_close_pill(app, forward);
+}
+
+/// The microphone died after it opened (record 0002 AC-30, the device
+/// settlement of 2026-08-30). The same four kinds an open failure has, decided
+/// by the same classification run again: `consent::refine` asks the Windows
+/// switches when the audio layer named no cause, so the person who just
+/// switched access off is sent to the page that undoes it. The pill says MIC
+/// STOPPED and keeps its last words; the code, the sentence and the one action
+/// are the EchoScribe window's, which comes forward after the pill has closed.
+fn on_device_died(app: &AppHandle, e: MicError) {
+    if !take_and_close_live(app) {
+        // The dictation already ended some other way. A dying stream can
+        // report more than once; only the first report is an ending.
+        return;
+    }
+
+    let cause = consent::refine(e);
+    let message = cause.message_mid_dictation();
+    eprintln!(
+        "dictate: the microphone died mid dictation: {} ({:?})",
+        message, cause
+    );
+    // Broadcast: the pill reads the kind and shows MIC STOPPED, and the
+    // EchoScribe window's microphone error screen reads the same event it
+    // already knows, with the mid dictation sentence in place of the
+    // could-not-open one. Same kinds, same codes, never a fifth.
+    let _ = app.emit(
+        "dictation:error",
+        json!({ "kind": cause.kind(), "message": message }),
+    );
+
+    hold_then_close_pill(app, true);
+}
+
+/// Shut the microphone and the stream if they are running. `true` when this
+/// call was the one that ended the dictation.
+fn take_and_close_live(app: &AppHandle) -> bool {
+    let Some(state) = app.try_state::<Dictate>() else {
+        return false;
+    };
+    let live = state
+        .listening
+        .lock()
+        .expect("dictate listening mutex poisoned")
+        .take();
+    match live {
+        Some(live) => {
+            live.close();
+            true
+        }
+        None => false,
+    }
+}
+
+/// The shared tail of every word ending: hold the pill for the eleventh
+/// amendment's 2 seconds so its last words can be read, close it, play the
+/// closing sound, and bring the EchoScribe window forward when there is
+/// something the person can do there.
+///
+/// Blocking this thread for the hold is deliberate: every open and close goes
+/// through this one thread, so nothing can race the pill while it holds, and a
+/// double tap during the hold simply lands after it.
+fn hold_then_close_pill(app: &AppHandle, bring_forward: bool) {
+    std::thread::sleep(WORD_ENDING_HOLD);
     pill_window::close(app, "an_error");
 
     let sounds_enabled = crate::sign_in::account_id_from(app)
-        .and_then(|account_id| state.store.setting_for(&account_id).ok())
+        .and_then(|account_id| {
+            app.try_state::<Dictate>()
+                .and_then(|state| state.store.setting_for(&account_id).ok())
+        })
         .map(|setting| setting.sounds_enabled)
         .unwrap_or(true);
     sound::play_close(sounds_enabled);
+
+    if bring_forward {
+        bring_window_forward(app);
+    }
 }
 
 /// What the current dictation is doing. Lets the pill recover after a reload.
@@ -776,14 +848,36 @@ mod tests {
     fn the_allowance_error_is_not_cleared_by_the_microphone_opening() {
         // covers: AC-32. The clearing table gives each error its own proof. An
         // open microphone is not proof that a Deepgram allowance is back, so
-        // wiring `deepgram_no_allowance` to it would take the message away
-        // while the problem was still there. That kind clears on the first
-        // finalised words, in milestone 4, and nowhere in the shell before it.
+        // the `dictation:opened` listener may only ever clear the microphone
+        // error screen; the Deepgram error screen clears on the first
+        // finalised words, `dictation:text`, and nowhere else.
+        let flat = flattened(SHELL);
+        let start = flat
+            .find(r#"listen("dictation:opened""#)
+            .expect("the shell still clears the microphone error on dictation:opened");
+        // This listener's text runs to the next listen( registration.
+        let body = &flat[start + 1..];
+        let end = body.find(r#"listen(""#).unwrap_or(body.len());
+        let listener_end = &flat[start..=start + end];
         assert!(
-            !flattened(SHELL).contains("deepgram_no_allowance"),
-            "src/main.js now knows about `deepgram_no_allowance`. Its only \
-             clearing trigger is the first finalised words from Deepgram \
-             (record 0002, the clearing table), never the microphone opening"
+            listener_end.contains(r#"!=="mic-error""#),
+            "the shell's dictation:opened listener no longer checks that the \
+             mounted screen is the microphone error. It can then clear a \
+             Deepgram error the open microphone does not disprove (record \
+             0002, the clearing table)"
+        );
+        assert!(
+            !listener_end.contains("deepgram"),
+            "the shell's dictation:opened listener now touches a Deepgram \
+             screen. An open microphone is not proof a Deepgram problem is \
+             gone; those clear on dictation:text (record 0002, the clearing \
+             table)"
+        );
+        assert!(
+            flat.contains(r#"listen("dictation:text""#),
+            "the shell no longer listens for dictation:text, so the Deepgram \
+             error screen has lost its one clearing trigger, the first \
+             finalised words (record 0002, the clearing table)"
         );
     }
 

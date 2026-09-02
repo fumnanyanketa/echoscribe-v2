@@ -99,6 +99,33 @@ decided the same day and `/debug` had deliberately held: consecutive
 finalised phrases within one dictation are joined by a single space before
 typing. No criterion is renumbered, reworded or added. The count stays
 at 33.
+**Amended:** 2026-08-31, the eleventh, by `/develop` under its gate's
+option 3, authorised by the user the same day. One value, needed by AC-20
+and AC-30 and named nowhere: how long the pill holds its last words before
+it closes. Today the pill hides in the same instant those words are
+emitted, which is why the live sitting saw the password refusal "just
+disappear". Settled at 2 seconds, measured from the words being shown, for
+every ending that puts words on the pill; then the pill closes and the
+closing sound plays, exactly as already decided. Nothing about which words,
+which endings or which sounds changes. The build itself did not proceed:
+the same gate found the pill's geometry once a transcript line exists has
+no named source, the drawn design holding a 232x44 MIC OPEN form and a
+472x52 listening form with no rule for when the pill is which, and the
+user routed that to `/architect`. The 2 seconds is not built until that
+returns. No criterion is renumbered, reworded or added. The count stays
+at 33.
+**Amended:** 2026-08-31, the twelfth. `/develop`'s gate stopped where the
+eleventh amendment says: the pill's geometry once anything is shown on it
+had no named source. The drawn design holds a 232x44 MIC OPEN form and a
+472x52 listening form with no rule for when the pill is which; the
+registry's pill shell row says fixed geometry across every state; the
+design system's prose says the pill never grows; and the decided sentences
+do not fit the 232 form. The user settled it the same day: the pill has one
+geometry, the drawn 472x52 listening form, from open to close, in every
+state. The 232x44 form is retired as a window size. This unblocks the
+eleventh amendment's 2 second hold and the pill's text rendering, and it
+answers the error pill geometry question plan row 2 had flagged. No
+criterion is renumbered, reworded or added. The count stays at 33.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -774,6 +801,59 @@ pill's events are unchanged. This was held during the `/debug` sitting of
 2026-08-31 on purpose, so every test there ran against unchanged typing;
 that hold ended with the sitting.
 
+**The pill's one geometry, settled 2026-08-31 by the twelfth amendment.**
+The pill is one size for its whole life: the drawn listening form, 472x52,
+from the moment it opens, before a word has been said, to the moment it
+closes, whatever it is showing. MIC OPEN before words, the transcript line
+with its grey tail, MIC STOPPED, and every word ending this record fixes,
+the password refusal among them, all render inside that one shell.
+
+This resolves a disagreement between two locked documents, the same shape
+AC-33 resolved. The comp draws two working sizes and writes no rule for
+when the pill is which, while the design system's prose says the pill never
+grows and the registry's pill shell row says fixed geometry across every
+state. This time the written rule wins over the drawings, chosen by the
+user on 2026-08-31: a small form that exists only for the breath before the
+first words buys almost nothing, and it would make the pill visibly change
+size a moment after speech starts, on every dictation. The comp's 232x44
+MIC OPEN form is retired as a window size; what it shows may survive as the
+wide shell's content before words arrive, which is `/canvas`'s to draw, not
+this record's. The comp's 48 high error pills are reconciled the same way:
+one geometry across every state means they take the same 472x52 shell,
+which is what the registry's own error pill row already requires in as many
+words.
+
+Three rules follow, and each is a rule rather than a preference:
+
+- **The pill window is sized once, as it opens, and is never resized while
+  it is open.** AC-25's promise that the pill never moves mid dictation
+  becomes structurally true rather than defended: a window that cannot
+  change size never has to shift to stay on screen.
+- **Everything the pill can ever show fits inside one fixed footprint, and
+  the whole footprint is clamped inside the working area at open.** The
+  elapsed and word count that appears after 20 seconds is part of that
+  footprint from the first moment, so its arrival resizes nothing and moves
+  nothing. The comp places it outside the pill's own 52 pixels, which is
+  why the footprint and the pill are named apart here; where it sits within
+  the footprint is `/canvas`'s call.
+- **No stored value changes.** `pill_x` and `pill_y` are fractions naming
+  the pill's centre within a working area and say nothing about its size. A
+  position saved against the old 232x44 pill is re-clamped at the next open
+  against the wide footprint by the clamp that already runs, which is the
+  same rule AC-23 and AC-26 already impose on a screen of any size. No
+  migration.
+
+What this costs, named rather than hidden: the pill is 472 pixels wide from
+its first instant, roughly twice the drawn MIC OPEN form, sitting over the
+person's document before they have said anything. Accepted, because the
+wide form is needed within about a second of speech starting anyway. And
+the change is not free to build: the geometry constants in
+`pill_window.rs`, the placement tests beside them, the grip rectangle in
+`pill_mouse.rs` and the fixed sizes in `pill.css` all change together, and
+any change to the pill's geometry re-opens the AC-27 live click proof, per
+the standing line in What this makes harder. That proof rides in the
+`/check verify` pass this feature already owes.
+
 ## What else was considered
 
 | Option | Why not |
@@ -825,6 +905,8 @@ that hold ended with the sitting.
 | Clipboard paste everywhere | One typing mechanism instead of two. The same clipboard cost on every dictation, and Ctrl V does not mean paste in every app, so it fixes the new Notepad by breaking apps that keystrokes already handle correctly. |
 | Accepting the Notepad collapse as a documented limit | No new code and no second mechanism to own. The failure lands in the default editor of Windows 11, the first app most people will try, and it garbles the very words the app exists to get right. |
 | Slower pacing and smaller batches | Already tried live: batches cut from 32 units to 8 with 10 millisecond pauses still collapsed a long phrase. Any receiver stall longer than the pause rebuilds the backlog, so no pace reaches zero. Kept only as the ratified mitigation for marginal receivers. |
+| Opening small and growing once, when the first thing to read arrives | Matches both drawings as drawn, and the pill is at its smallest in its quietest moment. It visibly changes size a moment after speech starts, on every dictation; near a screen edge the growth must shift the pill to stay on screen, which bends AC-25's promise that it never moves; and the never-take-focus proof would have to hold at both sizes and across the change. Refused by the user 2026-08-31. |
+| Keeping 232x44 for every state and making the words fit | The smallest possible object over the document, and one geometry. The decided sentences do not fit it: wrapping grows the pill and scrolling is forbidden outright by the locked design system, and a sentence a person cannot read is not a sign. |
 
 ## Data model
 
@@ -915,6 +997,8 @@ One migration, creating all three tables.
 | Which receivers are on the collapse list | AC-3 | This record. Exactly one today, the new Windows Notepad. A receiver joins by amendment carrying evidence in the finding's shape, never by a quick addition in code. |
 | How a focused receiver is matched against the collapse list | AC-3 | This record, settled 2026-08-31: the package family name of the process behind the focused window, read at the moment of typing. The new Windows Notepad's is `Microsoft.WindowsNotepad_8wekyb3d8bbwe`, read from the machine rather than assumed. Cannot tell means not on the list, so the default keystrokes run. |
 | What separates two finalised phrases at the cursor | AC-3, AC-4 | This record, decided by the user 2026-08-31: a single space, typed before every finalised phrase after a dictation's first, through the same one door and behind the same password check. Nothing before the first phrase, and the pill's events are unchanged. |
+| How long the pill holds its last words before closing | AC-20, AC-30 | This record, settled 2026-08-31 by the eleventh amendment: 2 seconds, from the moment the words are shown, for every ending that puts words on the pill. Then the pill closes and the closing sound plays. Fixed, not a setting. Not yet built; it lands with the pill's text rendering once `/architect` settles the pill's geometry. |
+| The pill's geometry | AC-1, AC-20, AC-23 to AC-27, AC-30, AC-33 | This record, settled 2026-08-31 by the twelfth amendment: one fixed form for every state from open to close, the drawn 472x52 listening form. Sized once at open, never resized while open, and the whole footprint, the 20 second counter included, is clamped inside the working area at open. The 232x44 form is retired as a window size. |
 
 ## Interface surface
 
@@ -1346,6 +1430,12 @@ window". In order:
   anything failing to build. It is the one part of this feature where a
   clean build proves nothing, so a live click test belongs in every pass
   that touches the pill.
+- **The pill is wide from its first instant.** One geometry means the 472
+  pixel listening form is what appears before a word has been said, roughly
+  twice the width the comp drew for that moment. That is the price of
+  nothing over the document ever changing size, paid on every dictation,
+  and it is why the retired 232x44 form must not quietly come back as an
+  optimisation.
 
 ## Still open
 

@@ -297,10 +297,12 @@ mod tests {
 
     #[test]
     fn the_grip_reaches_the_top_and_bottom_of_the_pill() {
+        // Full height of the 52px shell (the twelfth amendment's one
+        // geometry), starting PAD (16) in from the window's top: y in [16, 68).
         assert!(grip_contains(1.0, 20, 16));
-        assert!(grip_contains(1.0, 20, 59));
+        assert!(grip_contains(1.0, 20, 67));
         assert!(!grip_contains(1.0, 20, 15));
-        assert!(!grip_contains(1.0, 20, 60));
+        assert!(!grip_contains(1.0, 20, 68));
     }
 
     // ---- Regression tests for the focus fault of 2026-08-29 ----

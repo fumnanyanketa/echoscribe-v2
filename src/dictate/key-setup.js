@@ -19,8 +19,12 @@ const { invoke } = window.__TAURI__.core;
 
 /** Mount the key setup screen into `root`.
  *  `options.onSaved` is called once Deepgram has accepted a key and it has
- *  been stored, so the shell can leave this screen. Returns an unmount
- *  function. */
+ *  been stored, so the shell can leave this screen.
+ *  `options.initialError` puts an error line on the screen from the first
+ *  paint: it is how a saved key that stopped being accepted mid dictation
+ *  lands here, code and sentence straight off the `dictation:error` event
+ *  (record 0002 AC-13; design/registry.md "Key setup, rejected").
+ *  Returns an unmount function. */
 export function mountKeySetup(root, options) {
   ensureStyles();
 
@@ -31,7 +35,7 @@ export function mountKeySetup(root, options) {
     // Kept across redraws so a rejected key stays in the field: one typo must
     // not cost a fresh paste (design/registry.md "Key setup, rejected").
     pasted: "",
-    error: null,
+    error: options.initialError || null,
   };
 
   draw(ctx);

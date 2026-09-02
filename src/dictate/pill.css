@@ -1,20 +1,25 @@
 /* The floating pill.
  *
- * Milestone 2 shows one state: the microphone is open, with a live level.
- * Three independent signals say the same fact, so someone who cannot tell
- * violet from grey, or who has animation switched off, still reads it
- * (design/design-system.md):
+ * One geometry for its whole life, from open to close, in every state: the
+ * drawn 472x52 listening form (record 0002, twelfth amendment;
+ * design/registry.md "Pill shell"). Which pieces show is decided by the
+ * shell's data-state and nothing else:
  *
- *   1. the literal words MIC OPEN,
- *   2. the breathing violet ring,
- *   3. the level meter moving when sound arrives.
- *
- * Off is the pill absent from the screen entirely, so there is no idle-looking
- * form to mistake for it.
+ *   idle     off screen. Off is the pill absent entirely, so there is no
+ *            idle-looking form to mistake for it.
+ *   open     microphone open, no words yet: ring, MIC OPEN, the hint.
+ *   words    the transcript line, final ink and interim grey (AC-33).
+ *   stopped  the microphone died mid dictation: MIC STOPPED beside the
+ *            transcript's last words, meter flat, danger edge (AC-30).
+ *   fault    a word ending: a mono code over one sentence, no action
+ *            (AC-13, AC-14, AC-20).
  *
  * The window behind this page is larger than the pill, with a transparent
- * margin, so the pill's shadow has room to render. All values come from
- * styles.css; this file adds no new ones.
+ * margin for the shadow, and taller by the counter band beneath the shell,
+ * which is part of the fixed footprint and empty until the elapsed and word
+ * count chip is built. All values come from styles.css; the sizes here match
+ * the constants in src-tauri/src/dictate/pill_window.rs and change together
+ * with them.
  */
 
 .pill-body {
@@ -25,14 +30,13 @@
 
 .pill {
   position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  left: 16px; /* pill_window.rs PAD */
+  top: 16px;
   display: flex;
   align-items: center;
   box-sizing: border-box;
-  width: 232px;
-  height: 44px;
+  width: 472px; /* pill_window.rs PILL_W */
+  height: 52px; /* pill_window.rs PILL_H */
   padding-right: var(--space-4);
   background: var(--color-pill);
   border: 1px solid var(--color-pill-border);
@@ -43,9 +47,17 @@
   transition: opacity var(--duration-fast) ease-out;
 }
 
-.pill[data-state="open"] {
+.pill:not([data-state="idle"]) {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* A word ending and a dead microphone swap the violet channel for one danger
+ * edge (design/registry.md "Error pill", "Pill, MIC STOPPED"): violet only
+ * ever means an open microphone. */
+.pill[data-state="stopped"],
+.pill[data-state="fault"] {
+  border-left: 3px solid var(--color-danger-on-dark);
 }
 
 /* Grabbable from any edge, 44px hit area (design-system.md). The cursor is not
@@ -80,18 +92,16 @@
  * Each bar is scaled from the middle, so silence is a thin level line rather
  * than nothing at all: an empty gap would read as broken, a flat line reads as
  * a quiet instrument. Rust sends one number every 60 ms and pill.js shifts it
- * in from the right, so the 18 bars are the last second or so of loudness. */
-/* The meter takes whatever width is left once the grip, the divider and the
- * words have theirs, so the pill fills its fixed 232px edge to edge with no
- * dead space, and so a wider fallback font shrinks the meter rather than
- * pushing MIC OPEN out of the pill. */
+ * in from the right, so the 18 bars are the last second or so of loudness.
+ * The comp draws it 56px wide in the listening form, fixed, so the transcript
+ * line gets everything that remains. */
 .pill__meter {
   display: flex;
   align-items: center;
   gap: 1px;
-  flex: 1;
-  min-width: 44px;
-  height: 22px;
+  flex: none;
+  width: 56px;
+  height: 26px;
 }
 
 .pill__meter i {
@@ -107,17 +117,32 @@
   transition: transform var(--meter-interval) linear;
 }
 
+/* A word ending replaces the pill body: no meter on the drawn error pill. */
+.pill[data-state="fault"] .pill__meter,
+.pill[data-state="fault"] .pill__divider {
+  display: none;
+}
+
 .pill__divider {
   align-self: stretch;
+  flex: none;
   width: 1px;
   margin: var(--space-3) var(--space-2);
   background: var(--color-pill-border);
 }
 
+/* ---- Before words, and MIC STOPPED ---------------------------------- */
+
 .pill__signal {
   display: flex;
   align-items: center;
+  flex: none;
   gap: var(--space-2);
+}
+
+.pill[data-state="words"] .pill__signal,
+.pill[data-state="fault"] .pill__signal {
+  display: none;
 }
 
 .pill__ring {
@@ -128,6 +153,12 @@
   border: 2px solid var(--color-accent);
   border-radius: var(--radius-pill);
   animation: pill-breathe 1.4s ease-in-out infinite;
+}
+
+/* The microphone's truth, swapped: the ring only ever means it is open
+ * (design/registry.md "Pill, MIC STOPPED"). */
+.pill[data-state="stopped"] .pill__ring {
+  display: none;
 }
 
 @keyframes pill-breathe {
@@ -149,6 +180,136 @@
   text-transform: uppercase;
   color: var(--color-accent-on-dark);
   white-space: nowrap;
+}
+
+.pill[data-state="stopped"] .pill__label {
+  color: var(--color-danger-on-dark);
+}
+
+.pill__hint-divider {
+  align-self: stretch;
+  width: 1px;
+  margin: var(--space-1) 0;
+  background: var(--color-pill-border);
+}
+
+/* The comp's hint, in the unsettled grey and with no dotted rule: it is not
+ * transcript and makes no promise of changing (design/registry.md "Pill
+ * before words"). */
+.pill__hint {
+  flex: none;
+  margin-left: var(--space-2);
+  font-size: var(--text-md);
+  color: var(--color-ink-interim);
+  white-space: nowrap;
+}
+
+.pill[data-state="words"] .pill__hint,
+.pill[data-state="stopped"] .pill__hint,
+.pill[data-state="fault"] .pill__hint {
+  display: none;
+}
+
+/* ---- The transcript line --------------------------------------------- */
+
+/* One line, never scrolling, never growing, truncating from the left with a
+ * soft fade so the tail keeps the right edge (design/registry.md "Left fade
+ * truncation"). The inner row has min-width 100%, so a short line sits flush
+ * left while a long one overflows leftwards out of the right-aligned outer
+ * box. The fade only appears once the line actually overflows, which pill.js
+ * marks with data-overflowing. */
+.pill__line {
+  display: flex;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--space-2);
+  overflow: hidden;
+}
+
+.pill[data-state="open"] .pill__line,
+.pill[data-state="fault"] .pill__line {
+  display: none;
+}
+
+.pill[data-state="stopped"] .pill__line {
+  margin-left: var(--space-2);
+}
+
+.pill__line[data-overflowing="true"] {
+  mask-image: linear-gradient(to right, transparent 0, #000 64px);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 64px);
+}
+
+.pill__line-inner {
+  display: flex;
+  align-items: center;
+  min-width: 100%;
+  justify-content: flex-start;
+  white-space: pre;
+  font-size: var(--text-md);
+  letter-spacing: -0.005em;
+}
+
+.pill__final {
+  color: var(--color-ink-on-dark);
+}
+
+/* The still-settling tail: grey, with the dotted rule that promises it can
+ * change. The rule uses the grip's grey, the nearest token to the comp's
+ * dotted line. It disappears the instant the text is final, because the
+ * interim span is then empty. */
+.pill__interim {
+  color: var(--color-ink-interim);
+  border-bottom: 1.5px dotted var(--color-ink-grip);
+  padding-bottom: 1px;
+}
+
+.pill__interim:empty {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pill__caret {
+  flex: none;
+  width: 1.5px;
+  height: 15px;
+  margin-left: 2px;
+  background: var(--color-accent);
+}
+
+.pill[data-state="stopped"] .pill__caret {
+  display: none;
+}
+
+/* ---- A word ending ---------------------------------------------------- */
+
+/* The drawn error pill: a mono code over one sentence, nothing truncated, and
+ * no action at all (design/registry.md "Error pill"). */
+.pill__fault {
+  display: none;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-hair);
+}
+
+.pill[data-state="fault"] .pill__fault {
+  display: flex;
+}
+
+.pill__fault-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  color: var(--color-danger-on-dark);
+}
+
+.pill__fault-text {
+  font-size: var(--text-xs);
+  color: var(--color-ink-on-dark);
 }
 
 /* styles.css already damps animation globally under reduced motion; restate the

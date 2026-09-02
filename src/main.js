@@ -9,6 +9,10 @@
 import { mountSignIn, mountSignedIn } from "./sign-in/sign-in.js";
 import { mountMicError, MIC_ERROR_KINDS } from "./dictate/mic-error.js";
 import { mountKeySetup } from "./dictate/key-setup.js";
+import {
+  mountDeepgramError,
+  isDeepgramErrorKind,
+} from "./dictate/deepgram-error.js";
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -77,22 +81,59 @@ listen("auth:signed_out", (event) => {
   pendingNotice = (event.payload && event.payload.reason) || null;
   render();
 });
-// The microphone would not open (record 0002 AC-28). Rust brings this window
-// to the front; this mounts the screen with the code, the sentence and the one
-// action. Only the four microphone kinds are this screen's to show. The screen
-// is left when Try again succeeds, when the microphone opens by any other
-// route (the listener below, AC-32), or when an auth change re-renders the
-// shell.
-listen("dictation:error", (event) => {
-  const payload = event.payload || {};
-  if (!MIC_ERROR_KINDS.includes(payload.kind)) return;
+// Something ended dictation, or stopped it starting, and this window is where
+// it is read (record 0002 AC-13, AC-14, AC-28, AC-30). Rust brings the window
+// to the front; this mounts the matching screen with the code, the sentence
+// and the one action. Three routes, each drawn in design/registry.md:
+//
+//   * a microphone kind, whether the microphone would not open or died mid
+//     dictation, is the microphone error screen;
+//   * a saved key that stopped being accepted mid dictation is the key setup
+//     screen, where a new key can actually be pasted (AC-13's Replace key);
+//   * every other mid dictation Deepgram ending is the Deepgram error screen.
+//
+// The password refusal never lands here: its event goes to the pill alone and
+// the window deliberately stays where it is (AC-20).
+function mountMicErrorScreen(kind, message) {
   unmountCurrent();
   currentUnmount = mountMicError(app, {
-    kind: payload.kind,
-    message: payload.message,
+    kind,
+    message,
     onCleared: () => render(),
   });
   currentScreen = "mic-error";
+}
+
+listen("dictation:error", (event) => {
+  const payload = event.payload || {};
+  if (MIC_ERROR_KINDS.includes(payload.kind)) {
+    mountMicErrorScreen(payload.kind, payload.message);
+    return;
+  }
+  if (payload.kind === "deepgram_key_rejected") {
+    unmountCurrent();
+    currentUnmount = mountKeySetup(app, {
+      onSaved: () => render(),
+      initialError: {
+        code: payload.code,
+        message: payload.message,
+        action: payload.action,
+      },
+    });
+    currentScreen = "key-setup";
+    return;
+  }
+  if (isDeepgramErrorKind(payload.kind)) {
+    unmountCurrent();
+    currentUnmount = mountDeepgramError(app, {
+      code: payload.code,
+      message: payload.message,
+      action: payload.action,
+      onCleared: () => render(),
+      onMicError: (err) => mountMicErrorScreen(err.kind, err.message),
+    });
+    currentScreen = "deepgram-error";
+  }
 });
 // The microphone opened (record 0002 AC-32, and the clearing table in the
 // record's "The decision"). A microphone error still on screen is a claim that
@@ -117,6 +158,18 @@ listen("dictation:opened", () => {
   if (currentScreen !== "mic-error") return;
   // Claimed here, before the await inside render, so a second opening cannot
   // start a second render of the same screen.
+  currentScreen = null;
+  render();
+});
+// Finalised words came back from Deepgram (record 0002 AC-32, and the clearing
+// table). They are the one proof that clears a Deepgram error screen: an open
+// microphone proves nothing about an allowance, a key's permissions or the
+// connection, but words that arrived prove the whole stream works. Quiet, like
+// every clearing: nothing shows, hides, focuses or moves the window. The key
+// setup screen deliberately does not clear on this signal; the clearing table
+// gives its errors exactly one proof, a key being accepted and saved.
+listen("dictation:text", () => {
+  if (currentScreen !== "deepgram-error") return;
   currentScreen = null;
   render();
 });

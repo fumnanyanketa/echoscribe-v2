@@ -35,10 +35,19 @@ use super::store::DictationSetting;
 /// The window label. The `pill.json` capability is scoped to exactly this.
 pub const LABEL: &str = "pill";
 
-/// The visible pill, in logical pixels. Fixed geometry across every state
-/// (design/registry.md).
-const PILL_W: f64 = 232.0;
-pub(super) const PILL_H: f64 = 44.0;
+/// The visible pill, in logical pixels. One geometry for its whole life, from
+/// open to close, in every state: the drawn 472x52 listening form, settled
+/// 2026-08-31 by record 0002's twelfth amendment. The old 232x44 MIC OPEN form
+/// is retired as a window size; what it showed survives as this shell's content
+/// before words arrive (design/registry.md, "Pill shell").
+const PILL_W: f64 = 472.0;
+pub(super) const PILL_H: f64 = 52.0;
+/// The counter band beneath the shell: a `--space-3` (12px) gap plus one chip
+/// row. Part of the fixed footprint from the first moment, so the elapsed and
+/// word count chip's arrival after 20 seconds resizes nothing and moves nothing
+/// (design/registry.md, "Elapsed and word count"). The chip itself is not built
+/// yet; the band is reserved so the footprint never changes when it is.
+const COUNTER_BAND_H: f64 = 34.0;
 /// The grip: the leftmost part of the pill, full height, and the only part that
 /// answers the mouse (design/design-system.md, record 0002).
 pub(super) const GRIP_W: f64 = 44.0;
@@ -48,7 +57,7 @@ pub(super) const PAD: f64 = 16.0;
 const EDGE_GAP: f64 = 8.0;
 
 const WINDOW_W: f64 = PILL_W + PAD * 2.0;
-const WINDOW_H: f64 = PILL_H + PAD * 2.0;
+const WINDOW_H: f64 = PILL_H + COUNTER_BAND_H + PAD * 2.0;
 
 /// A screen's working area in physical pixels: the desktop minus the taskbar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -109,9 +118,18 @@ pub fn open(app: &AppHandle, setting: &DictationSetting) {
 
     if let Some((area, scale)) = focused_screen() {
         let (pill_w, pill_h) = (scaled(PILL_W, scale), scaled(PILL_H, scale));
+        let band = scaled(COUNTER_BAND_H, scale);
         let gap = scaled(EDGE_GAP, scale);
         let pad = scaled(PAD, scale);
-        let (px, py) = pill_topleft(area, pill_w, pill_h, gap, setting.pill_x, setting.pill_y);
+        let (px, py) = pill_topleft(
+            area,
+            pill_w,
+            pill_h,
+            band,
+            gap,
+            setting.pill_x,
+            setting.pill_y,
+        );
         let _ = window.set_position(PhysicalPosition::new(px - pad, py - pad));
     }
 
@@ -222,11 +240,16 @@ fn scaled(logical: f64, scale: f64) -> i32 {
 }
 
 /// Physical top-left of the visible pill for a fractional spot, clamped so the
-/// whole pill stays inside the working area with at least `gap` to every edge.
+/// whole footprint, the shell plus the counter band below it, stays inside the
+/// working area with at least `gap` to every edge (record 0002, the twelfth
+/// amendment: the footprint is clamped at open, and the window is never resized
+/// while it is open). The fractions still name the shell's own centre, so no
+/// stored value changes meaning.
 fn pill_topleft(
     area: WorkArea,
     pill_w: i32,
     pill_h: i32,
+    band: i32,
     gap: i32,
     frac_x: f64,
     frac_y: f64,
@@ -239,7 +262,7 @@ fn pill_topleft(
     let min_x = area.left + gap;
     let max_x = (area.left + area.width - pill_w - gap).max(min_x);
     let min_y = area.top + gap;
-    let max_y = (area.top + area.height - pill_h - gap).max(min_y);
+    let max_y = (area.top + area.height - pill_h - band - gap).max(min_y);
     (x.clamp(min_x, max_x), y.clamp(min_y, max_y))
 }
 
@@ -265,27 +288,49 @@ mod tests {
         height: 1040, // 1080 minus a 40px taskbar
     };
 
+    /// The one drawn geometry, in the physical pixels of a 100% scale screen.
+    /// Tied to the real constants so a geometry change can never leave these
+    /// tests proving the old shape.
+    const W: i32 = PILL_W as i32;
+    const H: i32 = PILL_H as i32;
+    const BAND: i32 = COUNTER_BAND_H as i32;
+
     #[test]
     fn the_default_spot_is_bottom_centre_above_the_taskbar() {
-        // frac 0.5, 1.0 with a 232x44 pill and an 8px gap.
-        let (x, y) = pill_topleft(FHD, 232, 44, 8, 0.5, 1.0);
-        assert_eq!(x, 1920 / 2 - 232 / 2); // horizontally centred
-        assert_eq!(y, 1040 - 44 - 8); // sitting on the bottom edge, gap kept
+        // covers: AC-23. frac 0.5, 1.0 with the one 472x52 form, its counter
+        // band, and an 8px gap. The band is below the shell, so the shell sits
+        // a band's height further up: the whole footprint stays on screen.
+        let (x, y) = pill_topleft(FHD, W, H, BAND, 8, 0.5, 1.0);
+        assert_eq!(x, 1920 / 2 - W / 2); // horizontally centred
+        assert_eq!(y, 1040 - H - BAND - 8); // footprint on the bottom edge, gap kept
     }
 
     #[test]
     fn a_spot_past_the_edge_is_pulled_fully_on_screen() {
-        let (x, y) = pill_topleft(FHD, 232, 44, 8, 1.0, 0.0);
-        assert_eq!(x, 1920 - 232 - 8);
+        // covers: AC-23, AC-26.
+        let (x, y) = pill_topleft(FHD, W, H, BAND, 8, 1.0, 0.0);
+        assert_eq!(x, 1920 - W - 8);
         assert_eq!(y, 8);
-        let (x0, _) = pill_topleft(FHD, 232, 44, 8, 0.0, 0.5);
+        let (x0, _) = pill_topleft(FHD, W, H, BAND, 8, 0.0, 0.5);
         assert_eq!(x0, 8);
     }
 
     #[test]
+    fn a_spot_saved_against_the_old_small_pill_is_reclamped_not_migrated() {
+        // covers: AC-24, AC-26, and the twelfth amendment's "no stored value
+        // changes". A bottom-centre fraction stored while the pill was 232x44
+        // simply lands the wide footprint fully on screen, by the same clamp
+        // that already covers a smaller screen. No migration exists.
+        let (x, y) = pill_topleft(FHD, W, H, BAND, 8, 0.5, 1.0);
+        assert!(x >= 8 && x + W <= 1920 - 8);
+        assert!(y >= 8 && y + H + BAND <= 1040 - 8);
+    }
+
+    #[test]
     fn topleft_and_fraction_round_trip_near_the_middle() {
-        let (x, y) = pill_topleft(FHD, 232, 44, 8, 0.4, 0.6);
-        let (fx, fy) = pill_fraction(FHD, 232, 44, x, y);
+        // covers: AC-24.
+        let (x, y) = pill_topleft(FHD, W, H, BAND, 8, 0.4, 0.6);
+        let (fx, fy) = pill_fraction(FHD, W, H, x, y);
         assert!((fx - 0.4).abs() < 0.01, "fx was {fx}");
         assert!((fy - 0.6).abs() < 0.01, "fy was {fy}");
     }
@@ -298,7 +343,7 @@ mod tests {
             width: 1280,
             height: 720,
         };
-        let (fx, fy) = pill_fraction(small, 232, 44, 1920 + 5000, 0);
+        let (fx, fy) = pill_fraction(small, W, H, 1920 + 5000, 0);
         assert!((0.0..=1.0).contains(&fx));
         assert!((0.0..=1.0).contains(&fy));
         assert_eq!(fx, 1.0);
@@ -316,8 +361,8 @@ mod tests {
             width: 1920,
             height: 1040,
         };
-        let (px, py) = pill_topleft(primary, 232, 44, 8, 0.3, 0.7);
-        let (sx, sy) = pill_topleft(secondary, 232, 44, 8, 0.3, 0.7);
+        let (px, py) = pill_topleft(primary, W, H, BAND, 8, 0.3, 0.7);
+        let (sx, sy) = pill_topleft(secondary, W, H, BAND, 8, 0.3, 0.7);
         assert_eq!(sx - 1920, px);
         assert_eq!(sy, py);
     }
