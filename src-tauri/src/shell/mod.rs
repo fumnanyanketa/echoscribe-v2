@@ -92,18 +92,37 @@ pub fn init(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     start_geometry_thread(handle.clone(), move_rx)?;
 
     // Closing the small window is how a person dismisses whatever it is
-    // carrying. With one window that meant closing the app, and it still does
-    // when the small window is all there is. With the dashboard up it must not
-    // destroy the window, because every error screen in the app lives on it and
-    // there would be nowhere for the next one to go.
+    // carrying. With the dashboard up it must not destroy the window, because
+    // every error screen in the app lives on it and there would be nowhere for
+    // the next one to go, so the close is refused and the window is hidden
+    // instead. With no dashboard behind it this window is the app, and closing
+    // it ends the app, exactly as closing the dashboard does (record 0004,
+    // AC-6).
+    //
+    // The close is refused in both cases, and the second one is the reason.
+    // The pill window is created at startup and never destroyed, so Tauri's
+    // own "the last window has gone" exit can never fire while EchoScribe is
+    // running: letting this close through destroyed the only window a person
+    // had and left the process alive on a pill nobody can see, still holding
+    // the global hotkey. Asking to exit is a request the event loop carries
+    // out on a later turn, not the exit itself (AGENTS.md standing rule 14),
+    // so the window is kept until that lands. A window still on screen is the
+    // harmless way for the exit to fail; destroying it first is not.
     if let Some(small) = app.get_webview_window(SMALL_WINDOW) {
         let dismiss_handle = handle.clone();
         small.on_window_event(move |event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
                 if dashboard_window::is_open(&dismiss_handle) {
-                    api.prevent_close();
                     clear_interruption(&dismiss_handle, None);
                     settle_small_window(&dismiss_handle);
+                } else {
+                    // The same one way out of the app that the dashboard's own
+                    // close uses. There is nothing to write down first: this
+                    // window's size and place are not remembered, and the
+                    // pill's spot is written by the dictate feature when a
+                    // drag settles.
+                    dismiss_handle.exit(0);
                 }
             }
         });
@@ -428,6 +447,42 @@ mod tests {
             screen_cleared_on(&flat, "dictation:key_saved"),
             "KeySetup",
             "a key being accepted must clear the key setup screen and nothing else"
+        );
+    }
+
+    #[test]
+    fn closing_the_small_window_never_leaves_the_app_with_no_window() {
+        // covers: AC-6, as a source guard only. The pill window is created at
+        // startup and never destroyed, so Tauri never sees a last window go and
+        // so never exits by itself. That makes both halves of this one handler
+        // load-bearing: the close is refused whatever is behind the window, and
+        // when there is no dashboard behind it the app is ended on purpose.
+        // With the refusal inside the dashboard branch, closing the sign in or
+        // key setup screen destroyed the only window a person had and left
+        // echoscribe.exe running on a hidden pill, still holding the global
+        // hotkey, with no way back in (found live 2026-09-03). Proving the
+        // behaviour needs a real click on a real title bar, so /check verify
+        // owns that; this stops either line drifting back inside the branch.
+        let flat = flattened(include_str!("mod.rs"));
+        let at = flat
+            .find("CloseRequested")
+            .expect("the shell no longer watches the small window closing");
+        // Bounded at the next thing in `init`, so a match here can only come
+        // from this handler and not from the dashboard's own exit further down.
+        let end = flat[at..]
+            .find("\"auth:signed_in\"")
+            .expect("the shell no longer listens for the sign-in signals");
+        let handler = &flat[at..at + end];
+        let branch = handler
+            .find("dashboard_window::is_open(")
+            .expect("the close handler no longer asks whether the dashboard is up");
+        assert!(
+            handler[..branch].contains("api.prevent_close();"),
+            "the small window's close is refused only inside a branch. Whichever              branch that is, the other one lets the window be destroyed, and with              the pill alive that leaves EchoScribe running with nothing on screen"
+        );
+        assert!(
+            handler.contains(".exit(0)"),
+            "closing the small window no longer ends the app. With no dashboard              behind it that window is the app, and nothing else will ever exit"
         );
     }
 
