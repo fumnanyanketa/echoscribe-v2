@@ -211,7 +211,7 @@ pub fn open(
             }
         };
         if let Err(e) = stream.play() {
-            let _ = ready_tx.send(Err(classify(e.kind())));
+            let _ = ready_tx.send(Err(logged_cause("starting the capture stream", &e)));
             return;
         }
         let _ = ready_tx.send(Ok(sample_rate));
@@ -230,6 +230,9 @@ pub fn open(
         }
         // The thread ended without answering.
         Err(_) => {
+            eprintln!(
+                "dictate: the audio thread ended without saying whether the microphone opened."
+            );
             let _ = audio.join();
             return Err(MicError::Unavailable);
         }
@@ -291,7 +294,7 @@ fn build_stream(
         .ok_or(MicError::NoMicrophoneFound)?;
     let supported = device
         .default_input_config()
-        .map_err(|e| classify(e.kind()))?;
+        .map_err(|e| logged_cause("reading the default input format", &e))?;
     let format = supported.sample_format();
     let config = supported.config();
     let sample_rate = config.sample_rate;
@@ -306,11 +309,35 @@ fn build_stream(
         SampleFormat::U8 => capture::<u8>(&device, config, shared, channels, on_audio, on_died),
         SampleFormat::U16 => capture::<u16>(&device, config, shared, channels, on_audio, on_died),
         SampleFormat::U32 => capture::<u32>(&device, config, shared, channels, on_audio, on_died),
-        _ => return Err(MicError::Unavailable),
+        other => {
+            eprintln!("dictate: the microphone records in {other:?}, which nothing here can read.");
+            return Err(MicError::Unavailable);
+        }
     };
     built
         .map(|stream| (stream, sample_rate))
-        .map_err(|e| classify(e.kind()))
+        .map_err(|e| logged_cause("building the capture stream", &e))
+}
+
+/// Classify a failure to open the microphone, and say what it really was.
+///
+/// **The saying is the point.** `MicError` is four buckets, and three quarters
+/// of what the audio layer knows is thrown away making one. That was fine
+/// until a microphone would not open on 2026-09-03: the person saw "The
+/// microphone could not be opened", and so did everybody trying to find out
+/// why, because nothing anywhere had kept the reason. A whole investigation
+/// went on a question one line could have answered.
+///
+/// Safe to log. A cpal error names the stage, the error kind and the Windows
+/// code. It never carries audio, a key or anything a person said, which is
+/// what AGENTS.md's data rules forbid.
+fn logged_cause(stage: &str, e: &cpal::Error) -> MicError {
+    let cause = classify(e.kind());
+    eprintln!(
+        "dictate: the microphone would not open, {stage}: kind={:?}, {e}. Reported as {cause:?}.",
+        e.kind()
+    );
+    cause
 }
 
 /// The audio callback, for one sample type.
