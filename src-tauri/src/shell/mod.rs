@@ -215,19 +215,36 @@ fn dashboard_is_due(app: &AppHandle) -> bool {
 /// when it is due and destroys it when it is not, then settles the small
 /// window around it.
 fn settle(app: &AppHandle) {
-    if dashboard_is_due(app) {
-        if !dashboard_window::is_open(app) {
+    let dashboard_up = if dashboard_is_due(app) {
+        if dashboard_window::is_open(app) {
+            true
+        } else {
             let remembered = remembered_placement(app);
-            if let Err(e) = dashboard_window::open(app, remembered) {
-                // Say so loudly and leave the small window up: a person with
-                // no window at all has no way back into the app.
-                eprintln!("shell: the dashboard window could not be created: {e}");
+            match dashboard_window::open(app, remembered) {
+                Ok(()) => true,
+                Err(e) => {
+                    // Say so loudly and leave the small window up: a person
+                    // with no window at all has no way back into the app.
+                    eprintln!("shell: the dashboard window could not be created: {e}");
+                    false
+                }
             }
         }
     } else {
         dashboard_window::close(app);
-    }
-    settle_small_window(app);
+        // Destroying a window is a request the event loop carries out on a
+        // later turn, so the dashboard is still gettable at this instant even
+        // though it is on its way out, and asking would get the answer "still
+        // there" (AGENTS.md standing rule 14: the call returning says the
+        // destroy was accepted, not that the window has gone). This branch is
+        // the only thing that knows there will be no dashboard, so it says so
+        // rather than leaving the next step to ask. Getting this wrong hid the
+        // small window over a dashboard that was already going and left the
+        // app running with nothing on screen, which is AC-7 and the state the
+        // record's second amendment refused for the close button.
+        false
+    };
+    settle_small_window_around(app, dashboard_up);
 }
 
 /// Show or hide the small window, without touching the dashboard.
@@ -239,6 +256,14 @@ fn settle(app: &AppHandle) {
 /// bringing the small window forward for a reason stays the dictate feature's
 /// one place that does it.
 fn settle_small_window(app: &AppHandle) {
+    // Nothing here has just ordered the dashboard open or closed, so what the
+    // system reports is the truth. `settle` is the one caller that cannot ask,
+    // and it passes its own answer in instead.
+    settle_small_window_around(app, dashboard_window::is_open(app));
+}
+
+/// The body of the above, told whether there is a dashboard rather than asking.
+fn settle_small_window_around(app: &AppHandle, dashboard_up: bool) {
     let Some(small) = app.get_webview_window(SMALL_WINDOW) else {
         return;
     };
@@ -247,7 +272,7 @@ fn settle_small_window(app: &AppHandle) {
         .and_then(|shell| shell.interruption.lock().ok().map(|held| held.is_some()))
         .unwrap_or(true);
 
-    if dashboard_window::is_open(app) && !interrupted {
+    if dashboard_up && !interrupted {
         let _ = small.hide();
     } else {
         // Deliberately not `set_focus`: this shows the window where the state
