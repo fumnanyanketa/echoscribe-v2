@@ -71,6 +71,11 @@ PAIRS = [
     ("Nav item on active row", "--color-ink-nav", "--color-rail-active", "text"),
     ("Active nav item", "--color-surface", "--color-rail-active", "text"),
     ("Control edge on rail", "--color-rail-border-control", "--color-rail", "nontext"),
+    # The offline row in the account block (record 0003 AC-14, drawn 2026-09-03).
+    # Its two parts are measured against the rail ground rather than borrowing the
+    # on-dark pairs above, which are all measured on --color-onboarding.
+    ("Offline badge on rail", "--color-warning-on-dark", "--color-rail", "text"),
+    ("Offline sentence on rail", "--color-ink-nav", "--color-rail", "text"),
 
     ("First run heading", "--color-ink-on-dark-heading", "--color-onboarding", "large"),
     ("First run body", "--color-ink-on-dark-secondary", "--color-onboarding", "text"),
@@ -95,6 +100,23 @@ PAIRS = [
 
     ("Blocker label on wash", "--color-accent-on-light", "--color-accent-wash", "text"),
     ("Blocker edge on wash", "--color-accent-border", "--color-accent-wash", "decor"),
+
+    # The Settings screen (record 0002 AC-12, AC-19, AC-21, AC-22). Its two new
+    # controls sit on the white reading surface, and the chosen hotkey row is a
+    # --color-surface-subtle fill, so the keycap and badge inside it get their
+    # own pairs rather than borrowing the ones measured against white.
+    ("Keycap text on a row", "--color-ink", "--color-surface-subtle", "text"),
+    ("Hotkey CHOSEN badge", "--color-ink-secondary", "--color-surface-subtle", "text"),
+    ("Focus ring on a row", "--color-accent", "--color-surface-subtle", "nontext"),
+    # The sound switch. Its meaning is knob position plus the word beside it, so
+    # these three are about seeing the control and where the knob sits, never
+    # about carrying the state. The off track keeps the --color-border-control
+    # edge already audited against the surface: that same edge on
+    # --color-surface-sunken is only 2.87:1 and would fail, which is why the off
+    # track is the subtle fill and not the sunken one.
+    ("Sound switch track, on", "--color-ink", "--color-surface", "nontext"),
+    ("Sound switch knob, on", "--color-surface", "--color-ink", "nontext"),
+    ("Sound switch knob, off", "--color-ink-faint", "--color-surface-subtle", "nontext"),
 ]
 
 NEEDED = {"text": 4.5, "large": 3.0, "nontext": 3.0, "decor": 0.0}
