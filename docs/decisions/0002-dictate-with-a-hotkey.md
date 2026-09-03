@@ -126,6 +126,52 @@ state. The 232x44 form is retired as a window size. This unblocks the
 eleventh amendment's 2 second hold and the pill's text rendering, and it
 answers the error pill geometry question plan row 2 had flagged. No
 criterion is renumbered, reworded or added. The count stays at 33.
+**Amended:** 2026-09-02, the thirteenth, by `/develop` under its gate's
+option 3, authorised by the user the same day. Milestone 5's gate found one
+value with no named source and it was the central one: AC-17 says "each
+completed dictation is saved" and nothing here said what completed meant.
+Six things end a dictation, and whichever line of code was written first
+would have decided it. Settled: a row is written when, and only when, at
+least one finalised phrase reached the cursor, whatever ended the
+dictation, and it holds exactly those phrases as they were typed, joining
+spaces included. It follows the data rule AGENTS.md already holds, that
+transcribed text goes to two places only, the cursor it was dictated into
+and the local history, so words a person has in their document are in their
+history even when a dropped connection or a dying microphone cut the
+dictation short, and text that never reached a cursor has no history to be
+in. A silent dictation and a password refusal therefore leave no row, which
+is also what keeps plan row 5's history screen free of blank ones. It adds
+one Value sourcing row and touches nothing else. No criterion is
+renumbered, reworded or added. The count stays at 33. Milestone 5's storage
+half and its four settings commands are built; its settings screen is not,
+and is waiting on `/canvas` for a control that chooses between two values
+and for a switch, neither of which `design/registry.md` draws.
+**Amended:** 2026-09-02, the fourteenth. `/canvas` drew the settings screen
+the same day and handed four questions to `/architect`, listed under "Handed
+to /architect" in `design/registry.md`. Three of them are about the window,
+the rail and the landing destination, which belong to no single feature and
+are now settled in their own record,
+[0004-the-app-shell](0004-the-app-shell.md). This amendment carries the two
+that are this record's. First, the wording of the `Setting error line`, the
+one error state of the settings screen: the store refusing a write is
+`SETTING_NOT_SAVED`, "This setting could not be saved, so it is unchanged.",
+and a failed read when the screen opens is `SETTINGS_NOT_READ`, "These
+settings could not be read, so none is shown.", with no control drawn at
+all in that state. Both are two Value sourcing rows. Second, and this is
+the part a reader of AC-32 must not miss, record 0004 gives EchoScribe a
+second window, so "the EchoScribe window" no longer names one thing. AC-32
+says an error clearing itself leaves the window not coming to the front,
+not hiding itself and not moving. That was written when one window held
+every screen. With two, the faithful reading is that the small 760x540 dark
+window hides and the 1200x800 dashboard behind it, which always exists
+while a person is signed in with a key saved, is revealed exactly where and
+as it was, with nothing raised, resized or moved. AC-32 is **not** reworded;
+record 0004's AC-6 carries that promise in its own words and is proved in
+the same sitting. The "Where a microphone error is read" row in Value
+sourcing is corrected in place to say which window. Milestone 5's settings
+screen is no longer blocked on `/canvas`: it is built inside record 0004's
+shell, after that record's third milestone. No criterion is renumbered,
+reworded or added. The count stays at 33.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -979,7 +1025,7 @@ One migration, creating all three tables.
 | The sentence shown for each microphone error | AC-15, AC-28, AC-30 | This record, the four sentence table in The decision. Fixed wording, not a setting, and it never carries a device name, a path, or anything from the audio. Added 2026-08-30: the catch-all kind has a second sentence, "The microphone stopped working.", used only when the failure arrives mid dictation, because the first one says the microphone could not be opened and it had been. Five sentences across the same four kinds. |
 | What the pill says when the microphone dies mid dictation | AC-30 | This record. `MIC STOPPED`, held long enough to read, then the pill closes and the closing sound plays. Fixed wording. It never carries a device name, a code or anything from the audio; the code and the action are the window's, not the pill's. |
 | Whether a mid dictation failure came from the microphone or from Deepgram | AC-13, AC-14, AC-30 | Which of the two reported it. The audio stream's own error callback for the device, the Deepgram connection for the rest. Added 2026-08-30, because until then the record named only Deepgram causes mid dictation and the device path went to stderr and nowhere else. |
-| Where a microphone error is read | AC-15, AC-28, AC-30 | This record. The EchoScribe window, brought to the front. Never the pill, which has no action and never appears when the microphone did not open. |
+| Where a microphone error is read | AC-15, AC-28, AC-30 | This record. The EchoScribe window, brought to the front. Never the pill, which has no action and never appears when the microphone did not open. **Corrected 2026-09-02.** There are two EchoScribe windows from record 0004 onwards, so this row now names one: the small 760x540 dark window, which is the window for everything with one way forward. It is never the dashboard. |
 | The Windows microphone privacy page | AC-15, AC-29 | A fixed literal address held in Rust, `ms-settings:privacy-microphone`, opened through the Windows shell with the already approved `windows` crate. The interface never supplies or sees it, and it is never built from anything. |
 | The address a person gets a Deepgram key from | AC-9 | This record. A fixed literal held in Rust, `https://console.deepgram.com/signup?jump=keys`, opened through the system browser by `open_deepgram_signup`, which takes nothing. The interface never supplies or sees it, and it is never built from anything. |
 | What checks a pasted key against Deepgram | AC-10, AC-11 | This record. `GET https://api.deepgram.com/v1/auth/token`, with the pasted key in an `Authorization: Token <key>` header. Deepgram's own documented way to test a key. It sends no audio and costs no allowance. A 200 does not prove the key can open a streaming socket, so milestone 4 must treat a scope failure on the live stream as a state of its own. |
@@ -999,6 +1045,9 @@ One migration, creating all three tables.
 | What separates two finalised phrases at the cursor | AC-3, AC-4 | This record, decided by the user 2026-08-31: a single space, typed before every finalised phrase after a dictation's first, through the same one door and behind the same password check. Nothing before the first phrase, and the pill's events are unchanged. |
 | How long the pill holds its last words before closing | AC-20, AC-30 | This record, settled 2026-08-31 by the eleventh amendment: 2 seconds, from the moment the words are shown, for every ending that puts words on the pill. Then the pill closes and the closing sound plays. Fixed, not a setting. Not yet built; it lands with the pill's text rendering once `/architect` settles the pill's geometry. |
 | The pill's geometry | AC-1, AC-20, AC-23 to AC-27, AC-30, AC-33 | This record, settled 2026-08-31 by the twelfth amendment: one fixed form for every state from open to close, the drawn 472x52 listening form. Sized once at open, never resized while open, and the whole footprint, the 20 second counter included, is clamped inside the working area at open. The 232x44 form is retired as a window size. |
+| Which dictations are saved, and what their text holds | AC-17, AC-18 | This record, settled 2026-09-02 by the thirteenth amendment, which is also what AC-17's word "completed" means. A row when, and only when, at least one finalised phrase reached the cursor, whatever ended the dictation: you stopped it, either cap, a Deepgram failure, the microphone dying. Its `text` is exactly the phrases that were typed, in order, with the same single joining space that was typed between them, so what is stored can never differ from what is in the person's document. A dictation that typed nothing leaves no row at all, which covers both a silent dictation and a password refusal. Nothing unfinished is ever in it, per AC-33. The rule lives in one place, `Store::save_dictation`, so no way of ending a dictation can write a different shape of row. |
+| The sentence when a setting will not save | AC-12, AC-19, AC-21 | This record, settled 2026-09-02 by the fourteenth amendment. Code `SETTING_NOT_SAVED`, sentence "This setting could not be saved, so it is unchanged." Fixed wording, held in one place in Rust like every other sentence on this surface, so no screen invents its own. It says both things the person needs: the change did not happen, and what is still on screen is therefore true, which is honest only because `design/registry.md` already fixed the behaviour that the shown choice does not move when a write is refused. No action follows it: the control is its own retry. It is the only cause the settings screen can reach for a write, because `not_signed_in` and `not_ready` cannot happen on a screen only reachable while signed in, and `unknown_hotkey` cannot happen while the two rows come from `get_hotkey`. |
+| The sentence when a setting will not read | AC-12, AC-19, AC-21 | This record, settled 2026-09-02 by the fourteenth amendment. Code `SETTINGS_NOT_READ`, sentence "These settings could not be read, so none is shown." Fixed wording, same one place in Rust. When `get_hotkey` or `get_dictation_sounds` fails as the screen opens, the section is that one line and **no control is drawn at all**, neither hotkey row and no switch. A control drawn without a chosen value would be showing a setting the app cannot read, and a person could leave the screen believing a hotkey is in force that is not. `/canvas` owes `design/registry.md` one row for this state. |
 
 ## Interface surface
 
@@ -1352,6 +1401,16 @@ window". In order:
    two hotkey choices as a list in settings, and the sound switch. Both
    settings take effect immediately and are still in force after a
    restart.
+
+   **Added 2026-09-02 by the fourteenth amendment: the screen half has a
+   prerequisite outside this record.** The storage half and the four
+   settings commands are built. The screen is built inside the shell that
+   record [0004](0004-the-app-shell.md) defines, after that record's third
+   milestone, because until then there is no window it can live in and no
+   route a person could take to reach it. `/canvas` has drawn every
+   component it needs, so it is not waiting on design any more. It owes one
+   more registry row, for the read failure state named in Value sourcing,
+   and that row can ride with the build.
 
 ## What this makes harder
 
