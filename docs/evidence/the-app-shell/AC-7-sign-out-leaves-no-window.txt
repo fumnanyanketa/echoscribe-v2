@@ -1,0 +1,104 @@
+AC-7, the app shell, 2026-09-03
+Signing out closes the dashboard and leaves me on the sign in screen.
+
+VERDICT: not met. The dashboard closes. The sign in screen is not left on
+screen. The app keeps running with no window at all.
+
+Physical pixels throughout.
+
+
+WHAT WAS DONE
+
+Sign out was pressed in the account block, by a real click on the button, with
+the dashboard genuinely at the front of the desktop first so the click could not
+land on anything else.
+
+  $ zorder.ps1
+  1. EchoScribe        707,197 2426x1671   <-- ECHOSCRIBE  [FOREGROUND]
+  2. Windows Input Experience
+  3. Program Manager
+
+  === before signing out ===
+  title      : EchoScribe dictation      visible: False      (the pill)
+  title      : EchoScribe                visible: True       (the dashboard)
+  title      : echoscribe                visible: False      (the small window)
+
+  $ click.ps1 -X 950 -Y 1779             the Sign out button
+
+
+WHAT HAPPENED
+
+  === after clicking Sign out ===
+  title      : EchoScribe dictation      visible: False
+  title      : echoscribe                visible: False
+  (the dashboard is gone from the list entirely: destroyed, not hidden)
+
+  $ zorder.ps1
+  1. Windows Input Experience   0,0 3840x2160
+  2. Program Manager            0,0 3840x2160
+
+  no EchoScribe window is on screen
+
+Screenshot: AC-7-signed-out-dashboard-closed.png, the whole desktop a second
+after Sign out was pressed. It shows the desktop and nothing else, which is the
+point of it.
+
+Checked again ten seconds later, in case it was slow:
+
+  === 10 s after signing out ===
+  title      : echoscribe                visible: False
+  --- any EchoScribe window on screen? ---
+  1. Windows Input Experience
+  2. Program Manager
+  --- process still alive? ---
+  echoscribe.exe               21996 Console                   13     43,872 K
+
+So the process is running, holding the global hotkey, with nothing on screen and
+no way for a person to reach it. That is the state the record's own second
+amendment refused to create for the close button, on the grounds that "a running
+app a person can neither see nor reach is worse than one that closed". Signing
+out reaches it by another door.
+
+The session was properly emptied, so signing out itself worked:
+
+  session rows: [(1, None)]                 account_id cleared
+  account rows: [('user_3IX...',)]          the account row is kept, as designed
+  deepgram_credential rows: [('user_3IX...',)]
+
+
+THE SIGN IN SCREEN ITSELF IS FINE
+
+Restarting the app with nobody signed in puts it on screen at once:
+
+  === after a restart with nobody signed in ===
+  title      : echoscribe                visible: True    outer 294,294 1546x1151
+
+  and it draws "Sign in to EchoScribe", the one Sign in button, and
+  "Sign-in opens in your browser. EchoScribe never sees your password."
+
+Screenshot: AC-7-sign-in-screen-after-restart.png
+
+So the screen is built and reachable. What is broken is only the handover: the
+dashboard is destroyed and the small window is never shown.
+
+
+A HYPOTHESIS, OFFERED AS A HYPOTHESIS
+
+/check does not fix anything and did not test this, so it is a lead for /debug
+rather than a conclusion. In src-tauri/src/shell/mod.rs, settle() calls
+dashboard_window::close(app), which calls window.destroy(), and then immediately
+calls settle_small_window(app). settle_small_window asks
+dashboard_window::is_open(app) and hides the small window when the answer is
+yes. If destroy() is deferred, as a queued window close, then the dashboard is
+still gettable at that instant, is_open() answers yes, and the small window is
+hidden instead of shown. The window is then really destroyed a moment later and
+nothing runs settle_small_window again.
+
+If that is the cause, it is the shape AGENTS.md standing rule 14 names: the call
+returning tells you the destroy was accepted, not that the window has gone.
+
+
+WHAT WAS NOT CHECKED
+The second half of AC-7, that a second account signing in on the same machine
+gets its own window size and place. That needs a second Clerk account's
+credentials, which this run does not have.

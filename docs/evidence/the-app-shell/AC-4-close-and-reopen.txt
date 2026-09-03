@@ -1,0 +1,73 @@
+AC-4, the app shell, 2026-09-03
+Resize it, drag it somewhere, close the app, reopen it, and it comes back the
+same size in the same place on the same screen.
+
+VERDICT: blocked, and the single screen half is met and is written out below.
+This machine has one monitor, so "on the same screen" cannot be told apart from
+"on the only screen", and the record's own milestone 2 names two monitors of
+different sizes as this criterion's proof. Nothing here was worked around.
+
+Physical pixels throughout. 200% display scaling, working area 3840x2064.
+
+
+THE JOURNEY, AS A PERSON WOULD DO IT
+
+1. The window was dragged by its title bar. Real mouse input through the
+   ordinary Windows path, so Windows moved the window and the app read the
+   result back.
+
+     $ drag.ps1 -FromX 714 -FromY 41 -ToX 1614 -ToY 441
+     before: outer 114,12 1946x1351
+     after : outer 1014,412 1946x1351      moved by exactly +900,+400
+
+   The row the app wrote, 400 ms after the drag stopped:
+
+     (..., 960, 640, 0.5174479166666667, 0.5268895348837209, '\\.\DISPLAY1',
+      '2026-09-03T09:20:03Z')
+
+   Checked rather than trusted: the window's centre is
+   (1014 + 973, 412 + 675.5) = (1987, 1087.5); 1987/3840 = 0.5174479 and
+   1087.5/2064 = 0.5268895. The stored fractions are the observed centre.
+
+2. The window was resized by a real drag on its bottom right corner.
+
+     $ drag.ps1 -FromX 2959 -FromY 1762 -ToX 3300 -ToY 1900
+     after : outer 1014,412 2287x1489
+             client 2261x1418               (1130.5x709 logical)
+
+     row: (..., 1131, 709, 0.5618489583333334, 0.5603197674418605,
+           '\\.\DISPLAY1', '2026-09-03T09:20:15Z')
+
+3. The app was closed with the window's own close button, which is AC-4's own
+   wording, "close the app".
+
+     $ click.ps1 -X 3241 -Y 441        the X in the title bar
+     --- process after clicking close ---
+     NO ECHOSCRIBE PROCESS (the app exited)
+
+     row rewritten at close: (..., 1131, 709, 0.5618489583333334,
+       0.5603197674418605, '\\.\DISPLAY1', '2026-09-03T09:20:39Z')
+
+   So closing the dashboard closes the app, and the geometry is written before
+   the exit rather than lost by it. Both are the second amendment's decisions.
+
+4. The app was started again.
+
+     === after reopen ===
+     outer      : 1014,412 2288x1489
+     client     : 2262x1418
+     row unchanged, still stamped 09:20:39
+
+     position   : 1014,412 closed  ->  1014,412 reopened     identical
+     client size: 2261x1418 closed ->  2262x1418 reopened    1 px wider
+
+The one pixel is the rounding of a half logical pixel. The window was left at
+1130.5 logical pixels wide, the column is an integer, so 1131 was stored and
+1131 came back. It is half a logical pixel and cannot be seen. It is written
+down here so that nobody reading "identical" later finds the discrepancy and
+wonders.
+
+WHAT IS NOT PROVEN HERE
+That the window returns to the screen it was left on, when there is more than
+one screen to be left on. That needs the two monitor sitting the record asks
+for, and it is the half the record itself warns will be tempting to skip.

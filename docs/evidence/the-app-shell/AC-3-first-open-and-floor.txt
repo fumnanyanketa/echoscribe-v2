@@ -1,0 +1,71 @@
+AC-3, the app shell, 2026-09-03
+The dashboard opens at 1200x800 the first time, and resizes down to 960x640 and no smaller.
+
+HOW THIS MACHINE REPORTS SIZES
+This screen is 3840x2160 with Windows display scaling at 200%, so one logical
+pixel is two physical ones. Every number below is physical unless it says
+logical. 1200x800 logical is 2400x1600 physical; 960x640 logical is 1920x1280
+physical. The working area, which excludes the taskbar, is 3840x2064 physical.
+The probe that read these numbers declares itself per-monitor DPI aware, so
+Windows hands it physical pixels rather than virtualised ones.
+
+
+HALF ONE: 1200x800 ON A FIRST EVER OPEN
+
+The shell_window row for the signed-in account was deleted first, which is what
+a first ever open means, and the app was started fresh.
+
+  $ sqlite: delete from shell_window
+  rows after clearing: 0
+
+  $ start echoscribe.exe
+  === first ever open, nothing remembered ===
+  visible    : True
+  outer      : 707,197 2426x1671
+  client     : 2400x1600
+
+  client 2400x1600 physical = 1200x800 logical.  MET
+
+Centred, checked against the working area rather than asserted:
+
+  outer 2426x1671 centred in 3840x2064 would sit at
+  (3840-2426)/2 = 707 , (2064-1671)/2 = 196
+  observed 707,197. The one pixel is the rounding of a 0.5 fraction.
+
+Screenshot: AC-3-first-open-1200x800.png
+
+Noted, not a defect: a first ever open writes no row. The row appears only once
+the person has moved or resized the window, which is what the record's data
+rules say.
+
+
+HALF TWO: THE 960x640 FLOOR
+
+Reached by a real mouse drag on the window's bottom right corner, not by
+SetWindowPos. The mouse was driven through the ordinary Windows input path
+(SetCursorPos plus mouse_event), so Windows itself ran its sizing loop and
+applied the window's minimum. That is the difference the record's build report
+asked for: SetWindowPos would have bypassed the minimum, a modal resize loop
+honours it. The input was synthesized rather than made by a hand on a mouse,
+and that is the one respect in which this is not a person doing it.
+
+  before:
+  outer      : 1014,412 2288x1489
+  client     : 2262x1418          (1131x709 logical)
+
+  $ drag.ps1 -FromX 3301 -FromY 1900 -ToX 1200 -ToY 500 -Steps 40
+    the corner was dragged 2101 px left and 1400 px up, which asks for a
+    window of roughly 187x89 physical, far inside the floor
+
+  after:
+  outer      : 1014,412 1946x1351
+  client     : 1920x1280          (960x640 logical)
+
+  Windows stopped the drag at exactly the floor and no smaller.  MET
+
+The row written afterwards agrees:
+
+  ('user_3IXiPaRho7Jkw48Yq8MMHCwCLyC', 960, 640, 0.5174479166666667,
+   0.5268895348837209, '\\.\DISPLAY1', '2026-09-03T09:21:24Z')
+
+Screenshot: AC-3-floor-960x640-after-drag.png

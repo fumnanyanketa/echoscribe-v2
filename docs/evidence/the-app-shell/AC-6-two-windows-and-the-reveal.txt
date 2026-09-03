@@ -1,0 +1,148 @@
+AC-6, the app shell, and record 0002's AC-32, 2026-09-03
+An error arrives while the dashboard is up; the small window comes forward and
+the dashboard is not resized, moved or closed. When the error clears itself the
+small window goes, the dashboard is there exactly as it was, and it is not
+brought to the front.
+
+VERDICT: blocked. The first half is met and cited below. The second half could
+not be exercised as written, because the proof that clears a microphone error is
+the microphone opening, and the microphone will not open on this machine at all.
+The same reveal path was then proven through the other route the record
+describes, a person dismissing the window, and that is written out too so the
+reader can see exactly what is and is not covered.
+
+Physical pixels throughout. The sitting was set up the way the record's
+milestone 1 asks: the dashboard on screen, and a separate window standing in for
+the app a person was working in, so that focus and stacking mean something.
+
+
+THE SITTING, BEFORE ANYTHING WENT WRONG
+
+  1. TYPING TARGET      0,300 1800x2190   [FOREGROUND]
+  2. EchoScribe         1890,200 1946x1351   <-- the dashboard
+  3. Settings           0,1 1817x973
+
+  the small window, 'echoscribe':  visible: False
+
+The person is in their own app. The dashboard is behind it. The small dark
+window is hidden, which is the invariant: signed in with a key saved, the
+dashboard is what is on screen.
+Screenshot: AC-6-1-before-the-error.png
+
+
+HALF ONE: THE ERROR ARRIVES.  MET
+
+Windows microphone access was switched to Deny, which is the proof method the
+record's own milestone 1 names, and the hotkey was pressed. The hotkey is
+double_tap_ctrl, read from the dictation_setting row, and the two taps were sent
+90 ms apart, inside the 300 ms window machine.rs holds.
+
+  microphone access: Deny
+  $ doubletap.ps1
+
+  === after the hotkey, microphone denied ===
+  1. echoscribe        245,245 1546x1151   <-- ECHOSCRIBE  [FOREGROUND]
+  2. TYPING TARGET     0,300 1800x2190
+  3. EchoScribe        1890,200 1946x1351  <-- ECHOSCRIBE
+
+  the small window came from hidden to the front of everything, and took focus
+  the dashboard: 1890,200 1946x1351 before  ->  1890,200 1946x1351 after
+                 not resized, not moved, not closed
+
+What it was carrying, read off the screen rather than off the code:
+  MICROPHONE_BLOCKED_BY_WINDOWS
+  "Windows is not letting EchoScribe use the microphone."
+  one action: Open Windows settings
+
+That also proves the fifteenth amendment's wire end to end. The interface no
+longer inspects an error kind; it mounted the microphone error screen because
+Rust classified the kind and named the screen on the event.
+
+Screenshot: AC-6-2-error-forward-dashboard-unmoved.png
+
+
+HALF TWO: WHY THE SELF CLEARING PROOF COULD NOT BE PRODUCED
+
+Microphone access was switched back to Allow and the hotkey pressed again, three
+times over three attempts. Dictation never started. The screen changed from
+MICROPHONE_BLOCKED_BY_WINDOWS to:
+
+  MICROPHONE_UNAVAILABLE
+  "The microphone could not be opened."
+  one action: Try again
+
+Screenshot: AC-6-microphone-would-not-open.png
+
+The consent change did land, since the error changed. The microphone itself
+never opened, so dictation:opened never fired, so nothing existed to clear the
+microphone screen.
+
+This is not the machine being short of a microphone. Another program was asked
+to open the default recording device and did, from the same session, after
+EchoScribe had failed:
+
+  $ winmm: waveInGetNumDevs           -> 4
+  $ winmm: open new type waveaudio    -> 0   (success)
+  $ winmm: record probe               -> 0   (success)
+  $ winmm: status probe length        -> 677 (ms of audio actually captured)
+
+So four capture devices are present and the default one records for another
+process. EchoScribe cannot open it. That is a finding of its own, it belongs to
+record 0002 rather than to this record, and it is what blocks this half.
+
+
+THE SAME REVEAL, THROUGH THE OTHER ROUTE
+
+The second amendment says that closing the small window while the dashboard is
+up hides it rather than destroying it, and forgets the interruption. That runs
+the same two steps AC-6's second sentence runs, clear_interruption then
+settle_small_window, so it proves the reveal and the not-raising even though it
+is a dismissal rather than a proof. It does not prove the trigger.
+
+  the person clicks back into their own app first, so the dashboard is behind it
+  1. TYPING TARGET     0,300 1800x2190   [FOREGROUND]
+  2. echoscribe        245,245 1546x1151
+  3. EchoScribe        1890,200 1946x1351
+
+  then dismisses the error window with its close button
+  $ click.ps1 -X 1731 -Y 274
+
+  1. TYPING TARGET     0,300 1800x2190   [FOREGROUND]
+  2. EchoScribe        1890,200 1946x1351   <-- ECHOSCRIBE
+  3. Settings          0,1 1817x973
+
+  the small window: visible: False, outer 245,245 1546x1151
+    hidden, and still there. Not destroyed: it is still enumerable, with its
+    size and place intact.
+
+  the dashboard: 1890,200 1946x1351 before  ->  1890,200 1946x1351 after
+                 revealed exactly where and as it was
+  the foreground: TYPING TARGET before  ->  TYPING TARGET after
+                 the dashboard was NOT brought to the front, so the person kept
+                 their place in the app they were working in
+
+  the app did not exit: the dashboard is still there
+
+Screenshot: AC-6-3-small-window-hidden-dashboard-revealed-unraised.png
+
+And the next failure still had somewhere to be read, which is why the window is
+hidden rather than destroyed:
+
+  $ doubletap.ps1
+  1. echoscribe        245,245 1546x1151   <-- ECHOSCRIBE  [FOREGROUND]
+  2. TYPING TARGET     0,300 1800x2190
+  3. EchoScribe        1890,200 1946x1351
+
+
+ONE THING WORTH KNOWING ABOUT BRINGING A WINDOW FORWARD
+
+On an earlier attempt the small window rose above the dashboard but did not take
+focus and did not reach the front of the desktop. At that moment the foreground
+window belonged to another process's dialog, and Windows refuses a foreground
+change to a process that does not hold the foreground lock. With an ordinary
+window in front instead, as above, it came fully forward every time. So the
+behaviour is right, and it is at the mercy of a Windows rule nothing in this app
+controls.
+
+WHAT WAS PUT BACK
+Windows microphone access is Allow, which is what it was before this run.
