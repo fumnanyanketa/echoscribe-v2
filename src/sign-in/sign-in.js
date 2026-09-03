@@ -1,9 +1,14 @@
-// The sign-in screen and the signed-in confirmation.
+// The sign-in screen.
 //
-// The sign-in screen is the only thing reachable when nobody is signed in
-// (record 0003 AC-1). It has one button; all credential entry happens on
-// Clerk's hosted pages. Four states from design/registry.md: initial, waiting,
-// failed, returned.
+// It is the only thing reachable when nobody is signed in (record 0003 AC-1).
+// It has one button; all credential entry happens on Clerk's hosted pages.
+// Four states from design/registry.md: initial, waiting, failed, returned.
+//
+// The signed-in confirmation that used to live here is gone. It was a
+// milestone-1 stand-in for the account block, and record 0004 built the real
+// one at the foot of the dashboard's nav rail, which is where its name, its
+// mail address, its date, its Sign out and its "working offline" sign all are
+// now (src/shell/account-block.js).
 //
 // Rust drives the actual sign-in. This module asks it to start or cancel, and
 // listens for the outcome. It never sees a token or a Clerk code.
@@ -58,47 +63,6 @@ export async function mountSignIn(root, options = {}) {
     ctx.disposed = true;
     if (ctx.unlisten) ctx.unlisten();
   };
-}
-
-/** Mount the signed-in confirmation. A milestone-1 stand-in for the Account
- *  block, which lands in the nav rail with the dictation feature. */
-export function mountSignedIn(root, state) {
-  ensureStyles();
-  const account = state.account;
-
-  const column = el("section", "signed-in");
-  column.append(
-    withText(el("h1", "signed-in__heading"), "Signed in as " + account.display_name),
-    withText(el("p", "signed-in__email"), account.email),
-    withText(
-      el("p", "signed-in__since"),
-      "Signed in since " + formatDate(account.signed_in_since),
-    ),
-  );
-
-  if (state.state === "signed_in_offline") {
-    const offline = el("p", "signed-in__offline");
-    offline.append(
-      withText(el("span", "signin__notice-marker"), "!"),
-      withText(el("span"), "Working offline"),
-    );
-    column.append(offline);
-  }
-
-  const row = el("div", "signin__action");
-  row.append(
-    makeButton("signin__btn signin__btn--secondary", "Sign out", async () => {
-      try {
-        await invoke("sign_out");
-      } catch (_) {
-        // sign-out always succeeds locally; nothing to show on failure
-      }
-    }),
-  );
-  column.append(row);
-
-  root.replaceChildren(column);
-  return function unmount() {};
 }
 
 function draw(ctx, screen) {
@@ -232,16 +196,6 @@ function makeButton(className, label, onClick) {
     onClick(button);
   });
   return button;
-}
-
-function formatDate(iso) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
 }
 
 function ensureStyles() {

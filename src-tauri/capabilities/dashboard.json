@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "dashboard",
+  "description": "The dashboard window: the nav rail and the white reading surface. It listens to two events and nothing else. `auth:offline` and `auth:signed_in` are what make the offline row in the account block arrive and go while the window is open; it emits nothing, ever. It is deliberately not granted `core:default`, and nothing here lets a web view move, resize, close or otherwise touch any window: the person resizes the dashboard through its own title bar, which is Windows doing it, and Rust reads the result. `pill.json` is the shape this file copies. The three commands the dashboard invokes, `get_rail`, `get_auth_state` and `sign_out`, appear nowhere in this list because they appear nowhere in Tauri's permission system: it covers Tauri's own plugin commands, and this application's commands are not among them, so no per-command grant exists to give or to withhold. What stops the dashboard reaching a command it should not is the `not_signed_in` refusal already in Rust on every one of them. See docs/decisions/0004-the-app-shell.md.",
+  "windows": ["dashboard"],
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+}

@@ -1,4 +1,5 @@
 mod dictate;
+mod shell;
 mod sign_in;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -14,6 +15,13 @@ pub fn run() {
         .setup(|app| {
             sign_in::init(app)?;
             dictate::init(app)?;
+            // Last of the three, and the order matters: the shell's table
+            // references `account`, which sign-in creates, and it counts rows
+            // in `deepgram_credential`, which dictate creates. It is also what
+            // puts the first window on screen, because neither window is
+            // visible until it decides which one belongs there
+            // (docs/decisions/0004-the-app-shell.md).
+            shell::init(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -32,7 +40,8 @@ pub fn run() {
             dictate::settings::get_hotkey,
             dictate::settings::set_hotkey,
             dictate::settings::get_dictation_sounds,
-            dictate::settings::set_dictation_sounds
+            dictate::settings::set_dictation_sounds,
+            shell::get_rail
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

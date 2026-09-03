@@ -1,0 +1,233 @@
+/* The dashboard: the two-tone shell of design/design-system.md's Composition,
+ * built at record 0004's geometry.
+ *
+ * A persistent dark rail on the left where you navigate, a white surface on the
+ * right where you read. Not tabs. The window's size and place are Rust's and
+ * arrive before this page is ever shown, so there is no breakpoint here and no
+ * layout that depends on one: the design system has no responsive breakpoints,
+ * and the window cannot go below 960x640.
+ *
+ * Every value is a token from styles.css, except the rail's own 232px width,
+ * which is a component geometry the comp fixes and design/registry.md's
+ * "Offline row" names, the way pill.css states the pill's 472x52.
+ */
+
+.dashboard-body {
+  margin: 0;
+  overflow: hidden;
+}
+
+.dashboard {
+  display: grid;
+  /* design/registry.md: the 232px rail. */
+  grid-template-columns: 232px 1fr;
+  height: 100vh;
+}
+
+/* ---- The rail ------------------------------------------------------- */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--space-5) var(--space-4);
+  background: var(--color-rail);
+  /* Decorative, so the decorative token is right: it separates two fields that
+     already differ, it does not tell you where a control is. */
+  border-right: var(--border-width) solid var(--color-rail-border);
+}
+
+/* design/registry.md "Brand lockup": a violet dot and the wordmark. The one
+   place violet is not about an open microphone, and it is registered as such.
+   Same treatment as the sign-in window's, because it is the same component. */
+.rail__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2) var(--space-5);
+}
+
+.rail__brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+}
+
+.rail__brand-word {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-ink-on-dark-heading);
+}
+
+.rail__nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-hair);
+}
+
+/* design/registry.md "Nav item": two states, resting and active. Active gets
+   the raised rail fill, which is a lightness change rather than a hue, so it
+   does not rest on colour perception. `aria-current` carries the same fact for
+   a screen reader. There is deliberately no disabled state: the design system
+   does not draw one, and nothing in the rail opens nothing (AC-2). */
+.rail__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  text-align: left;
+  color: var(--color-ink-nav);
+  cursor: pointer;
+}
+
+.rail__item--active {
+  background: var(--color-rail-active);
+  font-weight: var(--weight-medium);
+  color: var(--color-surface);
+}
+
+/* The section a person is inside, when the thing showing is one of its
+   sub-sections. Not the active state: it keeps the resting fill and only the
+   weight changes, so there is never any doubt which single item is open. */
+.rail__item--within {
+  font-weight: var(--weight-medium);
+  color: var(--color-surface);
+}
+
+/* design/registry.md "Section sub-nav": vertical and indented inside the rail,
+   nested under its parent item. One indent level in, and the nav item's own
+   two states. */
+.rail__sub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-hair);
+  padding-left: var(--space-4);
+}
+
+/* ---- The account block ---------------------------------------------- */
+
+/* design/registry.md "Account block": pinned to the rail foot, because it is
+   visited twice a year. Pinned is what makes the offline row's arrival grow the
+   block upward and move nothing already on screen. */
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--color-rail-border);
+}
+
+/* design/registry.md "Offline row": first in the block's reading order, above
+   the initials and the name and above Sign out. Two parts, a mono badge and one
+   plain sentence. No code, no left edge and no action: the four dark error
+   lines have all three because something failed, and here nothing has. It never
+   animates and never truncates; the sentence wraps inside the rail, which has
+   the room. */
+.account__offline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The row is shown and hidden by the `hidden` attribute, and a class with its
+   own `display` beats the browser's own rule for that attribute. Without this
+   line the row can never be hidden at all, which is what happened live on
+   2026-09-03: it stayed on screen through a session that was online. */
+.account__offline[hidden] {
+  display: none;
+}
+
+.account__offline-badge {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-warning-on-dark);
+}
+
+.account__offline-text {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--color-ink-nav);
+}
+
+.account__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Initials, never an avatar image: design/registry.md keeps avatars beyond
+   initials off the list. The fill is the raised rail fill and not violet,
+   because violet only ever means an open microphone. */
+.account__initials {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-pill);
+  background: var(--color-rail-active);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  color: var(--color-surface);
+}
+
+.account__name {
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-nav);
+  overflow-wrap: anywhere;
+}
+
+.account__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.account__email,
+.account__since {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--color-ink-nav);
+  overflow-wrap: anywhere;
+}
+
+/* design/registry.md "Secondary button, on dark", unchanged: a control edge and
+   a neutral label. It moved here from the signed-in stub record 0004 deleted. */
+.account__signout {
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width) solid var(--color-rail-border-control);
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink-on-dark-secondary);
+  cursor: pointer;
+}
+
+/* ---- The reading surface -------------------------------------------- */
+
+/* Always white: the design system has no light and dark theme, so there is no
+   second look for this to have. Empty until record 0002's milestone 5 builds
+   the settings screen. */
+.surface {
+  min-width: 0;
+  overflow: auto;
+  background: var(--color-surface);
+}

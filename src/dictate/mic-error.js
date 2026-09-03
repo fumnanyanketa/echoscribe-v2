@@ -17,15 +17,6 @@
 
 const { invoke } = window.__TAURI__.core;
 
-// The four kinds, and only these four. An error of any other kind is not a
-// microphone error and this screen never shows it.
-export const MIC_ERROR_KINDS = [
-  "microphone_blocked_by_windows",
-  "microphone_in_use_by_another_app",
-  "no_microphone_found",
-  "microphone_unavailable",
-];
-
 /** Mount the microphone error screen into `root`.
  *  `options.kind` and `options.message` come off the `dictation:error` event.
  *  `options.onCleared` is called when the screen is done: the microphone
@@ -99,9 +90,13 @@ async function retry(ctx, button) {
     await invoke("retry_dictation");
   } catch (err) {
     if (ctx.disposed) return;
-    if (err && MIC_ERROR_KINDS.includes(err.kind)) {
+    // Which screen a failure belongs on is Rust's answer, arriving on the
+    // command error the same way it arrives on the event, so this screen asks
+    // whether the new failure is still its own rather than matching kinds
+    // itself (record 0002, fifteenth amendment).
+    if (err && err.screen === "mic-error") {
       draw(ctx, err.kind, err.message);
-    } else if (err && err.kind === "no_deepgram_key") {
+    } else if (err && err.screen === "key-setup") {
       // The key was cleared between the failure and this retry (record 0002
       // AC-9). Rust has already sent `dictation:needs_key` and the shell is
       // mounting the setup screen, so do nothing here: asking the shell to

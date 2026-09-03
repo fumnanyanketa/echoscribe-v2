@@ -26,7 +26,8 @@
 use std::time::Duration;
 
 use serde::Serialize;
-use tauri::{AppHandle, Manager};
+use serde_json::json;
+use tauri::{AppHandle, Emitter, Manager};
 
 use super::key_vault;
 use super::store::SavedKey;
@@ -390,6 +391,13 @@ pub fn save_deepgram_key(app: AppHandle, key: String) -> Result<String, KeyError
         return Err(KeyErrorPayload::from(KeyError::CheckFailed));
     }
 
+    // A key is now saved, which is the moment record 0004's invariant changes:
+    // a person who was in a pre-shell state is now signed in with a key, so the
+    // dashboard is due. The shell listens for this. It carries nothing about
+    // the key, not even its last four characters, because nothing that listens
+    // needs them.
+    let _ = app.emit("dictation:key_saved", json!({}));
+
     Ok(masked)
 }
 
@@ -449,6 +457,11 @@ pub fn clear_deepgram_key(app: AppHandle) -> Result<(), &'static str> {
         eprintln!("dictate: could not clear the Deepgram key row: {e}");
         return Err("could_not_clear");
     }
+
+    // The other side of `dictation:key_saved`: after this AC-9 holds again, so
+    // the app is back in a pre-shell state and record 0004's dashboard is no
+    // longer due. The shell listens for this.
+    let _ = app.emit("dictation:key_cleared", json!({}));
     Ok(())
 }
 

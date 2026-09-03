@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="dashboard.css" />
+    <title>EchoScribe</title>
+    <script type="module" src="dashboard.js"></script>
+  </head>
+  <body class="dashboard-body">
+    <!-- The two-tone shell: a persistent dark rail on the left where you
+         navigate, a white surface on the right where you read
+         (design/design-system.md, Composition; record 0004). Rust sizes and
+         places the window before it is ever shown, and nothing on this page
+         knows a coordinate. -->
+    <div class="dashboard">
+      <!-- Filled by rail.js from what get_rail() returned. A screen cannot add
+           a destination: the list is a literal in Rust. -->
+      <nav class="rail" id="rail"></nav>
+      <!-- The white reading surface. Empty until record 0002's milestone 5
+           builds the settings screen: design/registry.md draws no component for
+           a surface waiting for its screen, and a build may not invent one. -->
+      <main class="surface" id="surface" tabindex="-1"></main>
+    </div>
+  </body>
+</html>

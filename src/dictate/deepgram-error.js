@@ -15,17 +15,6 @@
 
 const { invoke } = window.__TAURI__.core;
 
-/** Whether this kind is this screen's to show. Every mid dictation Deepgram
- *  kind lands here except the rejected key, which the registry sends to the
- *  key setup screen, where a new key can actually be pasted. */
-export function isDeepgramErrorKind(kind) {
-  return (
-    typeof kind === "string" &&
-    kind.startsWith("deepgram_") &&
-    kind !== "deepgram_key_rejected"
-  );
-}
-
 /** Mount the Deepgram error screen into `root`.
  *  `options.code`, `options.message` and `options.action` come off the
  *  `dictation:error` event. `options.onCleared` is called when Try again has
@@ -103,13 +92,17 @@ async function retry(ctx, button) {
     await invoke("retry_dictation");
   } catch (err) {
     if (ctx.disposed) return;
-    if (err && err.kind === "no_deepgram_key") {
+    // Which screen a failure belongs on is Rust's answer, arriving on the
+    // command error the same way it arrives on the event, so this screen reads
+    // the screen it is named rather than matching kinds itself (record 0002,
+    // fifteenth amendment).
+    if (err && err.screen === "key-setup") {
       // The key was cleared in the meantime. Rust has already sent
       // `dictation:needs_key` and the shell is mounting the setup screen, so
       // doing anything here would race it.
       return;
     }
-    if (err && err.kind) {
+    if (err && err.screen === "mic-error") {
       // The microphone would not open this time. That is the microphone error
       // screen's to show, and the shell owns which screen is mounted.
       ctx.onMicError(err);

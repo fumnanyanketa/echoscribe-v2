@@ -84,6 +84,7 @@
 mod collapse_list;
 mod consent;
 pub mod deepgram_key;
+pub mod error_screen;
 mod hook;
 mod key_vault;
 mod limits;
@@ -575,9 +576,16 @@ fn report_start_error(app: &AppHandle, e: StartError) {
             // The event goes to every window, so the main window receives it on
             // the capability it already has. Emitted before the window comes
             // forward so the screen is mounting as it arrives.
+            // `screen` is Rust's one classification of this kind, so the
+            // window mounts what it is named rather than matching the kind
+            // itself (record 0002, fifteenth amendment).
             let _ = app.emit(
                 "dictation:error",
-                json!({ "kind": mic.kind(), "message": mic.message() }),
+                json!({
+                    "kind": mic.kind(),
+                    "message": mic.message(),
+                    "screen": error_screen::screen_name_for(mic.kind()),
+                }),
             );
         }
     }
@@ -601,11 +609,29 @@ fn bring_window_forward(app: &AppHandle) {
 const MIC_PRIVACY_PAGE: windows::core::PCWSTR = windows::core::w!("ms-settings:privacy-microphone");
 
 /// What a failed `retry_dictation` hands back to the interface: the same named
-/// kind and fixed sentence that ride on `dictation:error`, and nothing else.
+/// kind and fixed sentence that ride on `dictation:error`, the screen that kind
+/// belongs on, and nothing else.
 #[derive(Debug, Clone, Serialize)]
 pub struct DictationErrorPayload {
     kind: &'static str,
     message: &'static str,
+    /// Which screen this failure belongs on, from the one classifier the event
+    /// uses. The screen that asked for the retry reads this rather than the
+    /// kind, so a Try again that fails on something else is handed over rather
+    /// than drawn in the wrong place (record 0002, fifteenth amendment).
+    screen: Option<&'static str>,
+}
+
+impl DictationErrorPayload {
+    /// The one way this is built, so the kind and the screen can never
+    /// disagree.
+    fn of(kind: &'static str, message: &'static str) -> Self {
+        Self {
+            kind,
+            message,
+            screen: error_screen::screen_name_for(kind),
+        }
+    }
 }
 
 impl From<StartError> for DictationErrorPayload {
@@ -615,14 +641,8 @@ impl From<StartError> for DictationErrorPayload {
             // `dictation:needs_key` event, so this only tells the caller why
             // Try again did not start anything. It carries no sentence because
             // no error line is ever drawn for it.
-            StartError::NoDeepgramKey => Self {
-                kind: "no_deepgram_key",
-                message: "",
-            },
-            StartError::Microphone(mic) => Self {
-                kind: mic.kind(),
-                message: mic.message(),
-            },
+            StartError::NoDeepgramKey => Self::of("no_deepgram_key", ""),
+            StartError::Microphone(mic) => Self::of(mic.kind(), mic.message()),
         }
     }
 }
@@ -663,10 +683,7 @@ pub async fn open_microphone_privacy_settings(app: AppHandle) -> Result<(), &'st
 #[tauri::command]
 pub async fn retry_dictation(app: AppHandle) -> Result<(), DictationErrorPayload> {
     if crate::sign_in::account_id_from(&app).is_none() {
-        return Err(DictationErrorPayload {
-            kind: "not_signed_in",
-            message: "",
-        });
+        return Err(DictationErrorPayload::of("not_signed_in", ""));
     }
     let commands = {
         let Some(state) = app.try_state::<Dictate>() else {
@@ -760,6 +777,7 @@ fn on_ended(app: &AppHandle, ended: transcribe::Ended) {
                     "code": cause.code(),
                     "message": cause.message(),
                     "action": cause.action(),
+                    "screen": error_screen::screen_name_for(cause.kind()),
                 }),
             );
         }
@@ -803,7 +821,11 @@ fn on_device_died(app: &AppHandle, e: MicError) {
     // could-not-open one. Same kinds, same codes, never a fifth.
     let _ = app.emit(
         "dictation:error",
-        json!({ "kind": cause.kind(), "message": message }),
+        json!({
+            "kind": cause.kind(),
+            "message": message,
+            "screen": error_screen::screen_name_for(cause.kind()),
+        }),
     );
 
     hold_then_close_pill(app, true);
@@ -908,6 +930,19 @@ mod tests {
     /// and so owns the clearing half of AC-32.
     const SHELL: &str = include_str!("../../../src/main.js");
 
+    /// One listener's own text out of the interface shell, flattened. It ends
+    /// at that registration's closing brace, so a comment sitting between two
+    /// listeners is never read as part of either.
+    fn listener_body(flat: &str, signal: &str) -> String {
+        let anchor = format!(r#"listen("{signal}""#);
+        let start = flat
+            .find(&anchor)
+            .unwrap_or_else(|| panic!("src/main.js no longer listens for {signal} at all"));
+        let body = &flat[start..];
+        let end = body.find("});").map(|at| at + 3).unwrap_or(body.len());
+        body[..end].to_string()
+    }
+
     /// The pill window's source, minus its own tests, so a guard cannot be
     /// satisfied by a test that quotes the thing it is checking for.
     fn the_pill_window_file() -> &'static str {
@@ -935,39 +970,50 @@ mod tests {
     }
 
     #[test]
-    fn the_allowance_error_is_not_cleared_by_the_microphone_opening() {
-        // covers: AC-32. The clearing table gives each error its own proof. An
-        // open microphone is not proof that a Deepgram allowance is back, so
-        // the `dictation:opened` listener may only ever clear the microphone
-        // error screen; the Deepgram error screen clears on the first
-        // finalised words, `dictation:text`, and nowhere else.
+    fn the_three_families_each_clear_on_their_own_proof() {
+        // covers: AC-32. The clearing table gives each error family its own
+        // proof, and this is the interface half of the residue the fifteenth
+        // amendment left on both sides. Which kind belongs on which screen is
+        // classified once now, in `error_screen.rs`, but each side still pairs
+        // a family with its proof, because each side clears the screen it is
+        // itself holding. Pair one wrong and a person's error window is taken
+        // away by something that did not disprove it: an open microphone says
+        // nothing about a Deepgram allowance, words coming back say nothing
+        // about a microphone that will not open, and neither says anything
+        // about a key. The Rust half of the same residue is guarded in
+        // shell/mod.rs.
+        const SCREENS: [&str; 3] = ["mic-error", "deepgram-error", "key-setup"];
         let flat = flattened(SHELL);
-        let start = flat
-            .find(r#"listen("dictation:opened""#)
-            .expect("the shell still clears the microphone error on dictation:opened");
-        // This listener's text runs to the next listen( registration.
-        let body = &flat[start + 1..];
-        let end = body.find(r#"listen(""#).unwrap_or(body.len());
-        let listener_end = &flat[start..=start + end];
+        for (signal, own) in [
+            ("dictation:opened", "mic-error"),
+            ("dictation:text", "deepgram-error"),
+        ] {
+            let body = listener_body(&flat, signal);
+            assert!(
+                body.contains(&format!(r#"!=="{own}""#)),
+                "the shell's {signal} listener no longer checks that the \
+                 mounted screen is {own}. It can then clear a screen this \
+                 proof does not disprove (record 0002, the clearing table)"
+            );
+            for other in SCREENS.iter().filter(|screen| **screen != own) {
+                assert!(
+                    !body.contains(other),
+                    "the shell's {signal} listener now touches the {other} \
+                     screen, which it is no proof about. Each family clears on \
+                     its own proof and on nothing else (record 0002, the \
+                     clearing table)"
+                );
+            }
+        }
+        // The middle row's proof is a key being accepted and saved, which the
+        // setup screen reports through its own callback. Neither clearing
+        // listener above may touch it, which the loop has just checked, and it
+        // must still have that one door out.
         assert!(
-            listener_end.contains(r#"!=="mic-error""#),
-            "the shell's dictation:opened listener no longer checks that the \
-             mounted screen is the microphone error. It can then clear a \
-             Deepgram error the open microphone does not disprove (record \
-             0002, the clearing table)"
-        );
-        assert!(
-            !listener_end.contains("deepgram"),
-            "the shell's dictation:opened listener now touches a Deepgram \
-             screen. An open microphone is not proof a Deepgram problem is \
-             gone; those clear on dictation:text (record 0002, the clearing \
-             table)"
-        );
-        assert!(
-            flat.contains(r#"listen("dictation:text""#),
-            "the shell no longer listens for dictation:text, so the Deepgram \
-             error screen has lost its one clearing trigger, the first \
-             finalised words (record 0002, the clearing table)"
+            flat.contains("onSaved:()=>render()"),
+            "the shell no longer re-renders when a key is accepted, so the key \
+             setup screen has lost its one clearing proof (record 0002, the \
+             clearing table's middle row)"
         );
     }
 

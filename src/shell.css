@@ -1,8 +1,9 @@
-/* App shell.
+/* The small dark window's field.
  *
- * One screen at a time is mounted into #app by main.js. The rail-and-surface
- * two-tone layout from the design system arrives with the signed-in app; for
- * now the shell is the dark first-run field the sign-in screen sits on.
+ * One screen at a time is mounted into #app by main.js, and every screen this
+ * window holds is dark throughout: sign in, first run, the key setup screen and
+ * the two error screens (design/registry.md). The rail-and-surface two-tone
+ * layout is the other window's and lives in src/shell/dashboard.css.
  */
 
 #app {
