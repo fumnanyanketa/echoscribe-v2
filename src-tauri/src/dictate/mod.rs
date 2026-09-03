@@ -67,8 +67,19 @@
 //! sentence in the window; and a mid dictation Deepgram ending brings the
 //! EchoScribe window forward carrying its one action.
 //!
-//! Still to come: history and settings (milestone 5), and the pill's elapsed
-//! and word count chip, whose band is reserved in the footprint.
+//! Milestone 5, the half that needs no screen (built 2026-09-02): every
+//! dictation that typed something is written down against the account that
+//! spoke it (AC-17, AC-18), and the hotkey choice and the sound switch have
+//! their four commands in `settings.rs`. What "completed" means in AC-17 was
+//! settled with the user the same day under `/develop`'s gate and is written
+//! on `Store::save_dictation`: a row when, and only when, at least one
+//! finalised phrase reached the cursor, whatever ended the dictation.
+//!
+//! Still to come: the settings screen itself, which is waiting on `/canvas`
+//! because `design/registry.md` draws no control for choosing between two
+//! values and no switch; reading history back, which is plan row 5's own
+//! feature; and the pill's elapsed and word count chip, whose band is
+//! reserved in the footprint and whose two values still have no source named.
 
 mod collapse_list;
 mod consent;
@@ -80,6 +91,7 @@ mod machine;
 mod microphone;
 mod pill_mouse;
 mod pill_window;
+pub mod settings;
 mod sound;
 pub mod store;
 mod transcribe;
@@ -133,17 +145,45 @@ const WORD_ENDING_HOLD: Duration = Duration::from_secs(2);
 struct Live {
     mic: Microphone,
     session: transcribe::Session,
+    /// Whose dictation this is, taken when the microphone opened (AC-17,
+    /// AC-18). Held here rather than asked for again at the close, because
+    /// signing out closes the microphone and clears the session in that order,
+    /// and the row belongs to whoever actually spoke.
+    account_id: String,
+    /// AC-17's start time: the moment the microphone opened, as UTC.
+    started_at: String,
+    /// The same moment, on the machine's own clock, which is what the duration
+    /// is measured from. A wall clock can jump; this cannot.
+    opened_at: Instant,
+}
+
+/// A dictation that has ended, ready to be written down (record 0002 AC-17).
+struct Finished {
+    account_id: String,
+    /// Exactly what reached the cursor, joining spaces included. Empty when
+    /// nothing was typed, and nothing is saved for that.
+    text: String,
+    started_at: String,
+    duration_ms: i64,
 }
 
 impl Live {
-    /// Close both, in the one order that works.
+    /// Close both, in the one order that works, and hand back what was said.
     ///
     /// The microphone first, always. It owns the only feed into the stream, so
     /// closing it is what tells Deepgram no more audio is coming, which is what
     /// lets the last words of a sentence come back instead of being cut off.
-    fn close(self) {
+    /// Those last words are in the returned text for the same reason.
+    fn close(self) -> Finished {
         self.mic.stop();
-        self.session.stop();
+        let text = self.session.stop();
+        Finished {
+            account_id: self.account_id,
+            text,
+            // AC-17: how long it lasted is the close minus the open.
+            duration_ms: self.opened_at.elapsed().as_millis() as i64,
+            started_at: self.started_at,
+        }
     }
 }
 
@@ -266,10 +306,15 @@ fn on_double_tap(app: &AppHandle, commands: &Sender<Command>) {
 
         if let Some(live) = listening.take() {
             // Shut the device before anything on screen changes, so the pill
-            // never outlives the microphone in either direction.
-            live.close();
+            // never outlives the microphone in either direction. The lock is
+            // held across all of this, including the write, so nothing can
+            // start a second dictation while this one is still ending.
+            let finished = live.close();
             pill_window::close(app, "you_stopped_it");
             sound::play_close(setting.sounds_enabled);
+            // Last, because AC-17 is a promise about a dictation that has
+            // ended, and nothing on screen should wait on a disk write.
+            record(&state, finished);
             return;
         }
     }
@@ -370,6 +415,12 @@ fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), StartErr
     )
     .map_err(consent::refine)?;
 
+    // AC-17's start time and the clock its duration is measured on, taken here
+    // because here is the moment the microphone actually opened. Nothing
+    // earlier would be true of a dictation that never started.
+    let started_at = crate::sign_in::clock::now_iso8601();
+    let opened_at = Instant::now();
+
     let ended_commands = commands.clone();
     let session = match transcribe::start(
         app.clone(),
@@ -394,10 +445,37 @@ fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), StartErr
         }
     };
 
-    *listening = Some(Live { mic, session });
+    *listening = Some(Live {
+        mic,
+        session,
+        account_id,
+        started_at,
+        opened_at,
+    });
     pill_window::open(app, &setting);
     sound::play_open(setting.sounds_enabled);
     Ok(())
+}
+
+/// Write a finished dictation down against the account that spoke it (record
+/// 0002 AC-17, AC-18).
+///
+/// The one place this feature writes to the `dictation` table, so every way a
+/// dictation can end goes through the same rule. What that rule is, and why a
+/// dictation that typed nothing leaves no row, is on `Store::save_dictation`.
+///
+/// A failure is logged and nothing else: the words are already at the person's
+/// cursor, and interrupting them to say the history did not save would be worse
+/// than the loss. The log carries the error and never the text.
+fn record(state: &Dictate, finished: Finished) {
+    if let Err(e) = state.store.save_dictation(
+        &finished.account_id,
+        &finished.text,
+        &finished.started_at,
+        finished.duration_ms,
+    ) {
+        eprintln!("dictate: could not save this dictation to the history: {e}");
+    }
 }
 
 /// The account's Deepgram key, ready to stream with.
@@ -620,6 +698,8 @@ fn close_if_listening(app: &AppHandle, reason: &str) {
     let Some(state) = app.try_state::<Dictate>() else {
         return;
     };
+    // Held to the end of this function, the write included, so nothing can
+    // start a second dictation while this one is still ending.
     let mut listening = state
         .listening
         .lock()
@@ -628,14 +708,19 @@ fn close_if_listening(app: &AppHandle, reason: &str) {
         return;
     };
 
-    live.close();
+    let finished = live.close();
     pill_window::close(app, reason);
 
+    // The sound choice is read against the account still signed in, because
+    // signing out is one of the reasons to be here and it silences nothing.
+    // The row, just below, uses the account that spoke instead.
     let sounds_enabled = crate::sign_in::account_id_from(app)
         .and_then(|account_id| state.store.setting_for(&account_id).ok())
         .map(|setting| setting.sounds_enabled)
         .unwrap_or(true);
     sound::play_close(sounds_enabled);
+
+    record(&state, finished);
 }
 
 /// Deepgram or a password field ended the dictation while the microphone was
@@ -724,8 +809,13 @@ fn on_device_died(app: &AppHandle, e: MicError) {
     hold_then_close_pill(app, true);
 }
 
-/// Shut the microphone and the stream if they are running. `true` when this
-/// call was the one that ended the dictation.
+/// Shut the microphone and the stream if they are running, and keep whatever
+/// was typed (AC-17). `true` when this call was the one that ended the
+/// dictation.
+///
+/// Every mid dictation ending comes through here, so the words a person got
+/// before it went wrong are kept just as the words from a clean stop are. They
+/// are already in their document either way.
 fn take_and_close_live(app: &AppHandle) -> bool {
     let Some(state) = app.try_state::<Dictate>() else {
         return false;
@@ -737,7 +827,7 @@ fn take_and_close_live(app: &AppHandle) -> bool {
         .take();
     match live {
         Some(live) => {
-            live.close();
+            record(&state, live.close());
             true
         }
         None => false,

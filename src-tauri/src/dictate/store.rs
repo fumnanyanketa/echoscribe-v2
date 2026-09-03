@@ -1,22 +1,22 @@
-//! Local storage for the dictate feature: record 0002's three tables, and the
-//! narrow reads and writes milestone 1 needs (the pill's remembered position
-//! and whether the two sounds are on).
+//! Local storage for the dictate feature: record 0002's three tables and the
+//! narrow reads and writes this feature needs. Reading history back is plan
+//! row 5's own feature and is deliberately not here.
 //!
 //! Everything EchoScribe persists lives in one SQLite file on the person's own
 //! machine (AGENTS.md data rules). The sign-in feature opens that file first and
 //! creates `account` and `session`; this module opens its own connection to the
 //! same file and owns record 0002's schema:
 //!
-//!   * `dictation` - one finished dictation. Filled from milestone 5.
+//!   * `dictation` - one row per finished dictation that typed something.
+//!     Written from milestone 5, read by plan row 5.
 //!   * `dictation_setting` - one row per account: hotkey, sounds, pill spot.
 //!   * `deepgram_credential` - the masked key and its vault entry name. Filled
 //!     from milestone 3. The key itself is never here: it lives in Windows
 //!     Credential Manager, behind `key_vault.rs`.
 //!
 //! Record 0002's data model calls for "one migration, creating all three
-//! tables", so all three are created together here even though milestone 1 only
-//! touches `dictation_setting`. No audio, and no partial transcript, is ever
-//! written to any of them.
+//! tables", so all three are created together here. No audio, and no partial
+//! transcript, is ever written to any of them.
 
 use std::path::Path;
 use std::sync::Mutex;
@@ -37,9 +37,9 @@ pub struct DictationSetting {
     pub pill_y: f64,
     /// Whether the open and close sounds play. On for a new account.
     pub sounds_enabled: bool,
-    /// The chosen hotkey, `"double_tap_ctrl"` or `"double_tap_alt"`. Milestone 1
-    /// has no screen to change it, but the hook reads it so milestone 5 only
-    /// adds the setter.
+    /// The chosen hotkey, one of exactly two. The hook is armed from this on
+    /// sign-in and re-armed from it the moment `set_hotkey` changes it, so
+    /// AC-19's "works immediately, with no restart" needs nothing else.
     pub hotkey: Hotkey,
 }
 
@@ -63,10 +63,41 @@ pub enum Hotkey {
 }
 
 impl Hotkey {
+    /// The two the interface may offer, in the order the record names them.
+    /// Fixed here, not a setting and not extendable at runtime, which is what
+    /// AC-22 asks for: there is nowhere else a third could come from.
+    pub const CHOICES: [Hotkey; 2] = [Hotkey::DoubleTapCtrl, Hotkey::DoubleTapAlt];
+
+    /// A stored value, read leniently. Anything that is neither of the two is
+    /// the default, never an instruction to the hook (record 0002 data rules).
     fn from_stored(value: &str) -> Self {
         match value {
             "double_tap_alt" => Hotkey::DoubleTapAlt,
             _ => Hotkey::DoubleTapCtrl,
+        }
+    }
+
+    /// A value the interface asked for, read strictly. `None` is `set_hotkey`'s
+    /// one refusal (AC-22), and it is deliberately not the same reading as
+    /// [`Hotkey::from_stored`]: a row we cannot understand falls back so the
+    /// hotkey still works, but a write we cannot understand is refused outright
+    /// rather than quietly turned into Ctrl.
+    pub fn from_chosen(value: &str) -> Option<Self> {
+        match value {
+            "double_tap_ctrl" => Some(Hotkey::DoubleTapCtrl),
+            "double_tap_alt" => Some(Hotkey::DoubleTapAlt),
+            _ => None,
+        }
+    }
+
+    /// How this hotkey is written down. The only two strings that ever reach
+    /// the column, so the record's "refused on write if it is not one of the
+    /// two named values" holds by construction and the table's CHECK is the
+    /// second guard rather than the first.
+    pub fn as_stored(self) -> &'static str {
+        match self {
+            Hotkey::DoubleTapCtrl => "double_tap_ctrl",
+            Hotkey::DoubleTapAlt => "double_tap_alt",
         }
     }
 }
@@ -227,6 +258,88 @@ impl Store {
         Ok(())
     }
 
+    /// Remember the hotkey this account chose (record 0002 AC-19, AC-22).
+    ///
+    /// Takes a [`Hotkey`], not a string, so there is no path by which a third
+    /// value reaches the column. Leaves the sound choice and the pill spot
+    /// alone; a fresh row takes the table defaults for those.
+    pub fn save_hotkey(
+        &self,
+        account_id: &str,
+        hotkey: Hotkey,
+        now_utc: &str,
+    ) -> rusqlite::Result<()> {
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        conn.execute(
+            "INSERT INTO dictation_setting (account_id, hotkey, updated_at)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(account_id) DO UPDATE SET
+                 hotkey = excluded.hotkey,
+                 updated_at = excluded.updated_at",
+            rusqlite::params![account_id, hotkey.as_stored(), now_utc],
+        )?;
+        Ok(())
+    }
+
+    /// Remember whether the opening and closing sounds play (record 0002
+    /// AC-21). Leaves the hotkey and the pill spot alone.
+    pub fn save_sounds_enabled(
+        &self,
+        account_id: &str,
+        enabled: bool,
+        now_utc: &str,
+    ) -> rusqlite::Result<()> {
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        conn.execute(
+            "INSERT INTO dictation_setting (account_id, sounds_enabled, updated_at)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(account_id) DO UPDATE SET
+                 sounds_enabled = excluded.sounds_enabled,
+                 updated_at = excluded.updated_at",
+            rusqlite::params![account_id, enabled as i64, now_utc],
+        )?;
+        Ok(())
+    }
+
+    /// Keep a finished dictation against the account that spoke it (record 0002
+    /// AC-17, AC-18).
+    ///
+    /// **A dictation that typed nothing is not saved, and that is the whole of
+    /// what AC-17's "completed" means.** Settled with the user on 2026-09-02
+    /// under `/develop`'s gate: a row is written when, and only when, at least
+    /// one finalised phrase reached the cursor, whatever ended the dictation.
+    /// It follows the data rule in AGENTS.md that transcribed text goes to two
+    /// places only, the cursor it was dictated into and the local history, so
+    /// text that never reached a cursor has no history to be in. That makes a
+    /// silent dictation and a password refusal save nothing, and it makes a
+    /// dictation cut short by a dropped connection save the words it did type,
+    /// because those words are sitting in the person's document.
+    ///
+    /// The rule lives here rather than in the caller so that no caller can
+    /// write a blank row, however dictation came to end.
+    ///
+    /// `text` is the finalised phrases exactly as they were typed, joining
+    /// spaces included. Nothing unfinished ever reaches here: AC-33 keeps
+    /// interim wording on the pill and out of every table.
+    pub fn save_dictation(
+        &self,
+        account_id: &str,
+        text: &str,
+        started_at: &str,
+        duration_ms: i64,
+    ) -> rusqlite::Result<()> {
+        if text.is_empty() {
+            return Ok(());
+        }
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        conn.execute(
+            "INSERT INTO dictation (account_id, text, started_at, duration_ms)
+             VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![account_id, text, started_at, duration_ms],
+        )?;
+        Ok(())
+    }
+
     /// Whether this account has a Deepgram key saved at all (record 0002 AC-9).
     ///
     /// The presence of the row is the whole answer, which is what the record's
@@ -325,10 +438,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn opening_twice_is_a_no_op() {
-        let dir = std::env::temp_dir();
-        let path = dir.join(format!(
+    /// A fresh database file holding the `account` table and row the sign-in
+    /// feature creates before this module ever opens it.
+    fn a_fresh_database_file() -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!(
             "echoscribe-dictate-test-{}-{}.sqlite3",
             std::process::id(),
             std::time::SystemTime::now()
@@ -336,11 +449,35 @@ mod tests {
                 .unwrap()
                 .as_nanos()
         ));
-        {
-            let conn = Connection::open(&path).unwrap();
-            conn.execute_batch("CREATE TABLE account (id TEXT PRIMARY KEY NOT NULL);")
-                .unwrap();
-        }
+        let conn = Connection::open(&path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE account (id TEXT PRIMARY KEY NOT NULL);
+             INSERT INTO account (id) VALUES ('acct_test');",
+        )
+        .unwrap();
+        path
+    }
+
+    /// Every dictation this store holds for one account, oldest first. Reading
+    /// history back is plan row 5's feature, so this stays a test helper.
+    fn dictations_of(store: &Store, account_id: &str) -> Vec<(String, String, i64)> {
+        let conn = store.conn.lock().unwrap();
+        let rows = conn
+            .prepare(
+                "SELECT text, started_at, duration_ms FROM dictation
+                 WHERE account_id = ?1 ORDER BY id",
+            )
+            .unwrap()
+            .query_map([account_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        rows
+    }
+
+    #[test]
+    fn opening_twice_is_a_no_op() {
+        let path = a_fresh_database_file();
         Store::open(&path).expect("first open");
         Store::open(&path).expect("second open");
         let _ = std::fs::remove_file(&path);
@@ -571,5 +708,236 @@ mod tests {
         );
         assert_eq!(Hotkey::from_stored("f13"), Hotkey::DoubleTapCtrl);
         assert_eq!(Hotkey::from_stored(""), Hotkey::DoubleTapCtrl);
+    }
+
+    /// AC-22: exactly two, and nowhere for a third to come from. The interface
+    /// renders this list rather than deciding for itself what is allowed.
+    #[test]
+    fn there_are_exactly_two_hotkeys_to_choose_from() {
+        assert_eq!(
+            Hotkey::CHOICES,
+            [Hotkey::DoubleTapCtrl, Hotkey::DoubleTapAlt]
+        );
+        assert_eq!(Hotkey::DoubleTapCtrl.as_stored(), "double_tap_ctrl");
+        assert_eq!(Hotkey::DoubleTapAlt.as_stored(), "double_tap_alt");
+    }
+
+    /// AC-22: anything that is not one of the two is refused outright, rather
+    /// than quietly becoming Ctrl the way an unreadable stored row does.
+    #[test]
+    fn a_hotkey_nobody_offered_is_refused_rather_than_defaulted() {
+        assert_eq!(
+            Hotkey::from_chosen("double_tap_ctrl"),
+            Some(Hotkey::DoubleTapCtrl)
+        );
+        assert_eq!(
+            Hotkey::from_chosen("double_tap_alt"),
+            Some(Hotkey::DoubleTapAlt)
+        );
+        for refused in ["", "f13", "double_tap_shift", "DOUBLE_TAP_ALT", "ctrl"] {
+            assert_eq!(
+                Hotkey::from_chosen(refused),
+                None,
+                "`{refused}` was accepted as a hotkey. Exactly two exist and \
+                 there is no way to set another (record 0002 AC-22)"
+            );
+        }
+    }
+
+    /// AC-19: picking the other hotkey is remembered, and picking it back again
+    /// works. Nothing else on the row moves.
+    #[test]
+    fn the_chosen_hotkey_round_trips_and_leaves_everything_else_alone() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .save_pill_spot("acct_test", 0.25, 0.8, "2026-09-02T10:00:00Z")
+            .unwrap();
+        store
+            .save_sounds_enabled("acct_test", false, "2026-09-02T10:01:00Z")
+            .unwrap();
+
+        store
+            .save_hotkey("acct_test", Hotkey::DoubleTapAlt, "2026-09-02T10:02:00Z")
+            .unwrap();
+        let setting = store.setting_for("acct_test").unwrap();
+        assert_eq!(setting.hotkey, Hotkey::DoubleTapAlt);
+        assert_eq!(setting.pill_x, 0.25);
+        assert_eq!(setting.pill_y, 0.8);
+        assert!(!setting.sounds_enabled);
+
+        store
+            .save_hotkey("acct_test", Hotkey::DoubleTapCtrl, "2026-09-02T10:03:00Z")
+            .unwrap();
+        assert_eq!(
+            store.setting_for("acct_test").unwrap().hotkey,
+            Hotkey::DoubleTapCtrl
+        );
+    }
+
+    /// AC-21: one switch, on to begin with, and off is remembered.
+    #[test]
+    fn the_sound_switch_round_trips_and_leaves_everything_else_alone() {
+        let store = Store::open_in_memory().unwrap();
+        // On for a new account, which for this table means with no row at all.
+        assert!(store.setting_for("acct_test").unwrap().sounds_enabled);
+
+        store
+            .save_hotkey("acct_test", Hotkey::DoubleTapAlt, "2026-09-02T10:00:00Z")
+            .unwrap();
+        store
+            .save_sounds_enabled("acct_test", false, "2026-09-02T10:01:00Z")
+            .unwrap();
+        let setting = store.setting_for("acct_test").unwrap();
+        assert!(!setting.sounds_enabled);
+        assert_eq!(setting.hotkey, Hotkey::DoubleTapAlt);
+
+        store
+            .save_sounds_enabled("acct_test", true, "2026-09-02T10:02:00Z")
+            .unwrap();
+        assert!(store.setting_for("acct_test").unwrap().sounds_enabled);
+    }
+
+    /// AC-17: a finished dictation is kept with its text, its start time and
+    /// how long it lasted.
+    #[test]
+    fn a_finished_dictation_is_kept_with_its_text_start_and_duration() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .save_dictation(
+                "acct_test",
+                "Hello there. This is a test.",
+                "2026-09-02T10:00:00Z",
+                4200,
+            )
+            .unwrap();
+
+        assert_eq!(
+            dictations_of(&store, "acct_test"),
+            vec![(
+                "Hello there. This is a test.".to_string(),
+                "2026-09-02T10:00:00Z".to_string(),
+                4200
+            )]
+        );
+    }
+
+    /// Every dictation is its own row, in the order they happened. Nothing here
+    /// overwrites, unlike the one-per-account settings and key rows.
+    #[test]
+    fn a_second_dictation_is_a_second_row() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .save_dictation("acct_test", "first", "2026-09-02T10:00:00Z", 1000)
+            .unwrap();
+        store
+            .save_dictation("acct_test", "second", "2026-09-02T10:05:00Z", 2000)
+            .unwrap();
+        let rows = dictations_of(&store, "acct_test");
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].0, "first");
+        assert_eq!(rows[1].0, "second");
+    }
+
+    /// AC-17, and what "completed" was settled to mean on 2026-09-02: a
+    /// dictation that typed nothing has nothing to keep. A silent dictation and
+    /// a password refusal both land here, and neither leaves a blank row for
+    /// plan row 5's history screen to show.
+    #[test]
+    fn a_dictation_that_typed_nothing_is_not_saved() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .save_dictation("acct_test", "", "2026-09-02T10:00:00Z", 31_000)
+            .unwrap();
+        assert!(dictations_of(&store, "acct_test").is_empty());
+    }
+
+    /// AC-18: a second account on the same machine sees none of the first
+    /// account's dictations.
+    #[test]
+    fn a_second_account_cannot_see_the_first_accounts_dictations() {
+        let store = Store::open_in_memory().unwrap();
+        {
+            let conn = store.conn.lock().unwrap();
+            conn.execute("INSERT INTO account (id) VALUES ('acct_other')", [])
+                .unwrap();
+        }
+        store
+            .save_dictation("acct_test", "mine", "2026-09-02T10:00:00Z", 1000)
+            .unwrap();
+
+        assert!(dictations_of(&store, "acct_other").is_empty());
+
+        store
+            .save_dictation("acct_other", "theirs", "2026-09-02T10:01:00Z", 1000)
+            .unwrap();
+        let mine = dictations_of(&store, "acct_test");
+        let theirs = dictations_of(&store, "acct_other");
+        assert_eq!(mine.len(), 1);
+        assert_eq!(mine[0].0, "mine");
+        assert_eq!(theirs.len(), 1);
+        assert_eq!(theirs[0].0, "theirs");
+    }
+
+    /// AC-17's second half, and AC-19's and AC-21's: still there after closing
+    /// and reopening the app. For this module that means a real file, closed
+    /// and opened again.
+    #[test]
+    fn dictations_and_both_settings_survive_reopening_the_file() {
+        let path = a_fresh_database_file();
+        {
+            let store = Store::open(&path).expect("first open");
+            store
+                .save_dictation("acct_test", "said before", "2026-09-02T10:00:00Z", 3500)
+                .unwrap();
+            store
+                .save_hotkey("acct_test", Hotkey::DoubleTapAlt, "2026-09-02T10:00:01Z")
+                .unwrap();
+            store
+                .save_sounds_enabled("acct_test", false, "2026-09-02T10:00:02Z")
+                .unwrap();
+        }
+
+        let store = Store::open(&path).expect("second open");
+        assert_eq!(
+            dictations_of(&store, "acct_test"),
+            vec![(
+                "said before".to_string(),
+                "2026-09-02T10:00:00Z".to_string(),
+                3500
+            )]
+        );
+        let setting = store.setting_for("acct_test").unwrap();
+        assert_eq!(setting.hotkey, Hotkey::DoubleTapAlt);
+        assert!(!setting.sounds_enabled);
+
+        drop(store);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// The data rules say no audio and no partial transcript is ever written.
+    /// Nothing in this table's shape allows either, and this is the test that
+    /// says so: an id and four columns, none of them a blob.
+    #[test]
+    fn the_dictation_table_has_nowhere_to_put_audio() {
+        let store = Store::open_in_memory().unwrap();
+        let conn = store.conn.lock().unwrap();
+        let mut columns: Vec<(String, String)> = conn
+            .prepare("SELECT name, type FROM pragma_table_info('dictation')")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        columns.sort();
+        assert_eq!(
+            columns,
+            vec![
+                ("account_id".to_string(), "TEXT".to_string()),
+                ("duration_ms".to_string(), "INTEGER".to_string()),
+                ("id".to_string(), "INTEGER".to_string()),
+                ("started_at".to_string(), "TEXT".to_string()),
+                ("text".to_string(), "TEXT".to_string()),
+            ]
+        );
     }
 }

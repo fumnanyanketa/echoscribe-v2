@@ -7,10 +7,18 @@
 //! go to the pill as grey text and nowhere near a keystroke. That split is the
 //! whole reason this file separates `dictation:interim` from `dictation:text`.
 //!
-//! **Nothing here keeps the audio and nothing here keeps the transcript.** A
-//! chunk of samples is turned into bytes, handed to the socket and dropped. A
-//! phrase is typed, sent to the pill, and dropped. The only place either lasts
-//! is the person's own document, and, from milestone 5, their own history.
+//! **Nothing here keeps the audio.** A chunk of samples is turned into bytes,
+//! handed to the socket and dropped. Audio never reaches a disk, a log or a
+//! table, whatever else this file does.
+//!
+//! **What it does keep, and only until the dictation ends, is what it typed.**
+//! Milestone 5 needs one row per finished dictation (AC-17), so the finalised
+//! phrases are appended to a string in memory as each one lands at the cursor,
+//! and [`Session::stop`] hands that string over for the row. It is the same
+//! string the joining space is decided from, so what is stored cannot drift
+//! from what was typed. Nothing refused is in it, because a phrase is appended
+//! only after the keystrokes actually landed. Unfinished wording is never in
+//! it: interim results go to the pill and are dropped (AC-33).
 //!
 //! **The key never leaves this file.** It arrives from the credential vault,
 //! goes into the client, and is never logged, never put on an event and never
@@ -121,12 +129,25 @@ pub fn channel() -> (Feed, Intake) {
 /// off mid phrase.
 pub struct Session {
     worker: JoinHandle<()>,
+    /// What this dictation has typed so far, in memory only. See
+    /// [`Session::stop`] and the transcript paragraph at the top of this file.
+    typed: Arc<Mutex<String>>,
 }
 
 impl Session {
-    /// Wait for the stream to finish and close.
-    pub fn stop(self) {
+    /// Wait for the stream to finish and close, and hand back everything this
+    /// dictation typed, exactly as it was typed, joining spaces included.
+    ///
+    /// Safe to read here and nowhere earlier: the worker is the only other
+    /// holder and it has finished by the time the join returns, so this is not
+    /// reading a transcript while one is still being written. Empty means
+    /// nothing was ever typed, and `mod.rs` saves no row for that (AC-17).
+    pub fn stop(self) -> String {
         let _ = self.worker.join();
+        self.typed
+            .lock()
+            .map(|typed| typed.clone())
+            .unwrap_or_default()
     }
 }
 
@@ -149,6 +170,8 @@ pub fn start(
     on_end: Box<dyn Fn(Ended) + Send>,
     intake: Intake,
 ) -> std::io::Result<Session> {
+    let typed = Arc::new(Mutex::new(String::new()));
+    let worker_typed = Arc::clone(&typed);
     let worker = std::thread::Builder::new()
         .name("echoscribe-dictate-transcribe".into())
         .spawn(move || {
@@ -169,10 +192,18 @@ pub fn start(
                     return;
                 }
             };
-            runtime.block_on(run(app, key, sample_rate, deadlines, on_end, intake.0));
+            runtime.block_on(run(
+                app,
+                key,
+                sample_rate,
+                deadlines,
+                on_end,
+                intake.0,
+                worker_typed,
+            ));
         })?;
 
-    Ok(Session { worker })
+    Ok(Session { worker, typed })
 }
 
 /// Say which of the two available cryptography libraries secures the connection
@@ -208,6 +239,7 @@ async fn run(
     deadlines: Arc<Mutex<Deadlines>>,
     on_end: Box<dyn Fn(Ended) + Send>,
     mut audio_rx: mpsc::Receiver<Vec<i16>>,
+    typed: Arc<Mutex<String>>,
 ) {
     let client = match Deepgram::new(&key) {
         Ok(client) => client,
@@ -236,9 +268,11 @@ async fn run(
     let mut held_samples: usize = 0;
     let hold_cap = sample_rate as usize * RECONNECT_WINDOW.as_secs() as usize;
 
-    // Whether this dictation has typed anything yet. It is what decides that
-    // a joining space belongs in front of the next finalised phrase.
-    let mut typed_something = false;
+    // What this dictation has typed so far. It does two jobs and no third: it
+    // decides whether a joining space belongs in front of the next finalised
+    // phrase, and it is the one row AC-17 asks for once the dictation ends.
+    // Both from the same string on purpose, so what is stored can never drift
+    // from what was typed.
 
     loop {
         let mut dropped = false;
@@ -258,7 +292,7 @@ async fn run(
                     // The microphone closed. Ask Deepgram for whatever it is
                     // still holding, take those last words, and finish. This is
                     // an ordinary ending and `on_end` is not called.
-                    finish(&mut handle, &app, &deadlines, &on_end, &mut typed_something).await;
+                    finish(&mut handle, &app, &deadlines, &on_end, &typed).await;
                     return;
                 }
             }
@@ -268,9 +302,7 @@ async fn run(
         if !dropped {
             match tokio::time::timeout(POLL, handle.receive()).await {
                 Ok(Some(Ok(response))) => {
-                    if let Some(ended) =
-                        on_response(response, &app, &deadlines, &mut typed_something)
-                    {
+                    if let Some(ended) = on_response(response, &app, &deadlines, &typed) {
                         on_end(ended);
                         return;
                     }
@@ -404,7 +436,7 @@ async fn finish(
     app: &AppHandle,
     deadlines: &Arc<Mutex<Deadlines>>,
     on_end: &(dyn Fn(Ended) + Send),
-    typed_something: &mut bool,
+    typed: &Mutex<String>,
 ) {
     if handle.finalize().await.is_err() {
         return;
@@ -419,7 +451,7 @@ async fn finish(
         match tokio::time::timeout(POLL, handle.receive()).await {
             Ok(Some(Ok(StreamResponse::TerminalResponse { .. }))) | Ok(None) => return,
             Ok(Some(Ok(response))) => {
-                if let Some(ended) = on_response(response, app, deadlines, typed_something) {
+                if let Some(ended) = on_response(response, app, deadlines, typed) {
                     on_end(ended);
                     return;
                 }
@@ -435,7 +467,7 @@ fn on_response(
     response: StreamResponse,
     app: &AppHandle,
     deadlines: &Arc<Mutex<Deadlines>>,
-    typed_something: &mut bool,
+    typed: &Mutex<String>,
 ) -> Option<Ended> {
     let StreamResponse::TranscriptResponse {
         is_final, channel, ..
@@ -477,15 +509,24 @@ fn on_response(
     // password check covers it too. Nothing goes in front of a dictation's
     // first phrase, and the events below carry the phrase exactly as it
     // arrived.
+    //
+    // "Has typed anything yet" is read off the same string that will be saved,
+    // so the space in the row and the space at the cursor are the one space.
+    let typed_anything_yet = typed.lock().map(|typed| !typed.is_empty());
     let mut to_type = String::with_capacity(text.len() + 1);
-    if *typed_something {
+    if typed_anything_yet.unwrap_or(false) {
         to_type.push(' ');
     }
     to_type.push_str(text);
 
     match typing::type_at_cursor(&to_type) {
         Typed::AtTheCursor => {
-            *typed_something = true;
+            // AC-17: what reached the cursor, and only that, is what the row
+            // holds. Appended after the keystrokes landed rather than before,
+            // so nothing refused is ever in it.
+            if let Ok(mut typed) = typed.lock() {
+                typed.push_str(&to_type);
+            }
             // Broadcast rather than sent to the pill alone. Record 0002's
             // clearing table gives a spent allowance one proof that it is over,
             // the first finalised words, and the window holding that message
