@@ -172,6 +172,39 @@ sourcing is corrected in place to say which window. Milestone 5's settings
 screen is no longer blocked on `/canvas`: it is built inside record 0004's
 shell, after that record's third milestone. No criterion is renumbered,
 reworded or added. The count stays at 33.
+**Amended:** 2026-09-03, the fifteenth, by `/architect`. Record 0004's three
+milestones were built the same day and took six readings no record held. Four
+belong to that record and are carried by its second amendment. Two are this
+record's, both about the clearing table in The decision, and both are settled
+here. First, **the clearing table now has an owner, and it is Rust.** The build
+wrote the table out twice: once across the interface, in `MIC_ERROR_KINDS`, in
+`isDeepgramErrorKind` and in the kind matching in `src/main.js`, and once again
+in `src-tauri/src/shell/mod.rs`, which needs it to decide whether the small dark
+window is on screen at all. Neither copy could be deleted, because the interface
+decides what is drawn and Rust decides which window exists, and AGENTS.md puts
+the second in Rust rather than leaving it to a screen choosing not to ask. So
+the table stops being copied and starts being handed over: Rust classifies an
+error kind into one of the three screens, once, in this feature where the kinds
+are minted, and `dictation:error` carries that answer as a field beside the
+kind, the code, the message and the action. The interface mounts the screen it
+is named and inspects no kind at all, so the three pieces of the table on the
+interface side are deleted in the same change, per standing rule 11. Record
+0004's shell reads the same classifier through one named function. This was the
+user's choice on 2026-09-03, over leaving both copies with a source guard
+between them, and over moving the clearing half into Rust too behind a new
+event. Second, **each family's pairing with its own proof still lives on both
+sides**, because each side clears the thing it is itself holding, and a source
+guard of the shape already in `dictate/mod.rs` holds them together: a Rust test
+that reads `src/main.js` and fails the build when the two stop agreeing. Third,
+and this corrects a sentence rather than adding one: the clearing table's
+paragraph says "No new event carries this", which was true when the interface
+cleared its own key setup screen through a callback nobody else needed to hear.
+Rust now has to learn that a key was accepted, so `dictation:key_saved` carries
+the second row's proof and `dictation:key_cleared` carries its opposite. Both
+are new, both are this feature's, both are emitted by `deepgram_key.rs` and
+listened to in Rust only, and **neither reaches a web view, so neither widens
+any file in `src-tauri/capabilities/`**. No criterion is renumbered, reworded or
+added. The count stays at 33.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -671,6 +704,20 @@ No new event carries this. `dictation:opened` and `dictation:text` already
 exist and already reach every window, the same way `dictation:error` does.
 Nothing in `src-tauri/capabilities/` widens for it.
 
+**Corrected 2026-09-03 by the fifteenth amendment, and only for the middle
+row.** The first and third rows are still carried by events that already
+existed. The second is not: it cleared through a callback inside the interface,
+which was enough while the interface was the only reader of this table, and
+record 0004 gave it a second reader in Rust that has to know a key was
+accepted. So `dictation:key_saved` now carries that row's proof and
+`dictation:key_cleared` carries its opposite. Both are listened to in Rust
+only, so the last sentence above still holds exactly as written: nothing in
+`src-tauri/capabilities/` widens for any of it. **The table itself is
+unchanged**, and it now has one copy rather than two: Rust classifies a kind
+into its screen and `dictation:error` carries the answer, and each side's
+pairing of a family with its proof is held to the other by a source guard. See
+the fifteenth amendment.
+
 **What is asked of Deepgram on the stream, settled 2026-08-31.** The model is
 `nova-3`, Deepgram's current general model, chosen over `nova-2` and over
 `flux-general-en`. Accuracy is the one thing this app must do well and the
@@ -1032,7 +1079,8 @@ One migration, creating all three tables.
 | The sentence shown for each key error | AC-11, AC-13 | This record, the four sentence table in The decision. Fixed wording, not a setting, held in one place in Rust so no screen invents its own. Nothing read off the pasted key ever appears in a sentence, and no sentence blames the key when the network was the cause. |
 | The one next step for each of AC-13's two causes | AC-13 | This record, the two step table in The decision. Replace key on a rejected key, which opens the AC-9 setup screen. Open Deepgram console on a spent allowance, which opens the address below. |
 | The Deepgram console page | AC-13 | This record. A fixed literal held in Rust beside the signup page, `https://console.deepgram.com`, opened through the system browser by `open_deepgram_console`, which takes nothing. The second and last Deepgram address this feature opens, and the third and last outside address of any kind, the Windows privacy page being the other. The interface never supplies or sees it. |
-| What clears an error screen once the cause is fixed | AC-28, AC-30, AC-32 | This record, the clearing table in The decision. Each error's own proof that the thing it complained about now works: the microphone opening for the four microphone errors, a key being accepted for the three setup screen key errors, the first finalised words for a spent allowance. Never a timer, never one blanket signal, and never the interface deciding on its own. |
+| What clears an error screen once the cause is fixed | AC-28, AC-30, AC-32 | This record, the clearing table in The decision. Each error's own proof that the thing it complained about now works: the microphone opening for the four microphone errors, a key being accepted for the three setup screen key errors, the first finalised words for a spent allowance. Never a timer, never one blanket signal, and never the interface deciding on its own. **Corrected 2026-09-03 by the fifteenth amendment**: the key row's proof now arrives as `dictation:key_saved` rather than as a callback inside the interface, because record 0004's shell is a second reader of this table. |
+| Which of the three screens an error kind belongs on | AC-13, AC-28, AC-30, AC-32 | Rust, once, in this feature where the kinds are minted, carried to the interface as a field on `dictation:error`. Added 2026-09-03 by the fifteenth amendment, and it was the user's choice that day. The interface inspects no kind and can only mount the screen it is named, so `MIC_ERROR_KINDS` and `isDeepgramErrorKind` are gone from it. Record 0004's shell reads the same classifier through one named function, so this table has exactly one copy. |
 | What is asked of Deepgram on the stream | AC-3, AC-4, AC-33 | This record: `nova-3`, English, punctuation on, interim results on. Settled 2026-08-31. The language stays plan row 4's to widen, per Still open. |
 | Unfinished wording on the pill | AC-33 | Deepgram's interim results on the live stream, carried to the pill by `dictation:interim` and read by nothing else. Never typed, never stored, never logged. |
 | The sentence and action for a key not allowed to stream | AC-30, AC-32 | This record: the fifth key kind table in The decision, `deepgram_key_not_allowed`. The action reuses `open_deepgram_console()`, so no new outside address. Its live trigger is undecided until the first spike in Still open runs; the 403 mapping in `deepgram_key.rs` is a documented guess until then. |
@@ -1116,7 +1164,11 @@ Rust sends these events out to the pill. None carries audio or the key.
   cap, or an error
 - `dictation:blocked` when typing was refused, currently only a password
   field
-- `dictation:error` with a named kind and a message safe to show
+- `dictation:error` with a named kind and a message safe to show. **Corrected
+  2026-09-03 by the fifteenth amendment**: it also carries which of the three
+  screens the kind belongs on, worked out in Rust, so the interface mounts what
+  it is named rather than matching kinds itself. That field is what makes the
+  clearing table one copy instead of two.
 - `dictation:needs_key` when the hotkey was pressed and no Deepgram key is
   saved. It carries nothing, no kind and no sentence, because nothing has gone
   wrong: there is a setup step outstanding and the guided screen explains it.
@@ -1125,6 +1177,18 @@ Rust sends these events out to the pill. None carries audio or the key.
   **Added to this list 2026-08-30.** Milestone 3 built this event and this
   section was never amended to name it. Found by the surface check in
   `docs/evidence/dictate-with-a-hotkey/report.md`.
+
+**Two more events, and they go to Rust rather than to the pill.** Added
+2026-09-03 by the fifteenth amendment. `dictation:key_saved` when Deepgram has
+accepted a key and its row is written, and `dictation:key_cleared` when the key
+and its row are gone. Both carry an empty payload, not even the key's last four
+characters, because nothing listening needs them and this feature never puts a
+key anywhere it does not have to. They exist for record 0004's shell, whose
+invariant is that a person signed in with a key saved has a dashboard: without
+them, pasting a first key leaves that person in front of a blank dark window
+until they restart. `dictation:key_saved` also carries the clearing table's
+middle row, as the correction to that table records. **Neither reaches a web
+view, so neither widens any file in `src-tauri/capabilities/`.**
 
 Errors that matter and must each read differently: no key saved, key
 rejected, the key not allowed to transcribe live audio, allowance exhausted,
@@ -1495,6 +1559,16 @@ window". In order:
   nothing over the document ever changing size, paid on every dictation,
   and it is why the retired 232x44 form must not quietly come back as an
   optimisation.
+
+- **A new error kind now touches Rust before it touches any screen.** Added
+  2026-09-03 by the fifteenth amendment. The interface can no longer look at a
+  kind, so an error whose kind the classifier does not place reaches no screen
+  at all, silently, and a person is told nothing about a failure that did
+  happen. The classifier must place every kind it is given or refuse loudly,
+  and adding a kind is now two edits in Rust rather than one in Rust and one in
+  a screen. That is the price of the clearing table having one copy, and it is
+  the right way round: a table in two places drifts, whereas this fails in one
+  place that a test can watch.
 
 ## Still open
 

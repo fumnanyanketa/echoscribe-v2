@@ -2,6 +2,22 @@
 
 **Status:** In progress
 **Date:** 2026-08-28
+**Amended:** 2026-09-03, by `/architect`, and it changes one thing only:
+where AC-14's "working offline" sign is shown. It leaves the sign-in
+feature. Record 0004, the app shell, deletes `mountSignedIn` in
+`src/sign-in/sign-in.js`, which is the only screen that sign has ever been
+on, and by record 0004's invariant the small dark window is hidden whenever
+a person is signed in with a key saved, so there would be no screen left
+for it. Its new home is the account block at the foot of the dashboard's
+nav rail, drawn as `design/registry.md`'s `Offline row` on 2026-09-03: an
+amber `OFFLINE` badge and the sentence "Your sign-in could not be checked,
+so this is your account from last time.", first in the block's reading
+order. **AC-14 stays this record's criterion and is not reworded**; record
+0004's milestone 3 is where it is proved, and its evidence file is named
+after AC-14 and belongs to this record's set. Nothing else moves: the state
+that drives it is still `signed_in_offline` from `get_auth_state()`, and
+`renewal.rs` still emits `auth:offline` and `auth:signed_in`. Nothing is
+owed in Rust. No criterion is renumbered, reworded or added.
 **Weight:** heavy
 **Plan row:** 1
 **Supersedes:** nothing
@@ -226,7 +242,7 @@ One migration creates `account` and `session`. It runs before record
 | Still signed in across restarts | AC-6, AC-8 | On launch, a non-empty `session.account_id` plus a successful, or when offline a skipped, refresh exchange. |
 | Silent refresh | AC-8 | Rust exchanges the stored refresh token for a new access token before expiry, and when a call is rejected as unauthorised, using the `oauth2` crate. |
 | Offline identity | AC-14 | The `account` row for `session.account_id`, shown without contacting Clerk when the network or Clerk is unreachable. |
-| "Working offline" indicator | AC-14 | Rust returns `signed_in_offline` from `get_auth_state()` when this launch has had no successful refresh yet. |
+| "Working offline" indicator | AC-14 | Rust returns `signed_in_offline` from `get_auth_state()` when this launch has had no successful refresh yet. **Amended 2026-09-03:** that is still the source of the state, and unchanged. What shows it is no longer this feature's screen. It is `design/registry.md`'s `Offline row` in the dashboard's account block, which owns the badge and the sentence, per record 0004. While the dashboard is open it changes on `auth:offline` and `auth:signed_in`, which `renewal.rs` already emits. |
 | Sign-out completion | AC-9, AC-15 | Rust empties the `session` row and deletes the Credential Manager entry locally, then best effort revokes at Clerk's `/oauth/token/revoke`. The local steps never depend on the network, and no reachability check gates them. |
 | "Session ended elsewhere" | AC-16 | Clerk's token endpoint rejecting a refresh as an invalid grant, told apart from a network failure, which leaves the session in place. |
 | Data separation between accounts | AC-10, AC-11 | Every record 0002 table is filtered by `account.id`, and the Deepgram credential entry is named per account. Enforced in Rust. |

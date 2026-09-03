@@ -1,7 +1,43 @@
 # 0004. The app shell
 
-**Status:** Proposed
+**Status:** In progress
 **Date:** 2026-09-02
+**Amended:** 2026-09-03. `/develop`'s gate stopped before writing any code,
+because deleting `mountSignedIn` would have taken record 0003's AC-14 from
+met to unmet with nowhere left for its "working offline" sign to be, and
+`design/registry.md` drew no component for one. `/canvas` has since drawn
+it. This amendment carries in four things so the rebuild's gate passes:
+where the offline sign lives and that record 0003's AC-14 stays record
+0003's, proved here; that there is no per-command permission to grant for
+this app's own commands, which closes the first Still open question; that
+the account block's four values come back from `get_auth_state`, which
+already exists; and that the dashboard does listen to two events after all,
+which closes the last Still open question and settles what
+`dashboard.json` grants. That last one corrects what the gate wrote and was
+the user's choice on 2026-09-03. No criterion is renumbered, reworded or
+added. The count stays at 7. Evidence:
+`docs/evidence/the-app-shell/gate-2026-09-03-blocked.md`.
+**Amended:** 2026-09-03, second of the day, by `/architect`. The three
+milestones were built the same day and took six readings no record held. All
+six are live in the code and visible to a person, and **all six stand; none is
+reversed.** Five are recorded here; the sixth, the clearing table, is decided
+here and carried into record 0002 by its fifteenth amendment. In order: the
+shell learns that a key has changed its invariant from two new dictate events
+rather than by asking on a timer; the small window shows the Deepgram key setup
+screen when a person is signed in with no key saved, which is what the
+invariant already required and had no screen for once `mountSignedIn` was
+deleted; closing the dashboard closes the app, because AC-4 is written as
+"close the app, reopen it" and there is no tray icon to reopen from; closing
+the small window while the dashboard is up hides it rather than destroying it,
+because every error screen in the app lives on that window; record 0002's
+clearing table gets an owner, which is Rust, and the interface stops holding a
+second copy of it; and the account block's initials circle is the raised rail
+grey rather than the comp's violet, because `design/design-system.md` says
+violet anywhere that is not about a live microphone is a bug. No criterion is
+renumbered, reworded or added. The count stays at 7. One cost is carried
+rather than fixed and is named in What this makes harder: closing the dashboard
+also stops the global hotkey, so a person can turn dictation off across the
+whole machine by closing a window.
 **Weight:** medium
 **Plan row:** none of its own. It serves rows 1 to 5, and row 2's settings
 screen is the first thing that cannot be built without it.
@@ -155,17 +191,145 @@ geometry and the one table, and `src/shell/` for the dashboard's own page,
 the rail and the surface. `src/main.js` stays what it is, the router for
 the small window. `src/sign-in/sign-in.js`'s `mountSignedIn`, the stub that
 says "Signed in as" with a Sign out button, is deleted in the same change
-that lands the rail, per standing rule 11, and its Sign out moves to the
-account block.
+that lands the rail, per standing rule 11. **It holds two things, not one,
+and both move in that change.** Its Sign out moves to the account block,
+and so does its "Working offline" line, along with the
+`.signed-in__offline` rule in `src/sign-in/sign-in.css` that styles it.
+
+**The offline sign moves into the account block, and record 0003's AC-14
+stays record 0003's criterion.** Added 2026-09-03. `mountSignedIn` is the
+only screen that sign has ever been on, and by the invariant above the
+small window is hidden whenever a person is signed in with a key saved, so
+deleting the stub would take AC-14 from met to unmet with nowhere left to
+put it. `design/registry.md`'s `Offline row`, drawn 2026-09-03, is its new
+home and owns everything about how it looks and what a person reads: an
+amber `OFFLINE` badge and the sentence "Your sign-in could not be checked,
+so this is your account from last time.", first in the account block's
+reading order, above the initials and the name. The block is pinned to the
+rail foot, so the row's arrival grows the block upward and nothing already
+on screen moves. No new criterion is added here for it. AC-14 belongs to
+the record that promised it, and milestone 3 below is where it is proved,
+exactly as record 0002's AC-32 stayed record 0002's and is proved by
+milestone 1 of this record.
 
 **A third capability file**, `src-tauri/capabilities/dashboard.json`,
-scoped to the dashboard window's label alone. It is granted the narrowest
-set that lets the dashboard call the commands named under Interface surface
-and nothing else. It is **not** granted `core:default`, and it is granted
-nothing that lets a web view move, resize, close or otherwise touch any
-window: the person resizes the dashboard through its own title bar, which
-is Windows doing it, and Rust reads the result. `pill.json` is the shape to
-copy, not `default.json`.
+scoped to the dashboard window's label alone. **Corrected 2026-09-03**, and
+what it grants is now settled rather than left to the build. It grants
+`core:event:allow-listen` and `core:event:allow-unlisten`, which is
+`pill.json`'s list exactly, and nothing else. Those two are for the offline
+row, which has to arrive and go while the dashboard is open. There is
+nothing to grant for the three commands the dashboard invokes: Tauri's
+permission system covers its own plugin commands, and this application's
+commands appear nowhere in `src-tauri/gen/schemas/`, so no per-command
+grant exists to give or to withhold. What stops the dashboard reaching a
+command it should not is the `not_signed_in` refusal already in Rust on
+every command on this surface. That is the real control and it is already
+built; this file is the second line, not the first. It is **not** granted
+`core:default`, and it is granted nothing that lets a web view move,
+resize, close or otherwise touch any window: the person resizes the
+dashboard through its own title bar, which is Windows doing it, and Rust
+reads the result. `pill.json` is the shape to copy, not `default.json`.
+
+**The shell is told when a key changes the invariant, and does not ask.** Added
+2026-09-03 by the second amendment. The invariant above turns on two things, and
+one of them can change while the app is running: a person with no key saved
+pastes one, or a saved key is cleared. Without a signal the shell only learns at
+the next launch, so saving a first key leaves a person looking at a blank dark
+window until they restart. The dictate feature emits two events for it,
+`dictation:key_saved` when Deepgram has accepted a key and the row is written,
+and `dictation:key_cleared` when the key and its row are gone. Rust listens to
+both, alongside `auth:signed_in` and `auth:signed_out`, and settles the windows
+from all four. **Neither event crosses into any web view and neither widens any
+file in `src-tauri/capabilities/`.** They are Rust talking to Rust. The dashboard
+still listens to two events and only two, `auth:offline` and `auth:signed_in`,
+exactly as the first amendment settled. Both carry an empty payload, not even
+the key's last four characters, because nothing listening needs them. A timer
+asking `get_deepgram_key_info` was rejected for the same reason the offline
+row's timer was on 2026-09-03: a repeating question to Rust is a worse thing to
+own than a listener, and it cannot be prompt.
+
+**Signed in with no key saved, the small window shows the key setup screen.**
+Added 2026-09-03 by the second amendment. This is not a free choice, it is what
+the invariant already required. The small window is shown whenever there is a
+pre shell state, and "no key saved yet" is named above as one of them, so that
+state owes a screen. Until this build the screen there was `mountSignedIn`, the
+"Signed in as" stub, which this record deletes. The key setup screen is the only
+other thing that state can honestly show: it is the one thing standing between
+the person and a working app, it already exists, and record 0002's AC-9 already
+puts them on it when they press the hotkey with no key. So a person who restarts
+before they have a key lands where they left off rather than on a stub that told
+them nothing. Nothing new is built for it and no criterion is added: it is
+`src/main.js` mounting a screen it already had, in a state that used to mount the
+stub.
+
+**Closing the dashboard closes the app.** Added 2026-09-03 by the second
+amendment. There were only ever two candidates and one of them is not available.
+Hiding the dashboard and leaving the app running needs somewhere to bring it back
+from, and there is no tray icon in this project and none drawn in
+`design/registry.md`, so hiding would leave a person with a running app they
+cannot see and cannot reach. Destroying the window without exiting breaks the
+invariant, and the shell would immediately build it again, so the close button
+would visibly do nothing. Exiting is the only reading that leaves AC-4's own
+words, "close the app, reopen it", meaning what they say. The window's size and
+place are written first and the exit waits for that write, so the geometry a
+person just chose is not lost by the very thing that ends the app. **This has a
+cost and this record does not pay it**: exiting stops the global hotkey, so
+closing a window turns dictation off across the whole machine. See What this
+makes harder.
+
+**Closing the small window while the dashboard is up hides it, and clears
+whatever it was carrying.** Added 2026-09-03 by the second amendment. The small
+window is not one screen, it is the home of every error screen in the app, so
+destroying it would leave the next microphone failure or Deepgram ending with
+nowhere to be read. Rust refuses the close and hides the window instead. It also
+forgets the interruption, because that is what a person dismissing an error
+window means: they have read it and want it gone. The problem is not thereby
+solved and nothing pretends it is. If the microphone is still blocked, the next
+hotkey press brings the window straight back with the same screen, which is
+record 0002's behaviour already and not a new promise. When the small window is
+all there is, meaning nobody is signed in or no key is saved, closing it still
+ends the app exactly as it always did: there is no dashboard behind it, so there
+is nothing to reveal and nothing to keep running for.
+
+**Record 0002's clearing table has an owner, and it is Rust.** Added 2026-09-03
+by the second amendment, and this was the user's choice that day. The build gave
+the table two readers, which was right, and two copies, which was not. Rust
+needs it because this record puts the question "is the small window on screen"
+in Rust, where AGENTS.md says a decision belongs, rather than leaving it to a
+screen choosing not to ask. The interface needs to know which of the three
+screens to draw. Neither reader can be deleted. So the table stops being copied
+and starts being handed over: **Rust classifies an error kind into its screen
+once, and `dictation:error` carries that answer as a field beside the kind, the
+code, the message and the action.** The interface mounts the screen it is named
+and no longer inspects a kind at all. `MIC_ERROR_KINDS` in
+`src/dictate/mic-error.js`, `isDeepgramErrorKind` in
+`src/dictate/deepgram-error.js` and the kind matching in `src/main.js` are all
+deleted in the same change, per standing rule 11. The classifier lives in the
+dictate feature, where the kinds are minted, and the shell reads it through one
+named function; the shell already depends on the sign in feature this way, so
+the direction is one the codebase already has. What is left over is each
+family's pairing with its own proof, which stays on both sides because each side
+clears the thing it is itself holding, and that residue is held together by a
+source guard of the shape already in `src-tauri/src/dictate/mod.rs`: a Rust test
+that reads `src/main.js` and fails the build when the two stop agreeing. Record
+0002's fifteenth amendment carries all of this, because the table is that
+record's.
+
+**The account block's initials circle is the raised rail grey, never violet.**
+Added 2026-09-03 by the second amendment. `design/registry.md`'s `Account block`
+row names initials, a name, a mail address and a date, and no colour, so the
+build had to choose one, and that choice is a decision rather than typing. It is
+`--color-rail-active`, the same raised fill an active nav item uses, with
+`--color-surface` initials on it. Violet was refused by
+`design/design-system.md`'s own rule: violet is one channel that only ever means
+a live microphone, and "if violet appears anywhere that is not about a live
+microphone, that is a bug". The registry already reaches the same conclusion
+twice for the same reason, at `Sound switch` and at `Waiting indicator`. The
+brand lockup's violet dot at the head of the same rail is the registry's one
+standing exception and is not reopened here. **The contrast pair is already
+audited**: `design/check-contrast.py` checks `--color-surface` on
+`--color-rail-active` as text, under the name "Active nav item", so what
+`/canvas` owes is a registry row naming the fill, not a new contrast pair.
 
 ## What else was considered
 
@@ -182,6 +346,14 @@ copy, not `default.json`.
 | Landing on a dashboard home screen | Nothing like it is drawn, so it hands milestone 5 back to `/canvas`, and it repeats what the first run Ready confirmation already said to the same person minutes earlier. |
 | Waiting for History and landing there | What the comp draws, and it blocks the settings screen behind plan row 5, which has no decision record at all. AC-12, AC-19, AC-21 and AC-22 would stay unmet indefinitely. |
 | Remembering which section the person was last on | Nothing has asked for it, it is a second stored value per account, and it would make AC-1's landing impossible to observe. |
+| Asking `get_deepgram_key_info` on a timer instead of the two key events | Added 2026-09-03. Refused for the reason the offline row's timer was refused the same day: a repeating question to Rust is a worse thing to own than a listener, and a timer cannot be prompt, so a person who has just pasted their first key waits out an interval in front of a window that is still wrong. |
+| Closing the dashboard hides it and leaves the app running | Added 2026-09-03. Needs somewhere to bring it back from, and there is no tray icon in this project and none drawn. A running app a person can neither see nor reach is worse than one that closed. |
+| Closing the dashboard destroys the window without exiting | Added 2026-09-03. Breaks the invariant, so the shell rebuilds the window at once and the close button visibly does nothing. |
+| Closing the small window destroys it while the dashboard is up | Added 2026-09-03. Every error screen in the app lives on that window, so the next microphone failure would have nowhere to be read. |
+| Leaving both copies of the clearing table and adding only a source guard | Added 2026-09-03, offered to the user and not chosen. It changes no behaviour and lands with no rework, and the guard shape already exists in `dictate/mod.rs`. It catches the two lists of strings drifting apart. It does not catch the two sides coming to genuinely different conclusions, which is the failure that actually costs a person a wrong window. |
+| Rust owning the clearing half too, through a new clearing event | Added 2026-09-03, offered to the user and not chosen. It would leave the table with nothing at all on the interface side. It costs a new event, which record 0002's clearing paragraph went out of its way to say it did not need, and one more hop between Rust and the screen for a residue that a source guard already holds. |
+| The interface owning the clearing table, with Rust asking it | Added 2026-09-03, and not offered, because this project's own rules forbid it. Rust would need the interface to tell it whether to keep a window on screen, and both AGENTS.md and this record's Risk section put that decision in Rust rather than in a screen choosing not to ask. |
+| The initials circle in the comp's violet | Added 2026-09-03. `design/design-system.md` reserves violet for one meaning, a live microphone, and calls violet used for anything else a bug. An account's initials are not a microphone. |
 
 ## Data model
 
@@ -239,21 +411,56 @@ the same file, the way the dictate feature's store does beside sign in's.
 | What the small window does when an error clears itself | AC-6 | This record, and it is record 0002's AC-32 read for two windows. It hides, revealing the dashboard where and as it was. Nothing is raised, resized or moved. The dashboard is always there to reveal, by the invariant in The decision. |
 | What happens to the dashboard on sign out | AC-7 | This record. Rust closes it and shows the small window on the sign in screen. Not hidden and kept. |
 | Which account's window place is used | AC-7 | The `shell_window` row for the signed in account. A second account on the machine has its own row or none, and none means the defaults. |
+| The account block's initials, name, mail address and signed-in date | AC-2, and record 0003's AC-5 and AC-7 | `get_auth_state()`, which already exists and already returns all four on its `AccountView`, and never a token. Added 2026-09-03. No new command, no new stored value, no widened capability. |
+| Whether the offline sign is showing | Record 0003's AC-14 | `get_auth_state()` at open, which returns `signed_in_offline` when this launch has had no successful refresh yet, per record 0003. While the dashboard is open it changes on two events Rust already emits from `sign_in/renewal.rs`: `auth:offline` when a refresh cannot reach Clerk, and `auth:signed_in` when a later one gets through. Nothing is owed in Rust. Added 2026-09-03. |
+| What a person reads in the offline sign | Record 0003's AC-14 | `design/registry.md`'s `Offline row`, which fixes the badge and the sentence at design time. The interface holds no wording of its own here, and Rust hands out a state, not a sentence, the same division as the rail's items above. Added 2026-09-03. |
+| Where the offline sign sits | Record 0003's AC-14 | `design/registry.md`'s `Offline row`: the account block at the rail foot, first in the block's reading order. Added 2026-09-03. |
+| When the shell learns a key has been saved or cleared | AC-1 | `dictation:key_saved` and `dictation:key_cleared`, emitted by `src-tauri/src/dictate/deepgram_key.rs` and listened to in Rust only. Added 2026-09-03 by the second amendment. Never a timer, and never asked of the interface. Both carry an empty payload and neither reaches a web view, so neither widens a capability file. |
+| What the small window shows when a person is signed in with no key saved | AC-1 | This record, second amendment. The Deepgram key setup screen, which record 0002's AC-9 already owns and already draws. Not a new screen and not a new criterion: it is the screen the pre shell state above always owed, and it replaces the deleted `mountSignedIn` stub. |
+| What closing the dashboard does | AC-4 | This record, second amendment. It writes the window's size and place, then exits the app. There is no tray icon to hide into, and the invariant would rebuild a window merely destroyed. |
+| What closing the small window does while the dashboard is up | AC-6 | This record, second amendment. Rust refuses the close, hides the window, and forgets the interruption it was carrying. Every error screen lives on that window, so it is never destroyed while there is an app to show one. With no dashboard behind it, closing it ends the app as it always did. |
+| Which screen a `dictation:error` kind lands on | AC-6, and record 0002's AC-28, AC-30, AC-32 | Rust, once, in the dictate feature where the kinds are minted, carried to the interface as a field on `dictation:error`. Added 2026-09-03 by the second amendment and by record 0002's fifteenth. The interface no longer inspects a kind, and the shell reads the same classifier through one named function, so record 0002's clearing table has exactly one copy. |
+| The fill behind the account block's initials | AC-2 | This record, second amendment. `--color-rail-active`, with `--color-surface` initials. Not violet: `design/design-system.md` reserves violet for a live microphone. The pair is already audited in `design/check-contrast.py` as "Active nav item". `design/registry.md` owes a row naming the fill; it owes no new contrast pair. |
 
 ## Interface surface
 
-Two commands, both on the same terms as every other command in this
-project: the interface asks and Rust decides, neither takes an account id
-because Rust knows it from the session, and both refuse when nobody is
-signed in.
+Three commands, **corrected from two on 2026-09-03**, all on the same terms
+as every other command in this project: the interface asks and Rust
+decides, none takes an account id because Rust knows it from the session,
+and all refuse when nobody is signed in. Only the first is new.
 
 - `get_rail()` returns the sections that exist, as identifiers, and which of
   them is the landing destination. The interface renders what it is given
   and cannot add a destination, which is AC-2 as a rule in Rust and not
-  only a rule in the design. It returns no wording.
+  only a rule in the design. It returns no wording. This is the one new
+  command in this record.
+- `get_auth_state()` already exists, from record 0003. The account block
+  calls it for the four things it shows, the initials, the name, the mail
+  address and the signed-in date, all of which come back on its
+  `AccountView`, and for whether the offline row is showing, which is the
+  difference between its `signed_in` and `signed_in_offline` states. It
+  never returns a token. Added to this list on 2026-09-03: it was always
+  the only route those five values could travel, and leaving it unnamed
+  invited a reader to think the account block invents its contents.
 - `sign_out()` already exists, from record 0003. The account block's Sign
-  out calls it and nothing else. It is named here only because the
-  dashboard's capability has to allow it.
+  out calls it and nothing else. It is named here so that the whole of what
+  the dashboard invokes is in one list. It is **not** named because a
+  capability has to allow it: as the capability paragraph above now records,
+  there is no per-command grant for this application's own commands.
+
+**Two events, and they are the only two the dashboard listens to.** Added
+2026-09-03, and this is what closes the last question in Still open.
+`auth:offline` and `auth:signed_in`, both already emitted by
+`src-tauri/src/sign_in/renewal.rs`, are what make the offline row arrive
+and go while the dashboard is open. Nothing is owed in Rust for either. The
+dashboard emits nothing, ever. Its capability grants
+`core:event:allow-listen` and `core:event:allow-unlisten` for this and for
+nothing else, which was the user's choice on 2026-09-03 over asking
+`get_auth_state()` again on a timer: a repeating question to Rust is a
+worse thing to own than a listener, and a timer cannot honour the registry
+row's promise that the sign goes the moment a refresh succeeds. Adding a
+third event stays an amendment, for the reason Still open gave: it widens a
+capability file.
 
 There is deliberately **no command for the window's size or position**. Rust
 positions and sizes the dashboard itself before showing it, and reads the
@@ -265,9 +472,29 @@ convenience getter later.
 Which section is showing is the dashboard's own business and needs no
 command and no event. It is drawing, not a decision.
 
-Errors that matter: not signed in, which both commands refuse; and the rail
-being unreadable, which cannot happen, because the list is fixed in this
-record rather than stored.
+Errors that matter: not signed in, which all three commands refuse; and the
+rail being unreadable, which cannot happen, because the list is fixed in
+this record rather than stored.
+
+**Four events reach Rust, and they are not the dashboard's two.** Added
+2026-09-03 by the second amendment. The paragraph above is about what a web view
+listens to and is unchanged: the dashboard listens to `auth:offline` and
+`auth:signed_in`, and to nothing else. Separately, and inside Rust, this feature
+listens to four signals that change whether the dashboard may exist at all:
+`auth:signed_in` and `auth:signed_out` from the sign in feature, and
+`dictation:key_saved` and `dictation:key_cleared` from the dictate feature. The
+last two are new, added by this amendment, and they exist because the invariant
+can change while the app is running. Rust listening to Rust needs no permission
+and grants none: **none of these four widens `src-tauri/capabilities/`, and
+`dashboard.json` is untouched by this amendment.** The rule that a third
+*dashboard* event is an amendment still stands, for the reason Still open gave,
+and it is about web views rather than about events in general.
+
+Rust also listens to `dictation:error`, `dictation:needs_key`,
+`dictation:opened` and `dictation:text`, which record 0002 already emits and
+already broadcasts to every window. Nothing is owed in the dictate feature for
+any of them except the classification field the fifteenth amendment adds to
+`dictation:error`.
 
 ## Risk
 
@@ -285,6 +512,20 @@ That is why the dashboard is denied `core:default` by name above, and why
 `pill.json` is named as the shape to copy. Nothing else in this record is
 reachable from outside: the geometry never crosses into the interface, and
 the rail's contents are a literal in Rust.
+
+**Added 2026-09-03, because the shape of that protection is not what this
+section first assumed.** It said the dashboard is granted the narrowest set
+that lets it call the commands under Interface surface. There is no such
+set. Tauri grants permissions for its own plugin commands, and this
+application's commands are not among them, so a capability file can neither
+allow nor forbid `get_rail`, `get_auth_state` or `sign_out`. The control
+that actually holds is the `not_signed_in` refusal in Rust on every one of
+them, which is already built and is checked against the session rather than
+against which window asked. The capability file still matters, for exactly
+the thing this paragraph opened with: it is what keeps the dashboard from
+reaching Tauri's own window, shell and filesystem APIs. So the two facts to
+carry are that a shorter list than `pill.json`'s is not available to buy,
+and that a longer one buys nothing the commands need.
 
 **What we are storing that we must protect.** Nothing that needs
 protecting, and that is a property to keep rather than to be pleased about.
@@ -308,7 +549,7 @@ Three milestones, each leaving the project working. Record 0002's milestone
    is signed in with a key saved, hides the small window while the
    dashboard is shown, shows the small window for a pre shell state or an
    interruption, and closes the dashboard on sign out. The new capability
-   file, written from `pill.json` rather than `default.json`. The dashboard
+   file, `pill.json`'s two event permissions and nothing else. The dashboard
    holds nothing but a white surface at this point. Proved live: sign in and
    land on the dashboard; switch Windows microphone access off and press the
    hotkey, and watch the small window come forward with the error while the
@@ -323,12 +564,22 @@ Three milestones, each leaving the project working. Record 0002's milestone
    there; then unplug that monitor, restart, and it opens wholly on screen
    on the remaining one. That is AC-3, AC-4 and AC-5.
 3. **The rail and the surface.** The rail with what exists, rendered from
-   `get_rail()`, the account block at the foot with the Sign out that moves
-   out of `mountSignedIn`, the white reading surface, and the landing on
-   Settings, Dictation. `mountSignedIn` is deleted in the same change.
-   Proved live: AC-2, by clicking every item in the rail, and AC-7, by
-   signing out and then signing in as a second account and finding its own
-   window place rather than the first's.
+   `get_rail()`, the account block at the foot with its four values from
+   `get_auth_state()`, the Sign out that moves out of `mountSignedIn`, the
+   offline row that moves out of it too, the white reading surface, and the
+   landing on Settings, Dictation. **`mountSignedIn` and its
+   `.signed-in__offline` rule are deleted in this same change**, per
+   standing rule 11, and this is the change that owes both of the things it
+   held a new home. Proved live: AC-2, by clicking every item in the rail;
+   AC-7, by signing out and then signing in as a second account and finding
+   its own window place rather than the first's; and **record 0003's AC-14,
+   which is proved here and stays record 0003's criterion**, by starting the
+   app with the network off and finding the `OFFLINE` badge and its sentence
+   at the top of the account block with the name and Sign out unmoved, then
+   putting the network back and watching the row go on the next refresh
+   without anything else on screen shifting. Evidence for that half is
+   named after AC-14 and belongs to record 0003's set, the same way this
+   record's milestone 1 carries evidence for record 0002's AC-32.
 
 ## What this makes harder
 
@@ -352,15 +603,49 @@ Three milestones, each leaving the project working. Record 0002's milestone
   window cannot show anything about the dashboard's state, or the other way
   round. That is a good boundary, and it is also one more thing to hold in
   mind when a future error needs a home.
+- **One of record 0003's criteria is now only reachable through this
+  record's shell.** Added 2026-09-03. AC-14's offline sign lives in the
+  account block, so record 0003 can no longer be verified on its own: a
+  person checking AC-14 has to have the dashboard. This is the second such
+  tie, after record 0002's AC-32, and both were found by a gate rather than
+  by the record that owned the criterion. The lesson to carry is that
+  deleting a screen deletes every promise it was keeping, so the next
+  deletion should be made to list them before it happens rather than after.
+
+- **Closing a window now turns dictation off across the whole machine.** Added
+  2026-09-03 by the second amendment, and this is the one cost of the six
+  readings that is carried rather than fixed. EchoScribe's headline promise is
+  that the hotkey works anywhere, and the hotkey lives in the app, so closing
+  the dashboard ends it. A person who closes the window to tidy their desktop
+  has quietly switched the product off, and nothing tells them. There was no
+  alternative available today: the two other readings of the close button are
+  worse, and the thing that would actually solve it, a tray icon, is not drawn
+  in `design/registry.md`, is not in any record, and would be a new decision
+  about an app that keeps running when it has no window. It is handed to
+  `/scope` as a row to weigh rather than built here, and it is named in Still
+  open so that it is not rediscovered.
+- **The clearing table is now one copy with a wire between its readers.** Added
+  2026-09-03 by the second amendment. That is better than two copies, and it is
+  not free: the interface is now blind to error kinds and can only draw what
+  Rust names, so a kind Rust forgets to classify reaches a screen that will not
+  be mounted, silently. The classifier must return a screen for every kind it is
+  given or refuse loudly, and a new kind now touches Rust before it touches any
+  screen. The source guard covers the residue, not this.
 
 ## Still open
 
-- **Whether Tauri 2 needs an explicit permission entry per application
-  command in a non default capability.** `pill.json` grants only two event
-  permissions and the pill invokes nothing, so it is not the precedent that
-  answers this. Read it against the generated schema in
-  `src-tauri/gen/schemas/` at build time and grant the narrowest set that
-  actually works. Do not resolve it by granting `core:default`.
+- ~~**Whether Tauri 2 needs an explicit permission entry per application
+  command in a non default capability.**~~ **Closed 2026-09-03. It does
+  not, because no such entry exists.** `src-tauri/gen/schemas/` was read on
+  2026-09-03: `acl-manifests.json` and `capabilities.json` hold no entry for
+  any of this app's own commands, and searching both for `get_auth_state`
+  and `save_deepgram_key` returns nothing. Tauri's permission list covers
+  its own plugin commands only. So there is nothing to grant or withhold
+  per command, and `dashboard.json` grants only the two event permissions
+  the offline row needs. The instruction not to resolve it by granting
+  `core:default` was right and is honoured. What protects the commands is
+  the `not_signed_in` refusal already in Rust; see the capability paragraph
+  in The decision and the addition in Risk.
 - **The 960x640 floor is a judgement, not a measurement.** It was chosen so
   a 1366x768 laptop can show the window. If a screen a real person uses
   cannot, it moves by amendment rather than by a quick edit.
@@ -370,6 +655,28 @@ Three milestones, each leaving the project working. Record 0002's milestone
 - **The landing destination once History exists.** Plan row 5's record
   settles it, moves it, and amends this record. Named here so that it is not
   discovered.
-- **Whether the dashboard ever needs to listen to a Rust event.** It does
-  not at first, and its capability grants nothing for it. Adding one is an
-  amendment, not a build detail, because it widens a capability file.
+- ~~**Whether the dashboard ever needs to listen to a Rust event.**~~
+  **Closed 2026-09-03. It does, to two, from the first milestone that has a
+  rail.** The offline row has to arrive and go while the dashboard is open,
+  so it listens to `auth:offline` and `auth:signed_in`, both already emitted
+  by `sign_in/renewal.rs`. This bullet said adding one would be an
+  amendment because it widens a capability file, and that is exactly how it
+  was added: the user chose the two event permissions on 2026-09-03 over
+  asking `get_auth_state()` on a timer. A third event is still an
+  amendment, for the same reason.
+- **Whether EchoScribe should keep running with no window, behind a tray icon.**
+  Added 2026-09-03 by the second amendment. Closing the dashboard closes the app
+  and so stops the global hotkey, which is the whole product. A tray icon is the
+  ordinary Windows answer and this record deliberately did not reach for it: it
+  is drawn nowhere, it is in no record, and an app that runs with no window on
+  screen touches the no silent listening rule closely enough to deserve its own
+  conversation rather than a line here. Handed to `/scope` as a row.
+- **Whether the key setup screen shows its step indicator when it is reached at
+  load.** Added 2026-09-03 by the second amendment, and noticed rather than
+  decided. `design/registry.md` draws a "STEP 2 OF 2" indicator for the first
+  run path and says there is none when the screen is reached by pressing the
+  hotkey with no key. Signing in, quitting before pasting a key and reopening is
+  a third route in, and the registry does not say which of the two it is. The
+  screen as built draws no indicator on any route, so nothing is currently
+  wrong on this route; the gap is that nothing says so on purpose. Not this
+  record's to settle: it belongs to `/canvas` and record 0002.
