@@ -134,6 +134,25 @@ Rules for new code:
 - Feature folders do not import from each other. If two features need the
   same thing, it moves to a shared module and both import that. Something
   becomes shared only when three features need it. Two is a coincidence.
+  **The settings error line is at four and the extraction is owed.** The
+  code and the sentence for a setting that would not save, or settings that
+  would not read, now exist in the dictate, vocabulary, language and
+  history features. Three was the threshold and four is past it. Until it
+  is extracted, each new feature that wants one is copying a fourth copy,
+  and each copy is a place the wording can drift. Naming it was record
+  0007's job and extracting it is not: it needs `/architect`, because where
+  a shared module for a sentence a person reads lives is a decision, and
+  every one of the four features has a Rust guard asserting that its screen
+  holds no copy of its own sentences.
+- Two copies held together by a guard is the sanctioned answer at two, and
+  it is not a shortcut. When two features must word the same thing
+  identically and the shared rule above says it is too early to extract,
+  write both and add a Rust test that reads both files and fails the build
+  when they drift. The character count's wording lives twice, on the
+  history row and on the pill's chip, held by
+  `both_surfaces_word_the_count_the_same_way`. A guard makes the
+  duplication visible and self correcting; a comment saying "keep these in
+  sync" does not.
 - No file named `utils`, `helpers`, `common` or `misc`. If a home is not
   obvious, the code belongs beside its only caller until a second caller
   appears. Names say what is inside: `hotkey-listener.rs` lets a reader
@@ -163,7 +182,16 @@ Rules for new code:
   discarded. It is never written to disk, never put in a log, and never
   kept after the text comes back.
 - Transcribed text goes to two places only: the cursor it was dictated
-  into, and the local history for that account. Nowhere else.
+  into, and the local history for that account. Nowhere else. The app never
+  routes it through a third place of its own accord. A person taking their
+  own text at their own request, by selecting it or by pressing an action
+  that exists to hand it to them, is not the app routing it, and the
+  clipboard reached that way is not a third place the app chose. The
+  distinction is the user's, given 2026-09-04, and it is inside this rule
+  rather than an exception to it: record 0007's Copy action is on one side,
+  and record 0002's refusal of clipboard paste as a typing mechanism is on
+  the other and still stands. Two worked examples, and the second is the
+  one that says no.
 - The Deepgram API key is per person, entered by them, stored locally, and
   never logged or shown in full after it is saved.
 - Treat anything typed, pasted or transcribed as hostile input. A
@@ -261,6 +289,56 @@ already do this".
     documented non-boolean meaning. Acceptance was mistaken for effect only
     in that one place.
 
+Rules 15 to 18 are the same mistake as rule 14, wearing four different
+faces. Rule 14 is about a call whose effect is outside the program. These
+are about a **report** whose meaning is outside the program: a fault code, a
+setting, a window, a lifecycle event. Each one is a real bug this project
+shipped and then had to find, so read them as history rather than as
+caution.
+
+15. **A reported fault is not a reported ending.** A library saying
+    something went wrong is not the same as the thing having stopped. Ask
+    what the report actually claims, then check the thing you care about
+    directly. `cpal` reported an audio under or overrun mid dictation and
+    this app read it as the microphone having died, closed the pill and
+    threw the dictation away. The stream was still delivering frames the
+    whole time, and the library's own words for it are "causing a potential
+    audio glitch" and, for the sibling kind, "audio will still play". It was
+    intermittent because it tracks machine load, so it looked like a hardware
+    fault for days. Proved by a spike that counted frames after the first
+    report instead of trusting it. The general shape: a glitch and a failure
+    arrive on the same channel, and only one of them means stop.
+16. **A setting changed outside the program does not tell the program it
+    changed.** A person switching Windows microphone access back on, or
+    plugging a device back in, or fixing anything in an operating system
+    dialog, generates no notification for this app. So an error state can
+    never clear itself on the strength of the cause being gone: it clears
+    only when the thing it complained about is tried again and works. Never
+    a timer, never one blanket signal, and never the interface deciding on
+    its own that the world has probably improved. This is the clearing table
+    in record 0002, and each error there is paired with its own proof: the
+    microphone actually opening, a key actually being accepted, the first
+    words actually landing.
+17. **Destroying a window is the same shape as playing a sound.** Rule 14's
+    lesson applies to anything whose effect is a window: creating, showing,
+    hiding, closing, focusing, moving. The call returning means the request
+    was accepted, and this app has already been left with no window at all
+    twice, both times because a path that took a window away was read as a
+    path that left one behind. Ask what a person would be looking at, and
+    check that a window they can see exists. The same goes for what a window
+    is showing: `dictation:opened` reaching a page that had not finished
+    loading was a real bug on record 0004's shell, and the fix was to
+    register every listener before asking Rust for anything.
+18. **Tauri's own "the last window has gone" exit can never fire in
+    EchoScribe.** The pill window is created at startup and is never
+    destroyed, only hidden, so the framework never sees a last window go.
+    Nothing may be built on that exit, and any path that takes the last
+    window a person can see away has to exit the app itself, deliberately,
+    in its own code. `src-tauri/src/shell/mod.rs` says so where it matters.
+    This is a fact about this app and not a general truth about Tauri, which
+    is exactly why it is written down: the framework's documented default is
+    correct and simply unreachable here.
+
 ## Things to know about this project
 
 - Rust has fewer training examples than JavaScript. Expect core changes
@@ -277,6 +355,19 @@ already do this".
   first-run screen as load-bearing, not as a form.
 - `src/main.js` is empty and `src-tauri/src/lib.rs` is the untouched Tauri
   starter. Nothing in this repository is a pattern to copy yet.
+- **This project has no JavaScript test runner, so no screen has automated
+  coverage of what it draws.** Eleven interface files draw something today,
+  the pill and ten screens, and not one of them is exercised by any test:
+  `cargo test` covers the Rust core only. This is
+  the single largest reason acceptance criteria come back from `/test` as "a
+  person must check this", thirteen of them so far across plan rows 3, 4 and
+  5. What a Rust test can do about a screen is read its source as a string
+  and fail the build when a promise disappears from it, which is how
+  `dir="auto"`, the no-markup rule, the count's wording and the one
+  clipboard write are all held today. Those guards are worth writing and
+  they are not coverage: they prove a line of code is present, never that
+  the screen behaves. Installing a runner is a new dependency and therefore
+  the user's decision, and it has not been asked yet.
 
 ## Final reminder
 

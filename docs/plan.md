@@ -6,7 +6,7 @@ into whatever app you're using. The scary risk is those pieces not
 connecting, so phase 1 proves the whole pipe works end to end, for real,
 before any one piece is made great.
 
-**Last reconciled:** 2026-08-24
+**Last reconciled:** 2026-09-04
 
 ## At a glance
 
