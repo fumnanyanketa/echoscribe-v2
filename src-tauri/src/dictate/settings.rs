@@ -21,17 +21,93 @@
 //! so changing it re-arms the hook there and then, which is AC-19's "works
 //! immediately, with no restart".
 //!
-//! The screen these four answer is not built yet. `design/registry.md` has no
-//! control for choosing between two values and no switch, so building one
-//! would be inventing design during a build. `/canvas` owns that, and this
-//! file is deliberately finished ahead of it, the way milestone 3 stored the
-//! last four characters of the key before anything displayed them.
+//! **The two sentences a person can read here live in this file and nowhere
+//! else.** Record 0002's fourteenth amendment fixed both, and fixed that they
+//! are held in one place in Rust like every other sentence on this surface, so
+//! no screen invents its own. The screen draws the code and the sentence it is
+//! handed; it does not know either one. The screen itself is
+//! `src/dictate/dictation-settings.js`, on the dashboard's white surface.
 
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 
 use super::store::Hotkey;
 use super::{hook, modifier_of, Dictate};
+
+/// The mono code and the one sentence of `design/registry.md`'s
+/// `Setting error line` when a write is refused (record 0002, fourteenth
+/// amendment). It says both things the person needs: the change did not
+/// happen, and what is still on screen is therefore true, which is honest only
+/// because the screen never moves the shown choice until the write comes back.
+const NOT_SAVED_CODE: &str = "SETTING_NOT_SAVED";
+const NOT_SAVED_MESSAGE: &str = "This setting could not be saved, so it is unchanged.";
+
+/// The same line when the settings cannot be read as the screen opens (record
+/// 0002, fourteenth amendment). In this state **no control is drawn at all**:
+/// a control drawn without a chosen value would be showing a setting the app
+/// cannot read, and a person could leave believing a hotkey is in force that
+/// is not.
+const NOT_READ_CODE: &str = "SETTINGS_NOT_READ";
+const NOT_READ_MESSAGE: &str = "These settings could not be read, so none is shown.";
+
+/// Why one of the four commands below refused, in the two parts the screen
+/// needs: the machine cause, and the line a person reads.
+///
+/// `reason` is for a log and for one branch the screen has to make. `code` and
+/// `message` are the `Setting error line` and are `None` for the two refusals
+/// that have no line, because they happen only while Rust is already closing
+/// the window this screen lives in. A screen with nothing to draw draws
+/// nothing rather than inventing a sentence for a state nobody designed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SettingError {
+    reason: &'static str,
+    code: Option<&'static str>,
+    message: Option<&'static str>,
+}
+
+impl SettingError {
+    /// Nobody is signed in. Unreachable from this screen, which only exists
+    /// while somebody is, so it carries no line (record 0002, fourteenth
+    /// amendment).
+    fn not_signed_in() -> Self {
+        Self {
+            reason: "not_signed_in",
+            code: None,
+            message: None,
+        }
+    }
+
+    /// The dictate feature is not up yet. Unreachable for the same reason, and
+    /// it carries no line for the same reason.
+    fn not_ready() -> Self {
+        Self {
+            reason: "not_ready",
+            code: None,
+            message: None,
+        }
+    }
+
+    /// A read failed as the screen opened. The one cause the read half can
+    /// reach, so the one code it can show.
+    fn not_read() -> Self {
+        Self {
+            reason: "could_not_read",
+            code: Some(NOT_READ_CODE),
+            message: Some(NOT_READ_MESSAGE),
+        }
+    }
+
+    /// A write did not happen. Every way a write can fail ends here, because
+    /// every one of them leaves the setting unchanged, which is exactly what
+    /// the sentence says. `reason` keeps the true cause for the log.
+    fn not_saved(reason: &'static str) -> Self {
+        Self {
+            reason,
+            code: Some(NOT_SAVED_CODE),
+            message: Some(NOT_SAVED_MESSAGE),
+        }
+    }
+}
 
 /// What the interface needs to draw the hotkey setting: which one is in force,
 /// and the complete list it may be chosen from (record 0002 AC-19, AC-22).
@@ -46,16 +122,16 @@ pub struct HotkeyChoice {
 
 /// The chosen hotkey and the two it may be chosen from.
 #[tauri::command]
-pub fn get_hotkey(app: AppHandle) -> Result<HotkeyChoice, &'static str> {
+pub fn get_hotkey(app: AppHandle) -> Result<HotkeyChoice, SettingError> {
     let Some(account_id) = crate::sign_in::account_id_from(&app) else {
-        return Err("not_signed_in");
+        return Err(SettingError::not_signed_in());
     };
     let Some(state) = app.try_state::<Dictate>() else {
-        return Err("not_ready");
+        return Err(SettingError::not_ready());
     };
     let setting = state.store.setting_for(&account_id).map_err(|e| {
         eprintln!("dictate: could not read the chosen hotkey: {e}");
-        "could_not_read"
+        SettingError::not_read()
     })?;
 
     Ok(HotkeyChoice {
@@ -75,18 +151,22 @@ pub fn get_hotkey(app: AppHandle) -> Result<HotkeyChoice, &'static str> {
 /// not take the change cannot leave the hook watching a key the settings screen
 /// will not show as chosen.
 #[tauri::command]
-pub fn set_hotkey(app: AppHandle, binding: String) -> Result<(), &'static str> {
+pub fn set_hotkey(app: AppHandle, binding: String) -> Result<(), SettingError> {
     let Some(account_id) = crate::sign_in::account_id_from(&app) else {
-        return Err("not_signed_in");
+        return Err(SettingError::not_signed_in());
     };
     let Some(state) = app.try_state::<Dictate>() else {
-        return Err("not_ready");
+        return Err(SettingError::not_ready());
     };
     let Some(hotkey) = Hotkey::from_chosen(&binding) else {
         // Nothing from `binding` is printed. It came from outside and it has no
         // business in a log; which of the two it was not is not information.
         eprintln!("dictate: a hotkey that is not one of the two was refused");
-        return Err("unknown_hotkey");
+        // A write that did not happen, so the shown choice is still true and
+        // the not-saved line is the honest one. The record says this cannot
+        // arrive from the screen at all, because its two rows come from
+        // `get_hotkey`; `reason` keeps it apart from a store failure in a log.
+        return Err(SettingError::not_saved("unknown_hotkey"));
     };
 
     let now = crate::sign_in::clock::now_iso8601();
@@ -95,7 +175,7 @@ pub fn set_hotkey(app: AppHandle, binding: String) -> Result<(), &'static str> {
         .save_hotkey(&account_id, hotkey, &now)
         .map_err(|e| {
             eprintln!("dictate: could not save the chosen hotkey: {e}");
-            "could_not_save"
+            SettingError::not_saved("could_not_save")
         })?;
 
     // AC-19: in force from now, with no restart. The hook is already installed
@@ -107,12 +187,12 @@ pub fn set_hotkey(app: AppHandle, binding: String) -> Result<(), &'static str> {
 /// Whether the opening and closing sounds play (record 0002 AC-21). On for a
 /// new account.
 #[tauri::command]
-pub fn get_dictation_sounds(app: AppHandle) -> Result<bool, &'static str> {
+pub fn get_dictation_sounds(app: AppHandle) -> Result<bool, SettingError> {
     let Some(account_id) = crate::sign_in::account_id_from(&app) else {
-        return Err("not_signed_in");
+        return Err(SettingError::not_signed_in());
     };
     let Some(state) = app.try_state::<Dictate>() else {
-        return Err("not_ready");
+        return Err(SettingError::not_ready());
     };
     state
         .store
@@ -120,7 +200,7 @@ pub fn get_dictation_sounds(app: AppHandle) -> Result<bool, &'static str> {
         .map(|setting| setting.sounds_enabled)
         .map_err(|e| {
             eprintln!("dictate: could not read the sound setting: {e}");
-            "could_not_read"
+            SettingError::not_read()
         })
 }
 
@@ -131,12 +211,12 @@ pub fn get_dictation_sounds(app: AppHandle) -> Result<bool, &'static str> {
 /// microphone is open and AGENTS.md forbids opening it without one. Nothing
 /// here touches the pill, and nothing may be added that does.
 #[tauri::command]
-pub fn set_dictation_sounds(app: AppHandle, enabled: bool) -> Result<(), &'static str> {
+pub fn set_dictation_sounds(app: AppHandle, enabled: bool) -> Result<(), SettingError> {
     let Some(account_id) = crate::sign_in::account_id_from(&app) else {
-        return Err("not_signed_in");
+        return Err(SettingError::not_signed_in());
     };
     let Some(state) = app.try_state::<Dictate>() else {
-        return Err("not_ready");
+        return Err(SettingError::not_ready());
     };
 
     let now = crate::sign_in::clock::now_iso8601();
@@ -145,12 +225,14 @@ pub fn set_dictation_sounds(app: AppHandle, enabled: bool) -> Result<(), &'stati
         .save_sounds_enabled(&account_id, enabled, &now)
         .map_err(|e| {
             eprintln!("dictate: could not save the sound setting: {e}");
-            "could_not_save"
+            SettingError::not_saved("could_not_save")
         })
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     /// This file's own source, minus its tests, flattened so a guard survives a
     /// formatter moving a call across lines.
     fn this_file_flattened() -> String {
@@ -202,5 +284,100 @@ mod tests {
              four of its commands. Each one must refuse when nobody is signed \
              in (record 0002, interface surface)"
         );
+    }
+
+    #[test]
+    fn the_two_sentences_are_word_for_word_the_records_own() {
+        // covers: AC-12, AC-19, AC-21, through record 0002's fourteenth
+        // amendment, which fixed both codes and both sentences. They are
+        // wording a person reads, so a build may not reword them and neither
+        // may a tidy-up. Every character, including the full stop.
+        assert_eq!(NOT_SAVED_CODE, "SETTING_NOT_SAVED");
+        assert_eq!(
+            NOT_SAVED_MESSAGE,
+            "This setting could not be saved, so it is unchanged."
+        );
+        assert_eq!(NOT_READ_CODE, "SETTINGS_NOT_READ");
+        assert_eq!(
+            NOT_READ_MESSAGE,
+            "These settings could not be read, so none is shown."
+        );
+    }
+
+    #[test]
+    fn a_write_that_did_not_happen_always_reads_as_unchanged() {
+        // covers: AC-19, AC-21. Both ways a write can fail leave the setting
+        // exactly as it was, which is what the sentence claims, so both carry
+        // the same line. The true cause survives in `reason` for a log, and
+        // that is the only thing that differs.
+        for reason in ["could_not_save", "unknown_hotkey"] {
+            let e = SettingError::not_saved(reason);
+            assert_eq!(e.reason, reason);
+            assert_eq!(e.code, Some(NOT_SAVED_CODE));
+            assert_eq!(e.message, Some(NOT_SAVED_MESSAGE));
+        }
+    }
+
+    #[test]
+    fn a_failed_read_carries_the_line_that_draws_no_control() {
+        // covers: AC-19, AC-21. The screen draws this line and no control at
+        // all, so the line has to arrive for it to have anything to draw.
+        let e = SettingError::not_read();
+        assert_eq!(e.reason, "could_not_read");
+        assert_eq!(e.code, Some(NOT_READ_CODE));
+        assert_eq!(e.message, Some(NOT_READ_MESSAGE));
+    }
+
+    #[test]
+    fn the_two_unreachable_refusals_carry_no_line_at_all() {
+        // covers: record 0002's fourteenth amendment. Neither can happen on a
+        // screen only reachable while signed in, and both happen only while
+        // Rust is already closing the window the screen lives in. Handing one
+        // a sentence would put a line on screen for a state nobody designed,
+        // and the screen's own branch on this is what keeps it blank.
+        for e in [SettingError::not_signed_in(), SettingError::not_ready()] {
+            assert_eq!(e.code, None);
+            assert_eq!(e.message, None);
+        }
+        assert_eq!(SettingError::not_signed_in().reason, "not_signed_in");
+        assert_eq!(SettingError::not_ready().reason, "not_ready");
+    }
+
+    #[test]
+    fn no_sentence_a_person_reads_lives_outside_this_file() {
+        // covers: record 0002's fourteenth amendment, "held in one place in
+        // Rust like every other sentence on this surface, so no screen invents
+        // its own". A second copy is how two truths start: one gets reworded
+        // and the other does not.
+        let flat = this_file_flattened();
+        assert_eq!(
+            flat.matches("Thissettingcouldnotbesaved").count(),
+            1,
+            "the not-saved sentence appears more than once in settings.rs"
+        );
+        assert_eq!(
+            flat.matches("Thesesettingscouldnotberead").count(),
+            1,
+            "the not-read sentence appears more than once in settings.rs"
+        );
+
+        // And the screen holds neither. It draws the code and the sentence it
+        // is handed on the command's error, and it does not know either one, so
+        // a change here reaches a person without a second file having to agree.
+        // Same shape as the two guards in mod.rs and error_screen.rs, which
+        // read src/main.js for the same reason.
+        const SCREEN: &str = include_str!("../../../src/dictate/dictation-settings.js");
+        for sentence in [NOT_SAVED_MESSAGE, NOT_READ_MESSAGE] {
+            assert!(
+                !SCREEN.contains(sentence),
+                "src/dictate/dictation-settings.js now holds a sentence this                  file owns. Both settings sentences live in Rust and nowhere                  else (record 0002, fourteenth amendment)"
+            );
+        }
+        for code in [NOT_SAVED_CODE, NOT_READ_CODE] {
+            assert!(
+                !SCREEN.contains(code),
+                "src/dictate/dictation-settings.js now holds an error code                  this file owns. The screen shows the code it is handed"
+            );
+        }
     }
 }

@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="../styles.css" />
     <link rel="stylesheet" href="dashboard.css" />
+    <!-- The dictation settings screen, which the surface below holds at
+         Settings, Dictation. Linked here rather than injected by the screen,
+         because this page is the only one that mounts it. -->
+    <link rel="stylesheet" href="../dictate/dictation-settings.css" />
     <title>EchoScribe</title>
     <script type="module" src="dashboard.js"></script>
   </head>
@@ -18,9 +22,11 @@
       <!-- Filled by rail.js from what get_rail() returned. A screen cannot add
            a destination: the list is a literal in Rust. -->
       <nav class="rail" id="rail"></nav>
-      <!-- The white reading surface. Empty until record 0002's milestone 5
-           builds the settings screen: design/registry.md draws no component for
-           a surface waiting for its screen, and a build may not invent one. -->
+      <!-- The white reading surface. dashboard.js mounts whichever screen the
+           rail's chosen destination has, and empties it again on the way out.
+           A destination with no screen yet leaves it empty: design/registry.md
+           draws no component for a surface waiting for its screen, and a build
+           may not invent one. -->
       <main class="surface" id="surface" tabindex="-1"></main>
     </div>
   </body>

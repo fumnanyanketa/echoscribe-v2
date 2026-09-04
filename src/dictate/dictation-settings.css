@@ -1,0 +1,246 @@
+/* The dictation settings screen (record 0002 AC-19, AC-21, AC-22;
+ * design/registry.md "Hotkey choice", "Sound switch", "Setting error line").
+ *
+ * It sits on the dashboard's white reading surface, so every colour here is a
+ * light-surface token. There is no dark twin: the design system has no light
+ * and dark theme, and the reading surface is always white.
+ *
+ * Every value is a token from styles.css, with one exception, called out where
+ * it appears: the switch's own 36 by 20 track and its 16 knob, which
+ * design/registry.md fixes as a component geometry the way it fixes the rail's
+ * 232px and the pill's 472x52.
+ *
+ * There is deliberately no heading. design/registry.md draws no heading for
+ * this surface, and dashboard.js gives the surface its accessible name from the
+ * rail item that opened it, so a build inventing one would be inventing both a
+ * component and its wording.
+ */
+
+/* The comp's Settings artboard sets this surface's own frame: 32 by 30 padding
+   and a 26 gap between settings. --space-8 and --space-6 are the tokens those
+   land on.
+
+   There is no heading. The comp draws one, 19px reading "Dictation", and
+   design/registry.md registers no heading component for this surface, so it is
+   not built: a component not on that list does not exist. The user confirmed
+   that reading on 2026-09-04, and `/canvas` owes the registry either the row or
+   a note that there deliberately is none. The surface is named by the rail item
+   that opened it in the meantime, which dashboard.js already does. */
+.dset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-8);
+}
+
+/* One setting: its control, then its one caption, then the line it says a
+   refused write on. */
+.dset__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ---- Hotkey choice --------------------------------------------------- */
+
+/* Exactly two rows and only two (AC-22). They are stacked, and the group is
+   never a dropdown: dropdown menus are on design/registry.md's not-in-the-
+   registry list. */
+.dset__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Same geometry as design/registry.md's "Setting row": the value on the left,
+   one thing on the right. Here the thing on the right is the CHOSEN badge
+   rather than an action, because choosing is what pressing the row does. */
+.dset__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  text-align: left;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+/* The chosen row, marked by two signals and exactly two: this fill, and the
+   mono CHOSEN badge the row carries. Neither is a hue, so the choice does not
+   rest on colour perception (design/registry.md "Hotkey choice"). The edge
+   deliberately does not change: a third signal is not in the registry, and the
+   control edge is what tells a person where a control is in both states.
+   Audited as "Control edge on a row" in design/check-contrast.py. */
+.dset__row--chosen {
+  background: var(--color-surface-subtle);
+}
+
+/* design/registry.md "Keycap", unchanged: mono, wherever a key is named. One
+   modifier per row; the words beside it carry the double tap. */
+.dset__keycap {
+  flex: none;
+  min-width: var(--space-8);
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-mono);
+  text-align: center;
+  /* The pair design/check-contrast.py audits as "Keycap text on a row": the
+     keycap keeps its own subtle fill in both row states, so its text is
+     measured against that and not against the white page. */
+  color: var(--color-ink);
+}
+
+.dset__row-label {
+  flex: 1;
+  min-width: 0;
+}
+
+/* design/registry.md "Mono badge", unchanged. Pushed to the right edge by the
+   label's own flex, so it sits where "Setting row" puts the one thing on the
+   right. */
+.dset__badge {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-ink-secondary);
+}
+
+/* ---- Sound switch ---------------------------------------------------- */
+
+.dset__switch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Every setting's label, at the comp's own treatment for them: 13px, medium.
+   design/registry.md's "Setting row" is label then control, and both settings
+   here take that shape. */
+.dset__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-ink);
+}
+
+/* The sound switch's label sits on the same row as its switch rather than above
+   it, because design/registry.md draws that one as label, switch, then the
+   state in words. */
+.dset__label--inline {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The one component geometry in this file. design/registry.md "Sound switch"
+   fixes it: a 36 by 20 track holding a 16 knob inset by --space-hair. Nothing
+   in the spacing scale lands on those, the way nothing in it lands on the
+   rail's 232px, so they are stated here and named as what they are. */
+.dset__track {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  padding: 0;
+  /* Off: the quiet fill, and the control edge, because that edge is what tells
+     a person where a control is. */
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-subtle);
+  cursor: pointer;
+}
+
+/* On: the ink fill, which needs no edge at 17.4:1 against the page. Dark fill
+   means on is the primary button's language already. Never violet in either
+   state: violet means an open microphone, and a sound setting is not a
+   microphone. */
+.dset__track--on {
+  border-color: transparent;
+  background: var(--color-ink);
+}
+
+.dset__knob {
+  position: absolute;
+  top: var(--space-hair);
+  left: var(--space-hair);
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink-faint);
+  /* The knob is the state, not decoration, so it moves rather than fades. Under
+     prefers-reduced-motion styles.css collapses this to 1ms, which is the jump
+     design/registry.md asks for, and the word beside it carries the state
+     either way. */
+  transition: transform var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.dset__track--on .dset__knob {
+  /* 36 - 2 - 2 - 16, in the same fixed geometry as the track above. */
+  transform: translateX(16px);
+  background: var(--color-surface);
+}
+
+/* The second signal, and the one a screen reader never needs: the state in
+   words, On or Off (design/registry.md "Sound switch"). */
+.dset__switch-state {
+  flex: none;
+  min-width: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--color-ink-secondary);
+}
+
+/* ---- Captions -------------------------------------------------------- */
+
+/* One caption per setting, once and not per row. */
+.dset__caption {
+  margin: 0;
+  max-width: 60ch;
+  font-size: var(--text-xs);
+  line-height: var(--leading-prose);
+  color: var(--color-ink-caption);
+}
+
+/* ---- Setting error line ---------------------------------------------- */
+
+/* design/registry.md "Setting error line": the light-surface twin of the four
+   dark error lines, in the same information order, a mono code then one plain
+   sentence of cause. Unlike those four it carries no action, and that is a
+   decision rather than an omission: the control above is its own retry. No left
+   edge either, for the same reason the offline row has none. */
+.dset__error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 60ch;
+}
+
+/* A class with its own display beats the browser's rule for the hidden
+   attribute, so the line is given one explicitly. The offline row was left
+   permanently on screen by exactly this on 2026-09-03. */
+.dset__error[hidden] {
+  display: none;
+}
+
+.dset__error-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-danger-on-light);
+}
+
+.dset__error-text {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--color-ink-secondary);
+}

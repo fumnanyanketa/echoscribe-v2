@@ -16,6 +16,20 @@
 
 import { mountRail, setActive, itemFor } from "./rail.js";
 import { mountAccountBlock, setOffline } from "./account-block.js";
+import { mountDictationSettings } from "../dictate/dictation-settings.js";
+
+/** Which destination opens which screen. The same shape and the same reason as
+ *  rail.js's wording table: Rust hands out identifiers and this side decides
+ *  what each one opens, so a destination with no entry here opens nothing
+ *  rather than something nobody designed. A screen joins this table with its
+ *  own feature, never ahead of it.
+ *
+ *  A screen belongs to its own feature's folder on both sides, the way
+ *  main.js mounts the dictate feature's three dark screens from src/dictate/.
+ *  This page is the dashboard's router, and routing is all it does with them. */
+const SCREEN = {
+  "settings.dictation": mountDictationSettings,
+};
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -24,6 +38,12 @@ const rail = document.getElementById("rail");
 const surface = document.getElementById("surface");
 
 let accountBlock = null;
+// What get_rail() returned. Kept so that pressing a section can be resolved to
+// the sub-section that actually holds a screen, off Rust's own structure rather
+// than off a shape assumed here.
+let railView = null;
+// The unmount function of whatever screen the surface is holding.
+let unmountScreen = null;
 // Whether the app is working offline. `null` means nothing has said yet, which
 // is what lets an event that arrives during startup win over the older snapshot
 // `get_auth_state` returned.
@@ -60,6 +80,7 @@ async function start() {
     return;
   }
 
+  railView = view;
   accountBlock = mountRail(rail, view, show);
   show(view.landing);
 
@@ -78,18 +99,44 @@ async function start() {
   }
 }
 
-// Which section is showing. The surface behind it is empty until record 0002's
-// milestone 5 builds the settings screen; the rail's own state is what changes
-// here today.
+// Which section is showing. Drawing, not a decision, which is why it needs no
+// command and no event.
+//
+// Every item in the rail opens a screen (record 0004 AC-2), and a section that
+// holds sub-sections opens the first of them that has one: pressing Settings
+// opens Dictation, and the rail then marks Dictation as the one showing with
+// Settings as the section it is inside. Which sub-sections exist is Rust's
+// answer, read off what get_rail() returned, so this cannot invent a
+// destination.
 function show(id) {
-  setActive(rail, id);
-  const item = itemFor(rail, id);
+  const target = resolve(id);
+  setActive(rail, target);
+  const item = itemFor(rail, target);
   if (item) {
     // The surface takes its accessible name from the rail item that opened it,
     // so it is named by design/registry.md's own wording rather than by a
     // heading this build invented.
     surface.setAttribute("aria-labelledby", item.id);
   }
+
+  // One screen at a time, and the old one goes before the new one arrives.
+  if (unmountScreen) {
+    unmountScreen();
+    unmountScreen = null;
+  }
+  surface.replaceChildren();
+
+  const mount = SCREEN[target];
+  if (mount) unmountScreen = mount(surface);
+}
+
+/** The destination that actually gets drawn when `id` is pressed. `id` itself
+ *  when it has a screen, otherwise its first sub-section that has one. */
+function resolve(id) {
+  if (SCREEN[id]) return id;
+  const item = ((railView && railView.items) || []).find((one) => one.id === id);
+  const child = ((item && item.children) || []).find((one) => SCREEN[one.id]);
+  return child ? child.id : id;
 }
 
 // The two events this window listens to, and the only two, are registered at

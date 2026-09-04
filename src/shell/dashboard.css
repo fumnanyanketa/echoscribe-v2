@@ -224,8 +224,9 @@
 /* ---- The reading surface -------------------------------------------- */
 
 /* Always white: the design system has no light and dark theme, so there is no
-   second look for this to have. Empty until record 0002's milestone 5 builds
-   the settings screen. */
+   second look for this to have. What it holds is the screen of whichever
+   destination the rail is on; each screen brings its own stylesheet, and this
+   rule owns only the field behind them. */
 .surface {
   min-width: 0;
   overflow: auto;
