@@ -20,6 +20,7 @@ import { mountDictationSettings } from "../dictate/dictation-settings.js";
 import { mountTranscriptionSettings } from "../dictate/transcription-settings.js";
 import { mountLanguageSettings } from "../language/language.js";
 import { mountVocabulary } from "../vocabulary/vocabulary.js";
+import { mountHistory } from "../history/history.js";
 
 /** Which destination opens which screen. The same shape and the same reason as
  *  rail.js's wording table: Rust hands out identifiers and this side decides
@@ -31,6 +32,7 @@ import { mountVocabulary } from "../vocabulary/vocabulary.js";
  *  main.js mounts the dictate feature's three dark screens from src/dictate/.
  *  This page is the dashboard's router, and routing is all it does with them. */
 const SCREEN = {
+  history: mountHistory,
   "settings.dictation": mountDictationSettings,
   "settings.languages": mountLanguageSettings,
   "settings.vocabulary": mountVocabulary,
@@ -133,7 +135,12 @@ function show(id) {
   surface.replaceChildren();
 
   const mount = SCREEN[target];
-  if (mount) unmountScreen = mount(surface);
+  // The second argument is how a screen asks the rail to move, and only the
+  // history empty state's one action uses it: design/design-system.md's empty
+  // state rule asks for a way to change the setup, and the hotkey is chosen on
+  // Settings, Dictation. The four settings screens take one argument and ignore
+  // it (record 0007, Interface surface).
+  if (mount) unmountScreen = mount(surface, { go: show });
 }
 
 /** The destination that actually gets drawn when `id` is pressed. `id` itself

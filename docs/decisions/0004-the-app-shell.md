@@ -74,6 +74,46 @@ identifier is added to the rail before its screen exists. **The count stays at
 7** and no criterion is renumbered, reworded or added. Still open's question
 "what the Transcription section holds beyond the saved key row" is untouched:
 these are two new sections, not additions to that one.
+**Amended:** 2026-09-04, fourth of the day, by `/architect`, for plan row 5.
+**The rail gains History and the dashboard lands on it.** This is the last of
+the three amendments The decision said plan rows 3, 4 and 5 would each bring,
+and it is the one this record has been holding a place for since it was written.
+
+- `history`, for record 0007, "see what you've said before". It is a **top
+  level item, not a sub-section**, because it has no children, and it goes
+  **first**, above Settings. Settings keeps its four children in the comp's
+  order, untouched.
+- **The landing destination moves from `settings.dictation` to `history`.**
+  Value sourcing below said in as many words that it "moves to History when plan
+  row 5 is designed, by an amendment carried in that record and here". This is
+  that.
+
+**AC-1 is reworded, and it is the first acceptance criterion in this project to
+be.** Its tail read "and Settings open on Dictation", which stops being true the
+moment this lands. Nothing is renumbered and nothing is added, **the count stays
+at 7**, and only that tail changes. It is legitimate because this record wrote
+down in advance that the sentence was temporary, and it is called out here
+because every amendment before this one could honestly end with "no criterion is
+renumbered, reworded or added", and this one cannot.
+
+**Nothing else about this record changes.** No new command: History hands its
+screen out through `get_rail`'s existing identifiers and its own feature holds
+its own command. No new event, in either direction. **Nothing in
+`src-tauri/capabilities/` is added or widened**, and `dashboard.json` still
+grants `core:event:allow-listen` and `core:event:allow-unlisten` and nothing
+else. `src/shell/rail.js` gains one wording row and `src/shell/dashboard.js`
+gains one entry in the table that says which destination opens which screen,
+both of which are the shape those two files were written for. One thing is added
+to `dashboard.js` that is not: it passes its own `show` as a second argument to
+whichever screen it mounts, so record 0007's empty state can move the rail to
+Settings, Dictation. The four screens that exist take one argument and ignore
+it.
+
+**AC-2 now covers six destinations rather than four**, and it is not reworded.
+`rail.rs`'s `the_rail_holds_no_section_that_does_not_exist` guard loses its one
+sentinel in the same change, per standing rule 11, because after this there is
+no unbuilt section left for it to name; the exhaustive list check above it is
+what keeps the rail honest from then on.
 **Weight:** medium
 **Plan row:** none of its own. It serves rows 1 to 5, and row 2's settings
 screen is the first thing that cannot be built without it.
@@ -109,7 +149,10 @@ item.
 
 - **AC-1**: Signed in with a Deepgram key saved, EchoScribe shows the
   dashboard without me clicking anything: a dark rail down the left, a
-  white reading surface on the right, and Settings open on Dictation.
+  white reading surface on the right, and History open. **Reworded
+  2026-09-04** by the fourth amendment of that day, for record 0007. Until then
+  it ended "and Settings open on Dictation", which this record always said was
+  temporary.
 - **AC-2**: Every item in the rail opens a screen. There is no item that
   does nothing when I click it, and no item that is greyed out.
 - **AC-3**: The dashboard opens at 1200x800 the first time. I can resize
@@ -188,6 +231,16 @@ that made this correction possible is the one this paragraph states: an item
 joins when its screen exists, and neither of the two was added before its own
 third milestone.
 
+**Corrected again 2026-09-04 by the fourth amendment of that day.** All three
+have landed. History is in the rail, for record 0007, as a top level item above
+Settings, and it joined the same way the other two did: with its own screen, in
+its own milestone, and not before. **The rail now holds every section this app
+has**, so the sentence above about what a rail built today may show has nothing
+left to exclude. The rule itself is not retired and must not be: the next
+feature with a screen adds its item when the screen exists, and nothing is ever
+greyed out, because `design/registry.md` still draws `Nav item` with exactly two
+states.
+
 **Nothing here decides that History, Languages or Vocabulary exist, or
 when.** Plan rows 3, 4 and 5 already say they are being built and in what
 order, and that is `/scope`'s to hold. What this record settles is only
@@ -200,6 +253,16 @@ landing. The comp's answer, the History empty state, is right and is plan
 row 5's to deliver: when that row is designed, its record moves the landing
 and amends this one. Nothing here assumes History is built, and nothing
 here quietly becomes wrong when it is.
+
+**Moved 2026-09-04 by the fourth amendment of that day. The landing is History,
+and it is no longer temporary.** Record 0007 designed plan row 5 and did exactly
+what the paragraph above said it would: it moved the landing and amended this
+record, and AC-1 was reworded with it. The comp's answer turned out to be right,
+which is the whole reason this was written as a placeholder rather than as a
+choice. Two things that were true of the old landing are now true of the new one
+and are worth carrying: the dashboard still does not remember which section you
+were last on, and the landing is still a fixed value in `rail.rs` rather than a
+stored one.
 
 **The dashboard does not remember which section you were last on.** It
 opens on the landing destination every time. Record 0002's AC-19 and AC-21
@@ -442,9 +505,9 @@ the same file, the way the dictate feature's store does beside sign in's.
 |---|---|---|
 | The signed in account id | AC-1, AC-4, AC-7 | The Clerk session held in the Rust core, per record 0003. Never passed in from the interface. |
 | Whether the dashboard may be shown at all | AC-1, AC-7 | Two things Rust already knows: the auth state from record 0003, and the presence of a `deepgram_credential` row for the account, which is record 0002's own source for whether a key exists. |
-| Which sections the rail holds | AC-2 | This record. A fixed list, one entry per feature that is built: today Settings alone, with Dictation, Languages, Vocabulary and Transcription beneath it, in that order, which is the comp's. Handed to the interface by Rust, never a list the interface holds, for the same reason `get_hotkey` hands out the two hotkeys: a screen must not be able to invent a destination. A section joins the list by an amendment to this record when its own feature record is written. **Languages and Vocabulary joined on 2026-09-04** by the third amendment of that day, for records 0006 and 0005. |
+| Which sections the rail holds | AC-2 | This record. A fixed list, one entry per feature that is built: History first, then Settings with Dictation, Languages, Vocabulary and Transcription beneath it, in that order, which is the comp's. Handed to the interface by Rust, never a list the interface holds, for the same reason `get_hotkey` hands out the two hotkeys: a screen must not be able to invent a destination. A section joins the list by an amendment to this record when its own feature record is written. **Languages and Vocabulary joined on 2026-09-04** by the third amendment of that day, for records 0006 and 0005, and **History joined the same day** by the fourth, for record 0007. |
 | What a person reads for each rail item | AC-2 | `design/registry.md`, which owns wording. Rust hands out identifiers, not labels, exactly as `get_hotkey` hands out stored values and the screen decides what a person reads. |
-| The landing destination | AC-1 | This record. Settings, on its Dictation sub-section. It moves to History when plan row 5 is designed, by an amendment carried in that record and here. |
+| The landing destination | AC-1 | This record. **History, from 2026-09-04**, by the fourth amendment of that day, for record 0007. Until then it was Settings, on its Dictation sub-section, and this row always said it moved to History when plan row 5 was designed. It did, by an amendment carried in that record and here, and AC-1 was reworded with it. |
 | Whether the dashboard remembers the last section | AC-1 | This record. It does not. The landing destination is where it opens, every time. |
 | The dashboard's size on a first ever open | AC-3 | This record. 1200x800 logical pixels, the comp's Surface 2 geometry, centred on the screen holding the focused window and clamped inside its working area. |
 | The smallest the dashboard may be | AC-3, AC-5 | This record. 960x640 logical pixels. Fixed, not a setting. A judgement rather than a measurement; see Still open. |
@@ -643,7 +706,10 @@ Three milestones, each leaving the project working. Record 0002's milestone
   its item. A row that forgets ships a feature nobody can reach.
 - **The landing destination is temporary and nothing enforces that.** If
   plan row 5's record forgets to move it, a person who has History will
-  still land on Settings, and nothing will fail.
+  still land on Settings, and nothing will fail. **Settled 2026-09-04**: record
+  0007 did move it, and the risk this bullet named never landed. What it leaves
+  behind is worth keeping, because the shape recurs: a value written down as
+  temporary is only temporary if something later reads the note.
 - **Two error surfaces are now two windows apart.** A screen on the small
   window cannot show anything about the dashboard's state, or the other way
   round. That is a good boundary, and it is also one more thing to hold in
@@ -697,9 +763,10 @@ Three milestones, each leaving the project working. Record 0002's milestone
 - **What the Transcription section holds beyond the saved key row.** Record
   0002's AC-12 masked row is the only thing that exists there today. Not
   this record's to fill.
-- **The landing destination once History exists.** Plan row 5's record
-  settles it, moves it, and amends this record. Named here so that it is not
-  discovered.
+- ~~**The landing destination once History exists.**~~ **Closed 2026-09-04.**
+  Record 0007 settled it, moved it to History, and amended this record by the
+  fourth amendment of that day, which also reworded AC-1. Naming it here is what
+  stopped it being discovered, which is what this bullet was for.
 - ~~**Whether the dashboard ever needs to listen to a Rust event.**~~
   **Closed 2026-09-03. It does, to two, from the first milestone that has a
   rail.** The offline row has to arrive and go while the dashboard is open,

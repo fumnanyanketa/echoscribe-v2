@@ -15,6 +15,7 @@
 /// would put a nav item on screen that opens nothing, which record 0004's AC-2
 /// forbids, so a new row arrives with its feature and not before.
 const LABEL = {
+  history: "History",
   settings: "Settings",
   "settings.dictation": "Dictation",
   "settings.languages": "Languages",

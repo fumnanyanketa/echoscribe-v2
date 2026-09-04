@@ -1,4 +1,5 @@
 mod dictate;
+mod history;
 mod language;
 mod shell;
 mod sign_in;
@@ -24,6 +25,10 @@ pub fn run() {
             language::init(app)?;
             vocabulary::init(app)?;
             dictate::init(app)?;
+            // After the dictate feature, and the order matters: this one
+            // reads `dictation` and creates nothing, and the dictate feature
+            // is what owns and creates that table (record 0007).
+            history::init(app)?;
             // Last of the three, and the order matters: the shell's table
             // references `account`, which sign-in creates, and it counts rows
             // in `deepgram_credential`, which dictate creates. It is also what
@@ -55,7 +60,8 @@ pub fn run() {
             vocabulary::get_vocabulary,
             vocabulary::add_vocabulary_term,
             vocabulary::remove_vocabulary_term,
-            shell::get_rail
+            shell::get_rail,
+            history::get_history
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
