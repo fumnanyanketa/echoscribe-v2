@@ -251,6 +251,36 @@ mod tests {
         }
     }
 
+    /// A real file on disk carrying the dictate feature's `dictation` table, so
+    /// that closing and reopening can be tested the way a person experiences
+    /// it: an in-memory database cannot be reopened, so nothing else would
+    /// catch this feature failing to find rows that are actually there.
+    fn a_fresh_database_file() -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "echoscribe-history-test-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let conn = Connection::open(&path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE account (id TEXT PRIMARY KEY NOT NULL);
+             INSERT INTO account (id) VALUES ('acct_one'), ('acct_two');
+             CREATE TABLE dictation (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id  TEXT NOT NULL REFERENCES account(id),
+                text        TEXT NOT NULL,
+                started_at  TEXT NOT NULL,
+                duration_ms INTEGER NOT NULL,
+                language    TEXT NOT NULL DEFAULT 'en'
+             );",
+        )
+        .unwrap();
+        path
+    }
+
     fn save(store: &Store, account: &str, text: &str, started_at: &str, language: &str) -> i64 {
         let conn = store.conn.lock().unwrap();
         conn.execute(
@@ -425,7 +455,14 @@ mod tests {
     #[test]
     fn an_underscore_in_a_search_is_searched_for_and_not_used_as_a_wildcard() {
         // covers: AC-5. `_` matches any single character in LIKE, so an
-        // unescaped one would match both rows here.
+        // unescaped one matches every row with a character in that position.
+        //
+        // The second row below is the whole test. It read "the filename"
+        // first, which is one character shorter and so matched the pattern
+        // neither way, and the test therefore still passed with the escaping
+        // deliberately removed. Found on 2026-09-04 by breaking `like_pattern`
+        // on purpose, which is the only thing that finds a test that cannot
+        // fail.
         let store = open_in_memory();
         save(
             &store,
@@ -437,12 +474,13 @@ mod tests {
         save(
             &store,
             "acct_one",
-            "the filename",
+            "the fileXname",
             "2026-09-01T11:00:00Z",
             "en",
         );
         let page = store.page("acct_one", Some("file_name"), None).unwrap();
         assert_eq!(texts(&page), vec!["the file_name"]);
+        assert_eq!(store.count("acct_one", Some("file_name")).unwrap(), 1);
     }
 
     #[test]
@@ -657,6 +695,93 @@ mod tests {
         assert_eq!(texts(&page), vec![chinese, arabic]);
         assert_eq!(page.rows[0].language, "zh");
         assert_eq!(page.rows[1].language, "ar");
+    }
+
+    #[test]
+    fn a_dictation_is_still_there_after_closing_and_reopening_the_app() {
+        // covers: AC-3, which is plan row 5's own `Done when:` line. This is
+        // the one test that goes through a real file rather than memory,
+        // because an in-memory database cannot be reopened and nothing else
+        // would catch this feature failing to find rows that are there.
+        let path = a_fresh_database_file();
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute(
+                "INSERT INTO dictation (account_id, text, started_at, duration_ms, language)
+                 VALUES ('acct_one', 'said before', '2026-09-02T10:00:00Z', 3500, 'en')",
+                [],
+            )
+            .unwrap();
+        }
+
+        {
+            let store = Store::open(&path).expect("first open");
+            let page = store.page("acct_one", None, None).unwrap();
+            assert_eq!(texts(&page), vec!["said before"]);
+        }
+
+        // The app closes and starts again. Nothing was written by this feature
+        // in between, and nothing needs to have been.
+        let store = Store::open(&path).expect("second open");
+        let page = store.page("acct_one", None, None).unwrap();
+        assert_eq!(texts(&page), vec!["said before"]);
+        assert_eq!(page.rows[0].duration_ms, 3500);
+        assert_eq!(store.count("acct_one", None).unwrap(), 1);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn opening_the_file_creates_nothing() {
+        // covers: AC-3, and record 0007's data model. `Store::open` on a file
+        // whose `dictation` table is missing must not conjure one: the dictate
+        // feature owns that schema, and a table created here would be a second
+        // creator with no migration behind it. The failure lands on the read,
+        // which is where the read failure state already goes.
+        let path = std::env::temp_dir().join(format!(
+            "echoscribe-history-empty-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let store = Store::open(&path).expect("opening a bare file is not an error");
+        assert!(
+            store.page("acct_one", None, None).is_err(),
+            "the history store created `dictation` itself. It reads that table \
+             and the dictate feature creates it"
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn a_dictation_finished_just_now_is_there_the_next_time_history_is_read() {
+        // covers: AC-4. The list is what History held when it was opened and
+        // does not refresh itself, so what this promises is that a fresh read
+        // finds a row written after the last one. Nothing is cached here, which
+        // is exactly what makes that true.
+        let store = open_in_memory();
+        save(&store, "acct_one", "before", "2026-09-01T10:00:00Z", "en");
+        let first = store.page("acct_one", None, None).unwrap();
+        assert_eq!(texts(&first), vec!["before"]);
+
+        save(&store, "acct_one", "just now", "2026-09-01T11:00:00Z", "en");
+        let second = store.page("acct_one", None, None).unwrap();
+        assert_eq!(texts(&second), vec!["just now", "before"]);
+        assert_eq!(store.count("acct_one", None).unwrap(), 2);
+    }
+
+    #[test]
+    fn an_empty_history_is_no_rows_rather_than_a_failure() {
+        // covers: AC-8, AC-10. An empty history and an unreadable one are
+        // different things and must never look alike: this is the one the
+        // screen answers with its empty state, and it comes back as success.
+        let store = open_in_memory();
+        let page = store.page("acct_one", None, None).unwrap();
+        assert!(page.rows.is_empty());
+        assert!(!page.has_older);
+        assert_eq!(store.count("acct_one", None).unwrap(), 0);
     }
 
     /// This file's own source, minus its tests.
