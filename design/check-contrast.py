@@ -117,6 +117,21 @@ PAIRS = [
     ("Sound switch track, on", "--color-ink", "--color-surface", "nontext"),
     ("Sound switch knob, on", "--color-surface", "--color-ink", "nontext"),
     ("Sound switch knob, off", "--color-ink-faint", "--color-surface-subtle", "nontext"),
+
+    # The saved Deepgram key on Settings, Transcription (record 0002 AC-12,
+    # AC-34, AC-35). Added 2026-09-04. Its label, mask, fragment, badge, edge
+    # and error line all reuse pairs above, named in the row that draws them.
+    # These five are the ones nothing had measured yet, and four of them are
+    # the light Primary button primitive, which had gone unaudited since it was
+    # registered: the pill, sign in and first run all use the on-dark twin.
+    ("Primary button label", "--color-surface", "--color-ink", "text"),
+    ("Primary button, nothing to do yet", "--color-surface", "--color-ink-faint", "text"),
+    ("Primary button busy, dim end of pulse", "--color-surface", "--color-ink-secondary", "text"),
+    # The paste field on the light surface takes the accent edge that
+    # "Secret field, empty" draws, because a field waiting to be typed into is
+    # the one thing on that surface asking for attention.
+    ("Paste field edge on surface", "--color-accent-on-light", "--color-surface", "nontext"),
+    ("Accent sentence on surface", "--color-accent-on-light", "--color-surface", "text"),
 ]
 
 NEEDED = {"text": 4.5, "large": 3.0, "nontext": 3.0, "decor": 0.0}
