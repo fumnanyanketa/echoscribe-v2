@@ -97,12 +97,17 @@ impl HistoryError {
     }
 }
 
-/// One dictation on the screen (record 0007 AC-2).
+/// One dictation on the screen (record 0007 AC-2, AC-14).
 ///
-/// Five values and no sixth. There is no word count, because no counting rule
-/// this project can apply is true in every language record 0006 offers, and no
-/// source application, because nothing stores one. Both absences are decisions
-/// in record 0007 rather than omissions here.
+/// Six values and no seventh. There is still no source application, because
+/// nothing stores one and record 0007 refuses to start.
+///
+/// The sixth is `characters`, added 2026-09-04 by record 0007's first
+/// amendment. It is a count of characters and not of words: no counting rule
+/// for words is true in every language record 0006 offers, and splitting on
+/// spaces reports one word for a paragraph of Chinese. Record 0005 counts its
+/// vocabulary budget in characters for that same reason and this is its
+/// precedent applied.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DictationView {
     id: i64,
@@ -110,6 +115,18 @@ pub struct DictationView {
     started_at: String,
     duration_ms: i64,
     language: String,
+    /// How many characters were typed, `chars().count()` over `text`, the same
+    /// call `vocabulary::rules` counts with, so this project has one meaning of
+    /// "a character" and not two.
+    ///
+    /// Counted here and never in the interface. JavaScript's `String.length`
+    /// counts UTF-16 code units, so an emoji or anything outside the basic
+    /// range would come out as two there and as one here, and the same
+    /// transcript would carry two different numbers depending on which side of
+    /// the boundary asked. The pill's chip counts the same way off the same
+    /// string while a dictation is running, which is what makes AC-14's "the
+    /// same figure" a fact rather than a hope.
+    characters: i64,
 }
 
 /// What the interface needs to draw the whole screen: one page of dictations,
@@ -187,6 +204,12 @@ pub fn get_history(
             .into_iter()
             .map(|d| DictationView {
                 id: d.id,
+                // Counted before `text` moves, over the whole stored string:
+                // nothing trimmed, no space collapsed, and the joining spaces
+                // record 0002 types between phrases counted like any other
+                // character. The number answers "how much of my document is
+                // this", so it counts what went into the document.
+                characters: d.text.chars().count() as i64,
                 text: d.text,
                 started_at: d.started_at,
                 duration_ms: d.duration_ms,
@@ -301,22 +324,166 @@ mod tests {
     }
 
     #[test]
-    fn the_screen_never_puts_a_transcript_on_the_clipboard() {
-        // covers: AC-13. AGENTS.md's data rules hold transcribed text to two
-        // places, the cursor it was dictated into and the local history, and
-        // record 0002 already read that rule this way when it refused clipboard
-        // paste as a typing mechanism. Record 0007 refuses the Copy action on
-        // those grounds and leaves it for the user to settle. This guard is
-        // what stops it being added quietly in the meantime, because a Copy
-        // button is the single most obvious thing to add to this screen.
-        for forbidden in ["clipboard", "execCommand", "ClipboardItem", "copy("] {
+    fn both_surfaces_word_the_count_the_same_way() {
+        // covers: AC-14, and record 0002's AC-36. One figure reads one way
+        // wherever a person meets it: on a history row, and on the pill's chip
+        // while the dictation that made that row was running.
+        //
+        // There are deliberately two copies of the wording and not a shared
+        // module. AGENTS.md: feature folders do not import from each other, and
+        // something becomes shared only when three features need it, because
+        // two is a coincidence. So the two copies are held together by this
+        // guard instead, which fails the build the day they drift.
+        const PILL: &str = include_str!("../../../src/dictate/pill.js");
+        for wording in ["\"1 character\"", "\" characters\""] {
             assert!(
-                !SCREEN.contains(forbidden),
-                "src/history/history.js reaches for the clipboard ({forbidden}). \
-                 AGENTS.md's data rules forbid it and only the user can lift \
-                 that. A person selects the text and Windows does the copying"
+                SCREEN.contains(wording),
+                "src/history/history.js no longer holds {wording}. The count's \
+                 wording is record 0007's, in its first amendment: the plain \
+                 word in full, singular at one"
+            );
+            assert!(
+                PILL.contains(wording),
+                "src/dictate/pill.js no longer holds {wording}. The pill's chip \
+                 and the history row must word the count the same way, because \
+                 they are the same figure about the same dictation"
             );
         }
+        // Neither surface counts a word, and neither splits a string to try.
+        // The rule is characters, on record 0005's precedent, and the reason is
+        // that splitting on spaces reports one word for a paragraph of Chinese.
+        // These are the shapes a word count is written in, not the word
+        // "words", which is all over the prose in both files.
+        for forbidden in ["1 word\"", " words\"", ".split(", "\\s+", "\\W+"] {
+            for (name, source) in [("history/history.js", SCREEN), ("dictate/pill.js", PILL)] {
+                assert!(
+                    !source.contains(forbidden),
+                    "src/{name} reaches for a word count ({forbidden}). The \
+                     count is characters, counted in Rust: no rule for \
+                     counting words is true in every language record 0006 \
+                     offers"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn neither_surface_counts_the_characters_itself() {
+        // covers: AC-14, and record 0002's AC-36. The number is Rust's, from
+        // `chars().count()`. `String.length` in the web view counts UTF-16 code
+        // units, so an emoji would come out as two there and as one here, and
+        // the same transcript would carry two different numbers depending on
+        // which side of the boundary asked. `Intl.Segmenter` would be a third
+        // answer again, counting graphemes, which record 0007's Still open
+        // holds as the user's decision and not a build's.
+        const PILL: &str = include_str!("../../../src/dictate/pill.js");
+        for forbidden in [
+            "text.length",
+            "transcript.length",
+            "settled.length",
+            "Intl.Segmenter",
+            "Array.from(",
+        ] {
+            for (name, source) in [("history/history.js", SCREEN), ("dictate/pill.js", PILL)] {
+                assert!(
+                    !source.contains(forbidden),
+                    "src/{name} measures a transcript itself ({forbidden}). \
+                     The count comes from Rust: on the row for history, and on \
+                     dictation:text for the pill's chip"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_screen_writes_the_clipboard_in_exactly_one_place() {
+        // covers: AC-13, AC-15. This guard used to forbid the clipboard here
+        // outright. The user lifted that on 2026-09-04, and record 0007's first
+        // amendment writes the reading into AGENTS.md's data rules as a
+        // distinction rather than an exception: the app never routes
+        // transcribed text through a third place of its own accord, and a
+        // person taking their own text at their own request is not the app
+        // routing it. So the ban becomes a count, which is the part that still
+        // has to hold: exactly one write, under one press, and nothing else.
+        //
+        // AC-13 is still what this protects. It promises EchoScribe never puts
+        // a transcript on the clipboard "on its own", and one write behind one
+        // button is not the app acting on its own. A second write anywhere
+        // would be, which is why a second one fails the build.
+        assert_eq!(
+            SCREEN.matches("navigator.clipboard.writeText").count(),
+            1,
+            "src/history/history.js must write the clipboard in exactly one \
+             place, the Copy action. A second one is a data rule question and \
+             not a convenience: AGENTS.md holds transcribed text to the cursor, \
+             the local history, and where the person themselves asks for it"
+        );
+        // Every other route to the clipboard stays shut. These are the ways to
+        // reach it without saying `writeText`, so the count above cannot be
+        // satisfied while a second, quieter write hides behind one of them.
+        for forbidden in [
+            "execCommand",
+            "ClipboardItem",
+            "clipboard.write(",
+            "clipboard.readText",
+            "oncopy",
+            "\"copy\"",
+        ] {
+            assert!(
+                !SCREEN.contains(forbidden),
+                "src/history/history.js reaches for the clipboard another way \
+                 ({forbidden}). There is one route and it is \
+                 navigator.clipboard.writeText behind the Copy action"
+            );
+        }
+    }
+
+    #[test]
+    fn no_other_screen_in_this_app_touches_the_clipboard() {
+        // covers: AC-15's second sentence, "Nothing else in EchoScribe ever
+        // writes to the clipboard". The Copy action is the one place, and the
+        // one place is on this screen. This walks every other interface file
+        // rather than naming them, so a screen added later is covered the day
+        // it arrives and not the day somebody remembers this test.
+        let mut checked = 0;
+        let mut stack = vec![std::path::PathBuf::from("../src")];
+        while let Some(dir) = stack.pop() {
+            let entries = std::fs::read_dir(&dir)
+                .unwrap_or_else(|e| panic!("cannot read {}: {e}", dir.display()));
+            for entry in entries {
+                let path = entry.expect("cannot read an entry").path();
+                if path.is_dir() {
+                    stack.push(path);
+                    continue;
+                }
+                let is_interface = path
+                    .extension()
+                    .is_some_and(|ext| ext == "js" || ext == "html");
+                // The one file allowed to, guarded by the test above.
+                let is_the_history_screen = path.ends_with("history.js");
+                if !is_interface || is_the_history_screen {
+                    continue;
+                }
+                let source = std::fs::read_to_string(&path)
+                    .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+                checked += 1;
+                assert!(
+                    !source.contains("clipboard") && !source.contains("execCommand"),
+                    "{} reaches for the clipboard. EchoScribe writes it in \
+                     exactly one place, the Copy action on a history row, \
+                     where a person asked for their own text. Everywhere \
+                     else, transcribed text goes to the cursor and the local \
+                     history and nowhere else (AGENTS.md's data rules; record \
+                     0002's clipboard refusal of 2026-08-31, which stands)",
+                    path.display()
+                );
+            }
+        }
+        // A walk that found nothing would pass silently forever.
+        assert!(
+            checked > 5,
+            "expected to walk the interface files and found {checked}"
+        );
     }
 
     #[test]

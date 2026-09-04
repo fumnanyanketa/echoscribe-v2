@@ -44,9 +44,11 @@ const PILL_W: f64 = 472.0;
 pub(super) const PILL_H: f64 = 52.0;
 /// The counter band beneath the shell: a `--space-3` (12px) gap plus one chip
 /// row. Part of the fixed footprint from the first moment, so the elapsed and
-/// word count chip's arrival after 20 seconds resizes nothing and moves nothing
-/// (design/registry.md, "Elapsed and word count"). The chip itself is not built
-/// yet; the band is reserved so the footprint never changes when it is.
+/// count chip's arrival after 20 seconds resizes nothing and moves nothing
+/// (design/registry.md, "Elapsed and word count"; record 0002 AC-36). The chip
+/// was built 2026-09-04 into this reserved band, and `pill.css` positions it
+/// against these constants: 16px from the right is the shell's right edge, and
+/// 80px from the top is `PAD` plus `PILL_H` plus the band's 12px gap.
 const COUNTER_BAND_H: f64 = 34.0;
 /// The grip: the leftmost part of the pill, full height, and the only part that
 /// answers the mouse (design/design-system.md, record 0002).

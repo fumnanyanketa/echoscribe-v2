@@ -1,7 +1,7 @@
 // The history screen: what you have said before (record 0007;
 // design/registry.md "Search field", "Result count", "Dictation row",
-// "Language tag", "Older dictations action", "History empty state",
-// "History, could not be read", "Setting error line").
+// "Language tag", "Copy action", "Older dictations action", "History empty
+// state", "History, could not be read", "Setting error line").
 //
 // It is the white reading surface of the dashboard, at History, and it is where
 // the dashboard lands. Not a dark interruption: nothing here has gone wrong.
@@ -9,6 +9,16 @@
 // One command and nothing else, `get_history`, plus the dictate feature's
 // existing `get_hotkey` for the empty state's keys alone. It emits nothing and
 // listens to nothing.
+//
+// **This file holds the only clipboard write in EchoScribe**, in `copyAction`
+// below, and it is there because a person pressed a button asking for their own
+// words. AGENTS.md's data rules hold transcribed text to the cursor it was
+// dictated into and the local history; the reading that allows this one, given
+// by the user on 2026-09-04 and written into record 0007's first amendment, is
+// a distinction inside that rule rather than an exception to it. Two Rust
+// guards keep it to one: one counts the writes in this file, and one walks
+// every other interface file and fails the build if any of them mentions the
+// clipboard at all.
 //
 // **Every string from a dictation reaches this page as textContent and never as
 // markup.** A transcription is text from outside the program (AGENTS.md rule 7)
@@ -315,14 +325,78 @@ function dictationRow(row) {
   meta.append(
     withText(el("span", "history__when"), whenOf(row.started_at)),
     withText(el("span", "history__how-long"), howLongOf(row.duration_ms)),
+    // Beside the duration, which is where the comp puts it, and it counts
+    // characters rather than words (record 0007, first amendment). The number
+    // itself is Rust's: this side never counts, because `String.length` here
+    // counts UTF-16 code units and would disagree with Rust for an emoji.
+    withText(el("span", "history__count"), countOf(row.characters)),
     // design/registry.md "Language tag": mono, a literal code, on every row
     // including English ones. The code the dictation was asked with, never
     // what Deepgram detected.
     withText(el("span", "history__language"), row.language),
   );
 
-  item.append(text, meta);
+  item.append(text, meta, copyAction(row.text));
   return item;
+}
+
+/** The one action on a row (record 0007 AC-15, its first amendment).
+ *
+ *  It puts the transcript on the clipboard and nothing else with it: no time,
+ *  no duration, no language. AGENTS.md's data rules hold transcribed text to
+ *  the cursor it was dictated into and the local history, and the reading that
+ *  allows this one is a distinction inside that rule and not an exception to
+ *  it: the app never routes a person's words through a third place of its own
+ *  accord, and a person taking their own text at their own request is not the
+ *  app routing it. Record 0002's refusal of clipboard paste as a typing
+ *  mechanism stands, and is on the other side of exactly that line.
+ *
+ *  This is the only place in EchoScribe that writes the clipboard, and two
+ *  Rust guards hold it there: one that this file writes it exactly once, and
+ *  one that walks every other interface file and fails the build if any of
+ *  them so much as mentions it.
+ *
+ *  design/registry.md's `Secondary button`, the primitive this screen already
+ *  uses for the older action, which is the user's choice on 2026-09-04 over a
+ *  new component. */
+function copyAction(transcript) {
+  const button = withText(el("button", "history__copy"), "Copy");
+  button.type = "button";
+  button.addEventListener("click", () => {
+    // A press that fails says nothing, deliberately. The registry draws no
+    // error state on a row, the whole screen has one error line and it belongs
+    // to the read, and AC-13's way out is still there: the text is selectable,
+    // so a person can take it by hand. Inventing a sentence here would be
+    // wording with no source.
+    navigator.clipboard.writeText(transcript).then(() => {
+      copied(button);
+    }, noop);
+  });
+  return button;
+}
+
+/** The answer to a press, on the button itself rather than somewhere else on
+ *  the screen, because that is where the press was. A clipboard write is
+ *  otherwise silent, so a press with no answer cannot be told from a button
+ *  that did nothing.
+ *
+ *  2 seconds is not chosen here: it is the hold record 0002's eleventh
+ *  amendment already fixed for the pill's last words, reused rather than
+ *  reinvented. A second press inside the two seconds restarts the two seconds
+ *  rather than stacking a second timer. */
+function copied(button) {
+  button.textContent = "Copied";
+  clearTimeout(copiedTimers.get(button));
+  copiedTimers.set(
+    button,
+    setTimeout(() => {
+      // The row may have been replaced by a search or a new page while the two
+      // seconds ran. Setting the text on a button nobody can see is harmless
+      // and the timer is dropped either way.
+      button.textContent = "Copy";
+      copiedTimers.delete(button);
+    }, COPIED_MS),
+  );
 }
 
 /** design/registry.md "Older dictations action": the Secondary button
@@ -427,7 +501,18 @@ async function fillKeys(ctx, keys) {
   );
 }
 
-/* ---- What a person reads for a time and a duration ------------------- */
+/** How long the Copy button reads "Copied" before it reads "Copy" again.
+ *  Record 0002's eleventh amendment's hold, in milliseconds. */
+const COPIED_MS = 2000;
+
+/** The running "Copied" timer per button, so a second press restarts the hold
+ *  instead of leaving two timers racing to reset one label. Keyed by the
+ *  element, so a row that leaves the screen takes its entry with it. */
+const copiedTimers = new WeakMap();
+
+function noop() {}
+
+/* ---- What a person reads for a time, a duration and a count ---------- */
 
 /** The machine's own conventions, from the browser, in its locale and time
  *  zone. Only this side knows either, and a format invented in a record would
@@ -446,6 +531,22 @@ function whenOf(startedAt) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/** The count in the plain word, in full, and singular at one (record 0007,
+ *  first amendment). The number is Rust's `chars().count()` and is only
+ *  formatted here.
+ *
+ *  Not the comp's abbreviated "84 w": this project writes plain words and the
+ *  row has the room. Not a count of words at all, which is the decision
+ *  itself: splitting on spaces reports one word for a paragraph of Chinese.
+ *
+ *  A row from a store that somehow has no count reads as nothing rather than
+ *  as "undefined characters", on the same rule the rest of this screen
+ *  applies to a value it does not understand. */
+function countOf(characters) {
+  if (!Number.isFinite(characters)) return "";
+  return characters === 1 ? "1 character" : characters + " characters";
 }
 
 /** Whole seconds below a minute, minutes and seconds above it (record 0007).

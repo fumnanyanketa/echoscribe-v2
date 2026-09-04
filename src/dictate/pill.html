@@ -70,8 +70,23 @@
       </div>
     </div>
     <!-- The counter band: part of the fixed footprint from the first moment,
-         empty until the elapsed and word count chip is built
-         (design/registry.md "Elapsed and word count"). Reserved by the window's
-         own height in pill_window.rs; nothing to draw yet. -->
+         reserved by the window's own height in pill_window.rs, so the chip's
+         arrival after 20 seconds resizes nothing and moves nothing
+         (design/registry.md "Elapsed and word count"; record 0002 AC-36).
+
+         How long, then how many characters, in the comp's own shape with its
+         middle dot. Characters and not words, because no rule for counting
+         words is true in every language this app offers (record 0002's
+         twentieth amendment, record 0007's first).
+
+         Hidden from screen readers, on the meter's reasoning rather than a new
+         one: a clock read out once a second is unusable, and the count is a
+         fact about words that are already landing at the person's own cursor.
+         Neither figure is the only signal for anything. -->
+    <div class="pill-chip" data-shown="false" aria-hidden="true">
+      <span class="pill-chip__elapsed"></span>
+      <span class="pill-chip__dot">·</span>
+      <span class="pill-chip__count"></span>
+    </div>
   </body>
 </html>

@@ -588,14 +588,30 @@ fn on_response(
             // AC-17: what reached the cursor, and only that, is what the row
             // holds. Appended after the keystrokes landed rather than before,
             // so nothing refused is ever in it.
+            //
+            // The count for the pill's chip is read off the same string in the
+            // same breath (AC-36, record 0002's twentieth amendment). It is
+            // therefore a count of exactly what reached the cursor, and it is
+            // the same string `save_dictation` writes, so the running figure on
+            // the chip and the final figure on record 0007's history row are
+            // two readings of one string and cannot disagree. `chars().count()`
+            // is the call `vocabulary::rules` counts with, so this project has
+            // one meaning of "a character". A lock this side could not take
+            // sends no count rather than a wrong one, and the chip keeps the
+            // last figure it had.
+            let mut characters = None;
             if let Ok(mut typed) = typed.lock() {
                 typed.push_str(&to_type);
+                characters = Some(typed.chars().count());
             }
             // Broadcast rather than sent to the pill alone. Record 0002's
             // clearing table gives a spent allowance one proof that it is over,
             // the first finalised words, and the window holding that message
             // has to receive them.
-            let _ = app.emit("dictation:text", json!({ "text": text }));
+            let _ = app.emit(
+                "dictation:text",
+                json!({ "text": text, "characters": characters }),
+            );
             None
         }
         Typed::RefusedPasswordField => {

@@ -11,6 +11,11 @@
 // between 0 and 1 saying how loud the last 60 ms were, and nothing else. There
 // is no way to hear, save or reconstruct anything from it.
 //
+// One thing here changes without an event arriving, and it is the only one: the
+// chip's clock, which ticks once a second while a dictation is open. It is
+// stopped by every ending and cleared on close, so there is one path out and
+// not two.
+//
 // The transcript is drawn and then gone (record 0002 AC-33, and the Risk
 // section). The grey interim line is never typed, never stored, never logged
 // and never read by anything but this page; it lives in these two spans and
@@ -27,6 +32,9 @@ const finalSpan = document.querySelector(".pill__final");
 const interimSpan = document.querySelector(".pill__interim");
 const faultCode = document.querySelector(".pill__fault-code");
 const faultText = document.querySelector(".pill__fault-text");
+const chip = document.querySelector(".pill-chip");
+const chipElapsed = document.querySelector(".pill-chip__elapsed");
+const chipCount = document.querySelector(".pill-chip__count");
 
 // Silence is a thin flat line rather than an empty gap: an instrument reading
 // zero, not a broken one (design/design-system.md, "flat at silence").
@@ -64,7 +72,77 @@ function drawTranscript() {
   line.dataset.overflowing = String(line.scrollWidth > line.clientWidth + 1);
 }
 
+/* ---- The elapsed and count chip (AC-36) ------------------------------
+ *
+ * design/registry.md's `Elapsed and word count`, in the band already reserved
+ * beneath the shell. Two figures: how long this dictation has been going, and
+ * how many characters have been typed.
+ *
+ * The count is Rust's and arrives on `dictation:text`. It is a count of
+ * characters and not of words, because no rule for counting words is true in
+ * every language this app offers, and it is taken from the same string that
+ * becomes the history row, so the figure here and the figure History shows
+ * afterwards cannot disagree (record 0002's twentieth amendment; record 0007's
+ * first). It counts finalised wording only: the grey interim tail is revised
+ * as Deepgram changes its mind, so a count including it would fall while a
+ * person is still speaking.
+ *
+ * The clock is this page's, and it is the one thing here that changes without
+ * an event arriving. A clock is not a decision and a per second event from
+ * Rust would be traffic for a value this page can read off its own wall. It
+ * ticks from `dictation:opened`, stops at whatever ends the dictation, and is
+ * cleared on `dictation:closed`. */
+
+/** After how long the chip appears (design/registry.md). Before this, the
+ *  band is simply empty, which it already was. */
+const CHIP_AFTER_MS = 20000;
+
+let startedAt = 0;
+let ticking = 0;
+
+/** `M:SS`, the comp's own shape. There is no hour case to write: AC-8 closes a
+ *  dictation at 5 minutes, so the largest figure this can show is 5:00. */
+function elapsedOf(ms) {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  const rest = seconds % 60;
+  return Math.floor(seconds / 60) + ":" + String(rest).padStart(2, "0");
+}
+
+function tick() {
+  const ms = Date.now() - startedAt;
+  // Measured against the clock rather than counted up per interval, so a
+  // delayed timer shows the right time rather than a slow one.
+  if (ms < CHIP_AFTER_MS) return;
+  chipElapsed.textContent = elapsedOf(ms);
+  chip.dataset.shown = "true";
+}
+
+/** Every ending freezes the chip where it is. The pill holds its last words
+ *  for two seconds under record 0002's eleventh amendment and the chip is part
+ *  of what is held: the dictation is over, and a clock still running under a
+ *  finished transcript would be the pill asserting something false. */
+function freezeChip() {
+  clearInterval(ticking);
+  ticking = 0;
+}
+
+function clearChip() {
+  freezeChip();
+  chip.dataset.shown = "false";
+  chipElapsed.textContent = "";
+  chipCount.textContent = "";
+  startedAt = 0;
+}
+
 event.listen("dictation:opened", () => {
+  clearChip();
+  // Nothing has been typed yet, and the chip says so rather than leaving a
+  // dangling separator: a dictation can reach 20 seconds with no finalised
+  // wording at all, and "0:20 · " with nothing after it would look broken
+  // where "0 characters" is simply true.
+  chipCount.textContent = "0 characters";
+  startedAt = Date.now();
+  ticking = setInterval(tick, 1000);
   flatten();
   settled = "";
   finalSpan.textContent = "";
@@ -94,6 +172,19 @@ event.listen("dictation:text", ({ payload }) => {
   interimSpan.textContent = "";
   pill.dataset.state = "words";
   drawTranscript();
+  // The count is Rust's, off the string it is about to save. Nothing is counted
+  // here: `String.length` counts UTF-16 code units, so an emoji would come out
+  // as two here and as one in the history row, for the same dictation. A
+  // payload without a usable number leaves the last figure standing rather
+  // than replacing it with a guess.
+  // The type and not `Number()`: Rust sends null for the one case where it
+  // could not take the lock to count, and `Number(null)` is 0, which would
+  // print "0 characters" over a dictation that has words in it.
+  const characters = payload?.characters;
+  if (typeof characters === "number" && Number.isFinite(characters)) {
+    chipCount.textContent =
+      characters === 1 ? "1 character" : characters + " characters";
+  }
 });
 
 // The wording Deepgram has not yet settled: grey, dotted, replaced as it goes,
@@ -114,6 +205,7 @@ function showFault(code, message) {
   faultCode.textContent = code;
   faultText.textContent = message;
   pill.dataset.state = "fault";
+  freezeChip();
 }
 
 // Typing was refused (record 0002 AC-20). The payload carries the fixed code
@@ -137,12 +229,14 @@ event.listen("dictation:error", ({ payload }) => {
     label.textContent = "MIC STOPPED";
     flatten();
     pill.dataset.state = "stopped";
+    freezeChip();
     return;
   }
   showFault(String(payload?.code || ""), String(payload?.message || ""));
 });
 
 event.listen("dictation:closed", () => {
+  clearChip();
   pill.dataset.state = "idle";
   label.textContent = "MIC OPEN";
   flatten();

@@ -16,16 +16,56 @@
  *
  * The window behind this page is larger than the pill, with a transparent
  * margin for the shadow, and taller by the counter band beneath the shell,
- * which is part of the fixed footprint and empty until the elapsed and word
- * count chip is built. All values come from styles.css; the sizes here match
- * the constants in src-tauri/src/dictate/pill_window.rs and change together
- * with them.
+ * which is part of the fixed footprint and holds the elapsed and count chip.
+ * All values come from styles.css; the sizes here match the constants in
+ * src-tauri/src/dictate/pill_window.rs and change together with them.
  */
 
 .pill-body {
   margin: 0;
   background: transparent;
   overflow: hidden;
+}
+
+/* design/registry.md "Elapsed and word count": the comp's chip, in the band
+   below the shell, right aligned to the shell's right edge.
+
+   Its place is fixed rather than laid out, for the same reason the pill's is:
+   this window is one geometry for its whole life and the band exists whether
+   or not the chip is in it, so the chip appearing can never move anything.
+   16px from the right is the shell's right edge, because the shell is 472 wide
+   inside a 504 window with a 16px transparent margin each side, and 80px from
+   the top is the shell's 52px plus the band's 12px gap.
+
+   The audited "Elapsed and word count chip" pair, ink on the pill's own fill.
+   Mono because both halves are figures a person reads rather than prose, which
+   is this system's test for mono. `tabular-nums` so the clock does not shuffle
+   sideways every second as its digits change. */
+.pill-chip {
+  position: fixed;
+  right: 16px; /* pill_window.rs PAD: the shell's right edge */
+  top: 80px; /* PAD + PILL_H + the band's --space-3 gap */
+  display: flex;
+  gap: 0.4em;
+  align-items: baseline;
+  padding: 3px 9px;
+  border: var(--border-width) solid var(--color-pill-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-pill);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-mono);
+  color: var(--color-ink-on-dark-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Before 20 seconds, and on a dictation that never gets there. Not visibility
+   or opacity: the band is empty, and an invisible chip in it would still be a
+   thing a mouse could find. The band's height is the window's and does not
+   depend on this. */
+.pill-chip[data-shown="false"] {
+  display: none;
 }
 
 .pill {
