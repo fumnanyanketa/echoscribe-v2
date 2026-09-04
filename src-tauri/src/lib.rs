@@ -1,6 +1,8 @@
 mod dictate;
+mod language;
 mod shell;
 mod sign_in;
+mod vocabulary;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,6 +16,13 @@ pub fn run() {
         .device_event_filter(tauri::DeviceEventFilter::Always)
         .setup(|app| {
             sign_in::init(app)?;
+            // Both of these open their own connection to the same file and
+            // both reference `account`, so they follow sign-in. Both are read
+            // by the dictate feature at the moment a dictation starts, through
+            // one named function each, so they are up before it can be asked
+            // (records 0005 and 0006).
+            language::init(app)?;
+            vocabulary::init(app)?;
             dictate::init(app)?;
             // Last of the three, and the order matters: the shell's table
             // references `account`, which sign-in creates, and it counts rows
@@ -41,6 +50,11 @@ pub fn run() {
             dictate::settings::set_hotkey,
             dictate::settings::get_dictation_sounds,
             dictate::settings::set_dictation_sounds,
+            language::get_transcription_language,
+            language::set_transcription_language,
+            vocabulary::get_vocabulary,
+            vocabulary::add_vocabulary_term,
+            vocabulary::remove_vocabulary_term,
             shell::get_rail
         ])
         .run(tauri::generate_context!())

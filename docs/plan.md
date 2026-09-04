@@ -14,8 +14,8 @@ before any one piece is made great.
 |---|---|---|---|---|
 | 1 | Sign in | 1 | heavy | in progress |
 | 2 | Dictate with a hotkey | 1 | heavy | in progress |
-| 3 | Teach it your words | 2 | medium | planned |
-| 4 | Speak in your language | 2 | medium | planned |
+| 3 | Teach it your words | 2 | medium | in progress |
+| 4 | Speak in your language | 2 | medium | in progress |
 | 5 | See what you've said before | 2 | medium | planned |
 
 ---
@@ -73,7 +73,7 @@ The three things confirmed as being built, not cut, on top of the
 working core loop. Order among these three is a judgment call, not a
 dependency — any could move first.
 
-### 3. Teach it your words · needs a decision · medium
+### 3. Teach it your words · in progress · medium
 
 Accuracy is the one thing EchoScribe has to get right. This lets you
 fix words or names it keeps getting wrong.
@@ -81,14 +81,20 @@ fix words or names it keeps getting wrong.
 Done when: I add a word or name it mis-transcribes, and the next time I
 say it, it comes out right.
 
-- [ ] Design it: /architect teach it your words
+- [x] Design it: [0005-teach-it-your-words](decisions/0005-teach-it-your-words.md), 14 acceptance criteria · designed 2026-09-04, in one session with plan row 4, while the user was away and under their standing instruction to decide anything with no named source and write the reasoning down. Eleven such decisions are listed at the end of the record under "Decided on the user's behalf". The load-bearing one is the budget: Deepgram's `keyterm` accepts 500 tokens per request and returns an error above that, and this project cannot count Deepgram's tokens, so the list is capped at **400 characters in total with each word up to 30**, because no tokeniser ever emits more tokens than there are characters, which makes the request provably inside the limit in every script. A count of words would have been safe in English and would have broken dictation in Chinese. It amends record 0002 (eighteenth, the stream now carries the terms as `keyterm`) and record 0004 (the rail gains `settings.vocabulary`)
+- [x] The store and the rules, with no screen · milestone 1 in the record · AC-5 to AC-8, AC-12, and the Rust half of AC-2, AC-9 and AC-11 · built 2026-09-04. `src-tauri/src/vocabulary/rules.rs` (new: the trim, the character rules, the case-insensitive duplicate check, the budget arithmetic, and `sendable`, with 15 tests), `src-tauri/src/vocabulary/store.rs` (new: the `vocabulary_term` table, its two indexes including the `NOCASE` unique one, and 11 tests), `src-tauri/src/vocabulary/mod.rs` (new: the three commands, the seven sentences, and 8 guards), `src-tauri/src/lib.rs`. Awaiting the user's own drive and then `/check verify`
+- [x] The terms reaching Deepgram · milestone 2 in the record · AC-3, AC-10, AC-14 · built 2026-09-04. `src-tauri/src/vocabulary/mod.rs` (`terms_for_dictation`, the one door), `src-tauri/src/dictate/transcribe.rs` (the new `Asked` struct, which the first connection and the one reconnect both read, so a dictation cannot change its terms halfway through), `src-tauri/src/dictate/mod.rs` (both reads, before the microphone opens). Awaiting `/check verify`: the live proof is a name Deepgram reliably gets wrong, added, then said again, which is plan row 3's own Done-when
+- [x] The screen, and the rail item · milestone 3 in the record · AC-1, AC-4, AC-13, and the visible half of AC-2, AC-9 and AC-11 · built 2026-09-04. `src/vocabulary/vocabulary.js` and `.css` (new: the add field with its unusable-while-empty action, the list with a Remove per row, the room left in both its states, the empty state, the read failure state and the caption), `src-tauri/src/shell/rail.rs` and `src/shell/rail.js` (the `settings.vocabulary` destination and its wording), `src/shell/dashboard.js` and `.html`. Awaiting the user's own drive and then `/check verify`
 
-### 4. Speak in your language · needs a decision · medium
+### 4. Speak in your language · in progress · medium
 
 Done when: I pick a language other than English, speak, and the text
 comes out correctly in that language.
 
-- [ ] Design it: /architect speak in your language
+- [x] Design it: [0006-speak-in-your-language](decisions/0006-speak-in-your-language.md), 12 acceptance criteria · designed 2026-09-04, in the same session as plan row 3 and under the same standing instruction; fifteen decisions made on the user's behalf are listed at the end of the record. The shape decision is **one chosen language, not a list with a default marker**, which is what `design/registry.md` draws: the non-default rows in that drawing have nowhere to go, because switching mid-dictation would need a control on the pill that nothing draws and AC-30 forbids, or a second hotkey that AC-22 refuses. The person who really does switch is served by Deepgram's own `multi` model as one row in the list. The list is **every language Deepgram's `nova-3` table names, one row each, plus Multilingual: 64 entries**, with a filter over it, and **English stays the default** so nothing changes for anybody until they choose. It closes record 0002's last Still open bullet and amends that record (nineteenth, the chosen language on the stream, `dictation.language`, `save_dictation`'s new parameter and `dir="auto"` on the pill's transcript line) and record 0004 (the rail gains `settings.languages`)
+- [x] The store, the fixed list and the two commands · milestone 1 in the record · AC-8, AC-10, and the Rust half of AC-1, AC-2 and AC-9 · built 2026-09-04. `src-tauri/src/language/catalog.rs` (new: the 64 codes, the strict read for a write and the lenient read for a stored value, and 8 tests including one that every code is a plain language tag and nothing that could add a parameter to a Deepgram request), `src-tauri/src/language/store.rs` (new: the `transcription_language` table and 7 tests), `src-tauri/src/language/mod.rs` (new: the two commands, the two sentences, and 9 guards, two of which fail the build if the 64 codes and the screen's 64 names drift apart in either direction), `src-tauri/src/lib.rs`. Awaiting the user's own drive and then `/check verify`
+- [x] The language reaching Deepgram, and the history column · milestone 2 in the record · AC-3, AC-4, AC-7, AC-12 · built 2026-09-04. `src-tauri/src/language/mod.rs` (`language_for_dictation`, the one door), `src-tauri/src/dictate/transcribe.rs` (the chosen language on the first connection and on the reconnect, replacing the hard-coded English), `src-tauri/src/dictate/store.rs` (the `dictation.language` column, added by a guarded `ALTER` because SQLite has no `ADD COLUMN IF NOT EXISTS` and this is the first column this project has added to an existing table, plus `save_dictation`'s new parameter and 2 new tests), `src-tauri/src/dictate/mod.rs` (`Live` and `Finished` carry the language the stream was opened with, rather than reading it again at the close). Awaiting `/check verify`: AC-3 stands for 64 choices, so the evidence has to name which language it was proved in
+- [x] The screen and the rail item · milestone 3 in the record · AC-5, AC-6, AC-11, and the visible half of AC-1, AC-2 and AC-9 · built 2026-09-04. `src/language/language.js` and `.css` (new: the 64 rows as one radio group sorted by the name a person reads, the `CHOSEN` badge, the filter with its live match count and its no-matches state, the Multilingual row's second line, the caption and the read failure state), `src/dictate/pill.html` (`dir="auto"` on the transcript line and both halves of it, which is AC-11's pill half), `src-tauri/src/shell/rail.rs` and `src/shell/rail.js` (the `settings.languages` destination and its wording), `src/shell/dashboard.js` and `.html`. Awaiting the user's own drive and then `/check verify`. **AC-11's typed half needs nothing and was checked by reading rather than building**: `typing.rs` already sends each UTF-16 unit through `KEYEVENTF_UNICODE` in order and derives no key code from a character, so it is script independent by construction
 
 ### 5. See what you've said before · needs a decision · medium
 

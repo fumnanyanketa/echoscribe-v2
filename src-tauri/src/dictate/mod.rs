@@ -156,6 +156,12 @@ struct Live {
     /// The same moment, on the machine's own clock, which is what the duration
     /// is measured from. A wall clock can jump; this cannot.
     opened_at: Instant,
+    /// The language this dictation was actually opened with (record 0006 AC-7,
+    /// carried here by record 0002's nineteenth amendment). Held rather than
+    /// read again at the close, for the same reason `account_id` is: the row
+    /// records what this dictation asked for, and a person who changes their
+    /// language while dictating changes the next one, not this one.
+    language: &'static str,
 }
 
 /// A dictation that has ended, ready to be written down (record 0002 AC-17).
@@ -166,6 +172,8 @@ struct Finished {
     text: String,
     started_at: String,
     duration_ms: i64,
+    /// The language the stream was opened with, on its way to the history row.
+    language: &'static str,
 }
 
 impl Live {
@@ -184,6 +192,7 @@ impl Live {
             // AC-17: how long it lasted is the close minus the open.
             duration_ms: self.opened_at.elapsed().as_millis() as i64,
             started_at: self.started_at,
+            language: self.language,
         }
     }
 }
@@ -386,6 +395,23 @@ fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), StartErr
         return Ok(());
     }
 
+    // What this dictation will ask Deepgram for, beyond this record's fixed
+    // model, punctuation and interim results. Both come from another feature,
+    // each through one named read only function, and **both are read here,
+    // once, before the microphone opens**: record 0006's AC-4 and record 0005's
+    // AC-3 both promise that a change made while dictating applies to the next
+    // dictation and not this one, and reading once is what makes that
+    // structural rather than a matter of timing. The same two values are
+    // re-sent by the one reconnect attempt AC-14 allows.
+    //
+    // Neither read can fail in a way that stops a dictation. The language falls
+    // back to English, which is exactly what this record had fixed in code
+    // before record 0006, and the terms fall back to none, which is the
+    // accuracy this feature had before record 0005. So a settings problem
+    // costs accuracy and never the microphone.
+    let language = crate::language::language_for_dictation(app);
+    let keyterms = crate::vocabulary::terms_for_dictation(app);
+
     // AC-8: the silence cap is armed from here on. Milestone 2 built it unarmed
     // because nothing could honestly report speech; Deepgram's final results
     // can, and `transcribe` calls `speech_heard` on every one of them. Shared
@@ -426,7 +452,15 @@ fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), StartErr
     let session = match transcribe::start(
         app.clone(),
         key,
-        mic.sample_rate(),
+        // Assembled here rather than above, because the sample rate is only
+        // known once the device has actually opened. The other two were read
+        // before it, which is the part that matters: neither can change between
+        // the read and the stream.
+        transcribe::Asked {
+            language,
+            keyterms,
+            sample_rate: mic.sample_rate(),
+        },
         deadlines,
         Box::new(move |ended| {
             // Everything that changes what this feature is doing goes through
@@ -452,6 +486,7 @@ fn try_start(app: &AppHandle, commands: &Sender<Command>) -> Result<(), StartErr
         account_id,
         started_at,
         opened_at,
+        language,
     });
     pill_window::open(app, &setting);
     sound::play_open(setting.sounds_enabled);
@@ -474,6 +509,7 @@ fn record(state: &Dictate, finished: Finished) {
         &finished.text,
         &finished.started_at,
         finished.duration_ms,
+        finished.language,
     ) {
         eprintln!("dictate: could not save this dictation to the history: {e}");
     }

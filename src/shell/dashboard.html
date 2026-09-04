@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="../styles.css" />
     <link rel="stylesheet" href="dashboard.css" />
-    <!-- The two screens the surface below holds, at Settings, Dictation and
-         Settings, Transcription. Linked here rather than injected by either
-         screen, because this page is the only one that mounts them. -->
+    <!-- The four screens the surface below holds, one per sub-section of
+         Settings: Dictation, Languages, Vocabulary and Transcription. Linked
+         here rather than injected by any of them, because this page is the
+         only one that mounts them. Each lives in its own feature's folder. -->
     <link rel="stylesheet" href="../dictate/dictation-settings.css" />
+    <link rel="stylesheet" href="../language/language.css" />
+    <link rel="stylesheet" href="../vocabulary/vocabulary.css" />
     <link rel="stylesheet" href="../dictate/transcription-settings.css" />
     <title>EchoScribe</title>
     <script type="module" src="dashboard.js"></script>
@@ -26,8 +29,11 @@
       <!-- The white reading surface. dashboard.js mounts whichever screen the
            rail's chosen destination has, and empties it again on the way out.
            Every destination the rail hands out now has one, so record 0004's
-           AC-2 holds for all three: Settings, Settings Dictation and Settings
-           Transcription. A destination with no screen would leave the surface
+           AC-2 holds for all five: Settings, and its Dictation, Languages,
+           Vocabulary and Transcription sub-sections. Languages and Vocabulary
+           joined on 2026-09-04, for records 0006 and 0005, and neither
+           identifier was added to the rail before its screen existed. A
+           destination with no screen would leave the surface
            empty, because design/registry.md draws no component for a surface
            waiting for its screen and a build may not invent one. -->
       <main class="surface" id="surface" tabindex="-1"></main>

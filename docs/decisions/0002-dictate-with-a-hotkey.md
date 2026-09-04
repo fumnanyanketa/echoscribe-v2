@@ -328,6 +328,67 @@ where they are standing the key is removed and the next save under the same name
 overwrites the leftover. This is AGENTS.md standing rule 14 in its ordinary
 shape: the return value said the work was not finished, and the effect the rest
 of the app depends on had already landed.
+**Amended:** 2026-09-04, the eighteenth, by `/architect`, for plan row 3.
+Record 0005, "teach it your words", is written, and it changes exactly one
+thing here: what is asked of Deepgram on the stream. The Value sourcing row
+"What is asked of Deepgram on the stream" said `nova-3`, English, punctuation
+on, interim results on. It now also carries that account's custom vocabulary as
+Deepgram's `keyterm` parameter, read once in Rust at the moment the microphone
+opens and reused by the one reconnect attempt AC-14 allows, so a dictation
+cannot change its terms halfway through. The terms come from record 0005 and
+belong to it: their budget, their rules, their sentences and the screen a person
+types them into are all that record's, and this record neither stores them nor
+holds any wording for them. **`transcribe.rs` gains one named read from another
+feature and nothing else**, which is the direction record 0004 already
+established when the shell read this feature's error classifier through one
+named function. No criterion is renumbered, reworded or added and the count
+stays at 35: nothing this record promised a person has changed, and record
+0005's own fourteen criteria carry everything new. Nothing in
+`src-tauri/capabilities/` is touched, no command is added here, and no event is
+added in either direction.
+**Amended:** 2026-09-04, the nineteenth, by `/architect`, for plan row 4.
+Record 0006, "speak in your language", is written, and it closes this record's
+last Still open bullet, the one that said the language "is fixed to English
+here. Plan row 4 owns making it a choice, and will add a language field to
+`dictation`." Both halves land now, and this is the amendment that carries them.
+
+1. **The language is no longer a constant.** The Value sourcing row "What is
+   asked of Deepgram on the stream" now names the account's chosen language
+   instead of English, read once in Rust at the moment the microphone opens,
+   through one named function in record 0006's feature, and reused by the one
+   reconnect attempt. English is still what a person gets until they choose, so
+   nothing about this record's behaviour changes for anybody who does nothing.
+2. **`dictation` gains a `language` column**, exactly as this record's Still
+   open promised. Text, required, defaulting to `en`, holding the code the
+   dictation was asked with, which is `multi` when Multilingual was chosen and
+   never what Deepgram detected. Existing rows take the default, which is a true
+   statement rather than a convenient one: every dictation before this feature
+   ran in English because this record fixed it in code. It is the first column
+   this project has added to a table that already exists, so the schema step
+   reads the table's own columns and adds it only when absent, SQLite having no
+   `ADD COLUMN IF NOT EXISTS`.
+3. **`Store::save_dictation` gains the language.** All three of its call sites
+   pass the value the stream was opened with rather than reading afresh, so a
+   language changed mid-dictation cannot land on a row it did not apply to. The
+   thirteenth amendment's rule about which dictations are saved, and what their
+   `text` holds, is untouched.
+4. **The pill's transcript line and its grey interim tail carry `dir="auto"`.**
+   Record 0006's AC-11 cannot hold without it: a line of Arabic or Hebrew in a
+   container that declares left to right is shown backwards. The browser decides
+   per string, nothing declares a direction per language, and no list of right to
+   left languages is held anywhere. It is the one thing record 0006 changes that
+   a person can already see, and record 0006 records why it is required rather
+   than chosen. **The one fixed 472x52 geometry the twelfth amendment locked is
+   not touched**, and record 0006's Still open names the risk that it was
+   measured with Latin text.
+
+`typing.rs` needs nothing: each UTF-16 unit of a finalised phrase already goes
+through `KEYEVENTF_UNICODE` in order and no key code is derived from a
+character, so it is script independent by construction. No criterion here is
+renumbered, reworded or added and the count stays at 35, for the eighteenth
+amendment's reason: what a person was promised here has not changed, and record
+0006's twelve criteria carry everything new. Nothing in
+`src-tauri/capabilities/` is touched and no event is added.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -863,6 +924,16 @@ hands the language to plan row 4; punctuation on, because the words go
 straight into a document and a person adding every full stop by hand has not
 saved any time; and interim results on, which the next block is for.
 
+**Corrected 2026-09-04 by the eighteenth and nineteenth amendments.** Two of
+those are no longer fixed here. The stream now asks for **the account's chosen
+language**, which record 0006 owns and which is still English until a person
+chooses otherwise, and it also carries **that account's custom vocabulary as
+`keyterm`**, which record 0005 owns. Both are read once in Rust at the moment
+the microphone opens, each through one named function in its own feature, and
+both are reused by the one reconnect attempt AC-14 allows, so neither can change
+inside a dictation. The model, the punctuation and the interim results are
+unchanged, and the paragraph above stands as the reasoning for all three.
+
 **Unfinished wording on the pill, settled 2026-08-31, and it is AC-33.** This
 resolved a disagreement between two locked documents. `design/registry.md`
 draws a transcript line on the pill, final text ink, interim grey with a
@@ -1140,7 +1211,7 @@ row 1, and referenced here.
 
 | Table | Key | Fields | Relationship |
 |---|---|---|---|
-| `dictation` | `id`, auto | `account_id` text, required. `text` text, required. `started_at` text, required, UTC. `duration_ms` integer, required. | One account has many dictations |
+| `dictation` | `id`, auto | `account_id` text, required. `text` text, required. `started_at` text, required, UTC. `duration_ms` integer, required. `language` text, required, defaulting to `en`, **added 2026-09-04 by the nineteenth amendment**. | One account has many dictations |
 | `dictation_setting` | `account_id` | `hotkey` text, required, one of exactly two values, `double_tap_ctrl` or `double_tap_alt`, defaulting to `double_tap_ctrl`. `sounds_enabled` integer, required, defaulting to on. `pill_x` real, required, defaulting to 0.5. `pill_y` real, required, defaulting to 1.0. `updated_at` text, required. | One account has zero or one |
 | `deepgram_credential` | `account_id` | `key_last_four` text, required. `credential_target` text, required. `saved_at` text, required. `last_validated_at` text, may be empty. | One account has zero or one |
 
@@ -1213,7 +1284,9 @@ One migration, creating all three tables.
 | The Deepgram console page | AC-13 | This record. A fixed literal held in Rust beside the signup page, `https://console.deepgram.com`, opened through the system browser by `open_deepgram_console`, which takes nothing. The second and last Deepgram address this feature opens, and the third and last outside address of any kind, the Windows privacy page being the other. The interface never supplies or sees it. |
 | What clears an error screen once the cause is fixed | AC-28, AC-30, AC-32 | This record, the clearing table in The decision. Each error's own proof that the thing it complained about now works: the microphone opening for the four microphone errors, a key being accepted for the three setup screen key errors, the first finalised words for a spent allowance. Never a timer, never one blanket signal, and never the interface deciding on its own. **Corrected 2026-09-03 by the fifteenth amendment**: the key row's proof now arrives as `dictation:key_saved` rather than as a callback inside the interface, because record 0004's shell is a second reader of this table. |
 | Which of the three screens an error kind belongs on | AC-13, AC-28, AC-30, AC-32 | Rust, once, in this feature where the kinds are minted, carried to the interface as a field on `dictation:error`. Added 2026-09-03 by the fifteenth amendment, and it was the user's choice that day. The interface inspects no kind and can only mount the screen it is named, so `MIC_ERROR_KINDS` and `isDeepgramErrorKind` are gone from it. Record 0004's shell reads the same classifier through one named function, so this table has exactly one copy. |
-| What is asked of Deepgram on the stream | AC-3, AC-4, AC-33 | This record: `nova-3`, English, punctuation on, interim results on. Settled 2026-08-31. The language stays plan row 4's to widen, per Still open. |
+| What is asked of Deepgram on the stream | AC-3, AC-4, AC-33 | This record: `nova-3`, punctuation on, interim results on. Settled 2026-08-31. **Corrected 2026-09-04 by the eighteenth and nineteenth amendments**, which took two things off this row and gave each to its own record. The language is record 0006's `language_for_dictation`, English until a person chooses otherwise, and the custom vocabulary is record 0005's `terms_for_dictation`, sent as `keyterm`. Both are read once at the moment the microphone opens and reused by the one reconnect, so neither changes inside a dictation. This row used to say the language "stays plan row 4's to widen"; plan row 4 has widened it. |
+| The language a dictation ran in | AC-17 | Record 0006, through `language_for_dictation`, read at the moment the microphone opens and carried to `save_dictation` on the close rather than read again, so the row records the language the stream was actually opened with. Added 2026-09-04 by the nineteenth amendment. |
+| Which way round transcribed wording reads on the pill | AC-33 | The browser, from `dir="auto"` on the transcript line and its interim tail. Nothing declares a direction per language and no list of right to left languages is held anywhere. Added 2026-09-04 by the nineteenth amendment, for record 0006's AC-11. |
 | Unfinished wording on the pill | AC-33 | Deepgram's interim results on the live stream, carried to the pill by `dictation:interim` and read by nothing else. Never typed, never stored, never logged. |
 | The sentence and action for a key not allowed to stream | AC-30, AC-32 | This record: the fifth key kind table in The decision, `deepgram_key_not_allowed`. The action reuses `open_deepgram_console()`, so no new outside address. Its live trigger is undecided until the first spike in Still open runs; the 403 mapping in `deepgram_key.rs` is a documented guess until then. |
 | The sentence and action for a lost connection | AC-14, AC-30 | This record: the `deepgram_connection_lost` table in The decision. Try again goes through `try_start`, the one way into dictation. |
@@ -1841,9 +1914,16 @@ window". In order:
   Still owed, and it needs the user: a key deliberately made without
   streaming permission in their own Deepgram console, pointed at the
   stream, and what comes back recorded verbatim.
-- **The language the transcription runs in** is fixed to English here.
+- ~~**The language the transcription runs in** is fixed to English here.
   Plan row 4 owns making it a choice, and will add a language field to
-  `dictation`.
+  `dictation`.~~ **Closed 2026-09-04 by the nineteenth amendment.** Plan row 4
+  is designed, as record 0006, and both halves of this bullet have landed: the
+  stream asks for the account's chosen language, and `dictation` has its
+  `language` column. English is still what a person gets until they choose, so
+  nothing here changed for anybody who does nothing. What is open now is
+  narrower and lives in record 0006's own Still open: which of its 64 languages
+  have actually been proved, and whether the one locked pill geometry holds for
+  a script it was not measured with.
 
 ## New libraries
 

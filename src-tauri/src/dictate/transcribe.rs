@@ -82,6 +82,37 @@ const POLL: Duration = Duration::from_millis(20);
 /// 60 ms cadence the microphone reports on, this is a few seconds of slack.
 const AUDIO_QUEUE: usize = 64;
 
+/// What this dictation asks Deepgram for, beyond the fixed model, punctuation
+/// and interim results.
+///
+/// **Both values are read once, before the microphone opens, and never again
+/// for the life of this dictation.** That is what makes record 0005's AC-3 and
+/// record 0006's AC-4 promises rather than races: a person who changes their
+/// language or adds a word while dictating changes the *next* dictation, and
+/// the one reconnect attempt AC-14 allows re-sends exactly what the first
+/// connection asked for. Holding them here is what makes that structural: there
+/// is nowhere in this file to ask again.
+///
+/// Neither value is ever logged. The language is one of 64 literals and says
+/// what language somebody speaks; the terms are a person's own custom
+/// vocabulary, which record 0005's risk section treats as personal data.
+pub struct Asked {
+    /// One of the 64 literals in the language feature's catalogue, never a
+    /// string that came from the interface (record 0006 AC-3).
+    pub language: &'static str,
+    /// This account's custom vocabulary, already inside Deepgram's limits by
+    /// the vocabulary feature's own rules, and empty when there is none
+    /// (record 0005 AC-3, AC-10).
+    pub keyterms: Vec<String>,
+    /// The rate the microphone actually opened at. It belongs here for the same
+    /// reason as the other two, and it is the same rule: this is what Deepgram
+    /// is told about this one stream, fixed before the first connection and
+    /// re-sent unchanged by the reconnect. A reconnect that described the audio
+    /// differently from the socket it replaced would garble every word after
+    /// it.
+    pub sample_rate: u32,
+}
+
 /// Why a dictation ended from this file's side.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Ended {
@@ -165,7 +196,7 @@ impl Session {
 pub fn start(
     app: AppHandle,
     key: String,
-    sample_rate: u32,
+    asked: Asked,
     deadlines: Arc<Mutex<Deadlines>>,
     on_end: Box<dyn Fn(Ended) + Send>,
     intake: Intake,
@@ -195,7 +226,7 @@ pub fn start(
             runtime.block_on(run(
                 app,
                 key,
-                sample_rate,
+                asked,
                 deadlines,
                 on_end,
                 intake.0,
@@ -235,7 +266,7 @@ fn choose_the_cryptography() {
 async fn run(
     app: AppHandle,
     key: String,
-    sample_rate: u32,
+    asked: Asked,
     deadlines: Arc<Mutex<Deadlines>>,
     on_end: Box<dyn Fn(Ended) + Send>,
     mut audio_rx: mpsc::Receiver<Vec<i16>>,
@@ -252,7 +283,7 @@ async fn run(
         }
     };
 
-    let mut handle = match connect(&client, sample_rate).await {
+    let mut handle = match connect(&client, &asked).await {
         Ok(handle) => handle,
         Err(e) => {
             // The very first connection. There is nothing to reconnect to, so
@@ -266,7 +297,7 @@ async fn run(
     // `RECONNECT_WINDOW` worth of samples. Never written anywhere.
     let mut held: Vec<Vec<i16>> = Vec::new();
     let mut held_samples: usize = 0;
-    let hold_cap = sample_rate as usize * RECONNECT_WINDOW.as_secs() as usize;
+    let hold_cap = asked.sample_rate as usize * RECONNECT_WINDOW.as_secs() as usize;
 
     // What this dictation has typed so far. It does two jobs and no third: it
     // decides whether a joining space belongs in front of the next finalised
@@ -322,7 +353,7 @@ async fn run(
         if dropped {
             match reconnect(
                 &client,
-                sample_rate,
+                &asked,
                 &mut audio_rx,
                 &mut held,
                 &mut held_samples,
@@ -351,16 +382,36 @@ async fn run(
 }
 
 /// Open the socket, with everything this feature asks of Deepgram.
-async fn connect(client: &Deepgram, sample_rate: u32) -> Result<WebsocketHandle, DeepgramError> {
-    let options = Options::builder()
+///
+/// `asked` carries the two things that are the person's rather than this
+/// record's, and it is borrowed rather than taken so that the one reconnect
+/// attempt asks for exactly the same thing this call did.
+async fn connect(client: &Deepgram, asked: &Asked) -> Result<WebsocketHandle, DeepgramError> {
+    let mut options = Options::builder()
         .model(MODEL)
-        // Fixed to English by record 0002's Still open section. Plan row 4 owns
-        // making it a choice, and will add a language field to `dictation`.
-        .language(Language::en)
+        // The account's chosen language, from record 0006, read once before the
+        // microphone opened. English until a person chooses otherwise, which is
+        // exactly what record 0002 had fixed here in code.
+        //
+        // `Language::from` maps a known tag to its own variant and anything
+        // else to the SDK's documented `Other`, and both serialise to the tag
+        // itself, so one line covers all 64. The string is always one of that
+        // feature's literals: nothing that arrived from the interface reaches
+        // here (record 0006's risk section).
+        .language(Language::from(asked.language.to_string()))
         // The words go straight into somebody's document. A person who has to
         // add every full stop by hand has not saved any time.
-        .punctuate(true)
-        .build();
+        .punctuate(true);
+
+    // Record 0005: the account's custom vocabulary, as Deepgram's `keyterm`.
+    // Empty means the parameter is not sent at all, so an account with no words
+    // asks for exactly what this feature asked for before that record existed.
+    // The SDK percent encodes each term, which is what stops a word holding an
+    // ampersand from adding a parameter of its own (record 0005 AC-14).
+    if !asked.keyterms.is_empty() {
+        options = options.keyterms(asked.keyterms.iter().map(String::as_str));
+    }
+    let options = options.build();
 
     client
         .transcription()
@@ -370,7 +421,7 @@ async fn connect(client: &Deepgram, sample_rate: u32) -> Result<WebsocketHandle,
         // because this is one person dictating: sending two would have Deepgram
         // treat them as separate speakers and charge for both.
         .encoding(Encoding::Linear16)
-        .sample_rate(sample_rate)
+        .sample_rate(asked.sample_rate)
         .channels(1)
         // The grey half of the pill's transcript line. Only finalised wording is
         // ever typed, so these never reach a keystroke.
@@ -387,7 +438,7 @@ async fn connect(client: &Deepgram, sample_rate: u32) -> Result<WebsocketHandle,
 /// meaning out of a close code.
 async fn reconnect(
     client: &Deepgram,
-    sample_rate: u32,
+    asked: &Asked,
     audio_rx: &mut mpsc::Receiver<Vec<i16>>,
     held: &mut Vec<Vec<i16>>,
     held_samples: &mut usize,
@@ -403,7 +454,7 @@ async fn reconnect(
             hold(held, held_samples, hold_cap, chunk);
         }
 
-        match connect(client, sample_rate).await {
+        match connect(client, asked).await {
             Ok(handle) => return Ok(handle),
             Err(e) => {
                 last = classify(&e);

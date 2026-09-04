@@ -145,6 +145,7 @@ impl Store {
     fn prepare(conn: Connection) -> rusqlite::Result<Self> {
         conn.execute_batch("PRAGMA foreign_keys = ON;")?;
         Self::create_schema(&conn)?;
+        Self::add_language_column(&conn)?;
         Ok(Self {
             conn: Mutex::new(conn),
         })
@@ -160,7 +161,12 @@ impl Store {
                 account_id  TEXT NOT NULL REFERENCES account(id),
                 text        TEXT NOT NULL,
                 started_at  TEXT NOT NULL,
-                duration_ms INTEGER NOT NULL
+                duration_ms INTEGER NOT NULL,
+                -- Record 0006, carried here by record 0002's nineteenth
+                -- amendment. The code the dictation was asked with, never what
+                -- Deepgram detected. `add_language_column` below is what gets
+                -- it onto a file that already has this table.
+                language    TEXT NOT NULL DEFAULT 'en'
             );
 
             -- Plan row 5 only ever reads this newest-first for one account.
@@ -186,6 +192,31 @@ impl Store {
             );
             ",
         )
+    }
+
+    /// Record 0002's second migration: `dictation` gains its `language`
+    /// column (the nineteenth amendment, for record 0006).
+    ///
+    /// **The first column this project has ever added to a table that already
+    /// exists**, so this is a new shape here and the next feature will copy it.
+    /// `CREATE TABLE IF NOT EXISTS` above covers a fresh file and does nothing
+    /// at all for one already carrying the old four column table, and SQLite
+    /// has no `ADD COLUMN IF NOT EXISTS`. So the table's own columns are read
+    /// first and the column is added only when it is absent. Running the bare
+    /// `ALTER` and swallowing the error was the alternative and was refused: it
+    /// would hide a real failure behind the one expected one.
+    ///
+    /// Existing rows take the default, `en`, and that is a true statement
+    /// rather than a convenient one: every dictation before record 0006 ran in
+    /// English, because record 0002 fixed it in code.
+    fn add_language_column(conn: &Connection) -> rusqlite::Result<()> {
+        let present: bool = conn
+            .prepare("SELECT 1 FROM pragma_table_info('dictation') WHERE name = 'language'")?
+            .exists([])?;
+        if present {
+            return Ok(());
+        }
+        conn.execute_batch("ALTER TABLE dictation ADD COLUMN language TEXT NOT NULL DEFAULT 'en';")
     }
 
     /// The names of record 0002's tables, for tests and diagnostics.
@@ -321,21 +352,28 @@ impl Store {
     /// `text` is the finalised phrases exactly as they were typed, joining
     /// spaces included. Nothing unfinished ever reaches here: AC-33 keeps
     /// interim wording on the pill and out of every table.
+    ///
+    /// `language` is the code the stream was actually opened with, added by
+    /// record 0002's nineteenth amendment for record 0006. The caller passes
+    /// the value the dictation started with rather than reading it afresh, so a
+    /// language changed mid dictation cannot land on a row it did not apply to.
+    /// It is what was asked for and never what Deepgram detected.
     pub fn save_dictation(
         &self,
         account_id: &str,
         text: &str,
         started_at: &str,
         duration_ms: i64,
+        language: &str,
     ) -> rusqlite::Result<()> {
         if text.is_empty() {
             return Ok(());
         }
         let conn = self.conn.lock().expect("store mutex poisoned");
         conn.execute(
-            "INSERT INTO dictation (account_id, text, started_at, duration_ms)
-             VALUES (?1, ?2, ?3, ?4)",
-            rusqlite::params![account_id, text, started_at, duration_ms],
+            "INSERT INTO dictation (account_id, text, started_at, duration_ms, language)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![account_id, text, started_at, duration_ms, language],
         )?;
         Ok(())
     }
@@ -808,6 +846,7 @@ mod tests {
                 "Hello there. This is a test.",
                 "2026-09-02T10:00:00Z",
                 4200,
+                "en",
             )
             .unwrap();
 
@@ -827,10 +866,10 @@ mod tests {
     fn a_second_dictation_is_a_second_row() {
         let store = Store::open_in_memory().unwrap();
         store
-            .save_dictation("acct_test", "first", "2026-09-02T10:00:00Z", 1000)
+            .save_dictation("acct_test", "first", "2026-09-02T10:00:00Z", 1000, "en")
             .unwrap();
         store
-            .save_dictation("acct_test", "second", "2026-09-02T10:05:00Z", 2000)
+            .save_dictation("acct_test", "second", "2026-09-02T10:05:00Z", 2000, "en")
             .unwrap();
         let rows = dictations_of(&store, "acct_test");
         assert_eq!(rows.len(), 2);
@@ -846,7 +885,7 @@ mod tests {
     fn a_dictation_that_typed_nothing_is_not_saved() {
         let store = Store::open_in_memory().unwrap();
         store
-            .save_dictation("acct_test", "", "2026-09-02T10:00:00Z", 31_000)
+            .save_dictation("acct_test", "", "2026-09-02T10:00:00Z", 31_000, "en")
             .unwrap();
         assert!(dictations_of(&store, "acct_test").is_empty());
     }
@@ -862,13 +901,13 @@ mod tests {
                 .unwrap();
         }
         store
-            .save_dictation("acct_test", "mine", "2026-09-02T10:00:00Z", 1000)
+            .save_dictation("acct_test", "mine", "2026-09-02T10:00:00Z", 1000, "en")
             .unwrap();
 
         assert!(dictations_of(&store, "acct_other").is_empty());
 
         store
-            .save_dictation("acct_other", "theirs", "2026-09-02T10:01:00Z", 1000)
+            .save_dictation("acct_other", "theirs", "2026-09-02T10:01:00Z", 1000, "en")
             .unwrap();
         let mine = dictations_of(&store, "acct_test");
         let theirs = dictations_of(&store, "acct_other");
@@ -887,7 +926,13 @@ mod tests {
         {
             let store = Store::open(&path).expect("first open");
             store
-                .save_dictation("acct_test", "said before", "2026-09-02T10:00:00Z", 3500)
+                .save_dictation(
+                    "acct_test",
+                    "said before",
+                    "2026-09-02T10:00:00Z",
+                    3500,
+                    "en",
+                )
                 .unwrap();
             store
                 .save_hotkey("acct_test", Hotkey::DoubleTapAlt, "2026-09-02T10:00:01Z")
@@ -916,7 +961,14 @@ mod tests {
 
     /// The data rules say no audio and no partial transcript is ever written.
     /// Nothing in this table's shape allows either, and this is the test that
-    /// says so: an id and four columns, none of them a blob.
+    /// says so: an id and five columns, none of them a blob.
+    ///
+    /// `language` joined the list on 2026-09-04, by record 0002's nineteenth
+    /// amendment for record 0006. It is a language tag and nothing else, so the
+    /// promise this test guards is untouched. The list is spelled out rather
+    /// than counted on purpose: a new column has to be added here by hand,
+    /// which is the moment somebody reads this comment and checks that what
+    /// they are adding is not a place audio could go.
     #[test]
     fn the_dictation_table_has_nowhere_to_put_audio() {
         let store = Store::open_in_memory().unwrap();
@@ -935,8 +987,95 @@ mod tests {
                 ("account_id".to_string(), "TEXT".to_string()),
                 ("duration_ms".to_string(), "INTEGER".to_string()),
                 ("id".to_string(), "INTEGER".to_string()),
+                ("language".to_string(), "TEXT".to_string()),
                 ("started_at".to_string(), "TEXT".to_string()),
                 ("text".to_string(), "TEXT".to_string()),
+            ]
+        );
+    }
+
+    /// Record 0002's nineteenth amendment: `dictation` gains its `language`
+    /// column on a file that already has the four column table, because
+    /// `CREATE TABLE IF NOT EXISTS` does nothing at all for one that exists and
+    /// SQLite has no `ADD COLUMN IF NOT EXISTS`.
+    ///
+    /// This is the first column this project has ever added to an existing
+    /// table, so the test builds the old shape by hand and proves the migration
+    /// on it: the column arrives, the row that was already there takes `en`,
+    /// and running the migration twice is a no-op.
+    #[test]
+    fn the_language_column_is_added_to_a_file_that_predates_it() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE account (id TEXT PRIMARY KEY NOT NULL);
+             INSERT INTO account (id) VALUES ('acct_test');
+             CREATE TABLE dictation (
+                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                 account_id  TEXT NOT NULL REFERENCES account(id),
+                 text        TEXT NOT NULL,
+                 started_at  TEXT NOT NULL,
+                 duration_ms INTEGER NOT NULL
+             );
+             INSERT INTO dictation (account_id, text, started_at, duration_ms)
+             VALUES ('acct_test', 'said before this feature', '2026-09-02T10:00:00Z', 1000);",
+        )
+        .unwrap();
+
+        // Twice, because every launch after the first runs it again.
+        Store::add_language_column(&conn).unwrap();
+        Store::add_language_column(&conn).unwrap();
+
+        // Existing rows take the default, and that is a true statement rather
+        // than a convenient one: every dictation before record 0006 ran in
+        // English, because record 0002 fixed it in code.
+        let language: String = conn
+            .query_row("SELECT language FROM dictation", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(language, "en");
+
+        // And the column arrived exactly once.
+        let count: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM pragma_table_info('dictation') WHERE name = 'language'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    /// AC-17, and record 0006's AC-7: the row records the language the stream
+    /// was actually opened with, which is what was asked for and never what
+    /// Deepgram detected.
+    #[test]
+    fn a_dictation_keeps_the_language_it_ran_in() {
+        let store = Store::open_in_memory().unwrap();
+        store
+            .save_dictation(
+                "acct_test",
+                "こんにちは",
+                "2026-09-04T10:00:00Z",
+                1200,
+                "ja",
+            )
+            .unwrap();
+        store
+            .save_dictation("acct_test", "hello", "2026-09-04T10:01:00Z", 900, "multi")
+            .unwrap();
+
+        let conn = store.conn.lock().unwrap();
+        let rows: Vec<(String, String)> = conn
+            .prepare("SELECT text, language FROM dictation ORDER BY id")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(
+            rows,
+            vec![
+                ("こんにちは".to_string(), "ja".to_string()),
+                ("hello".to_string(), "multi".to_string()),
             ]
         );
     }

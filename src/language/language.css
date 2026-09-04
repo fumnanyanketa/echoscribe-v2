@@ -1,0 +1,203 @@
+/* The language screen (record 0006; design/registry.md "Language list",
+ * "Multilingual row", "Language filter", "Default marker", "Setting error
+ * line").
+ *
+ * It sits on the dashboard's white reading surface, so every colour here is a
+ * light-surface token. There is no dark twin: the design system has no light
+ * and dark theme, and the reading surface is always white.
+ *
+ * Every value is a token from styles.css, with one exception, called out where
+ * it appears: the height the list of rows is allowed to reach before it
+ * scrolls, which is a geometry rather than a colour or a space.
+ *
+ * There is deliberately no heading, the same as the other two settings
+ * surfaces: design/registry.md draws none, and dashboard.js gives the surface
+ * its accessible name from the rail item that opened it.
+ */
+
+.lang {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-8);
+  /* The rows scroll inside their own box rather than the surface growing, so
+     the filter above them stays where a person left it. That needs this screen
+     to know how tall it may be. */
+  min-height: 0;
+}
+
+.lang__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+}
+
+/* design/registry.md "Setting label", the stacked shape. */
+.lang__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-ink);
+}
+
+/* ---- Language filter ------------------------------------------------- */
+
+/* The History `Search field` primitive on a light surface.
+   --color-surface-subtle and not --color-surface-sunken, for the reason
+   design/registry.md's own row gives: --color-border-control measures 2.87:1 on
+   sunken and 3.00:1 on subtle, and the mandate needs 3:1 of a boundary that
+   tells you where a control is. */
+.lang__field {
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-subtle);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  color: var(--color-ink);
+}
+
+.lang__field:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* How many languages the filter leaves. The audited "Caption on a row" ink. */
+.lang__count {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-ink-caption);
+}
+
+/* ---- Language list --------------------------------------------------- */
+
+/* 64 rows, so they scroll inside their own box. Never a dropdown: dropdown
+   menus are on design/registry.md's not-in-the-registry list, which is exactly
+   why the filter above exists.
+
+   The 420px is off the spacing scale on purpose and is the one exception this
+   file has: it is a geometry, like the rail's 232px and the pill's 472x52, and
+   it is the height at which the list stops growing so the filter and the
+   caption stay in view on the 960x640 floor record 0004 sets. */
+.lang__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 420px;
+  overflow-y: auto;
+  /* Room for the focus ring on the first and last rows, which would otherwise
+     be clipped by the scrolling box. */
+  padding: var(--space-hair);
+}
+
+/* Same geometry as design/registry.md's "Setting row" and the hotkey rows: the
+   value on the left, one thing on the right. The thing on the right is the
+   CHOSEN badge, because choosing is what pressing the row does. */
+.lang__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  font-family: var(--font-sans);
+  text-align: left;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.lang__row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* The chosen row, marked by two signals: this fill, and the CHOSEN badge. The
+   fill alone never carries it, because roughly one man in twelve would not see
+   it (design/design-system.md's mandate, rule 5). */
+.lang__row--chosen {
+  background: var(--color-surface-subtle);
+}
+
+.lang__row-words {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-hair);
+}
+
+/* The audited "Keycap text on a row" pair, 16.61:1. */
+.lang__name {
+  font-size: var(--text-md);
+  color: var(--color-ink);
+}
+
+/* The one row with a second line (design/registry.md "Multilingual row"). The
+   audited "Caption on a row" ink. Nothing about it is emphasised over its
+   neighbours: it is one choice among 64 and not a recommendation. */
+.lang__note {
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--color-ink-caption);
+}
+
+/* design/registry.md "Default marker": the `Mono badge` primitive reading
+   CHOSEN, the same treatment as the hotkey rows' badge, so one marker means one
+   thing across the Settings section. The audited "Hotkey CHOSEN badge" pair,
+   8.86:1. */
+.lang__badge {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-ink-secondary);
+}
+
+/* The no-matches state (design/registry.md "Language filter"): one sentence and
+   no rows. */
+.lang__empty {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--color-ink-secondary);
+}
+
+/* The caption beneath the list. */
+.lang__caption {
+  margin: 0;
+  max-width: 62ch;
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--color-ink-caption);
+}
+
+/* ---- Setting error line ---------------------------------------------- */
+
+/* design/registry.md "Setting error line", the same shape as the other two
+   settings surfaces: a mono code, then one sentence, and no action. */
+.lang__error {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.lang__error[hidden] {
+  display: none;
+}
+
+.lang__error-code {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-danger-on-light);
+}
+
+.lang__error-text {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--color-ink-secondary);
+}

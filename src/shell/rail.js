@@ -17,6 +17,8 @@
 const LABEL = {
   settings: "Settings",
   "settings.dictation": "Dictation",
+  "settings.languages": "Languages",
+  "settings.vocabulary": "Vocabulary",
   "settings.transcription": "Transcription",
 };
 

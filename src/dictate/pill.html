@@ -41,10 +41,23 @@
            truncating from the left (design/registry.md; record 0002 AC-33).
            Hidden from screen readers: the final words are already landing at
            the person's own cursor, and the grey tail is unsettled by
-           definition. -->
-      <div class="pill__line" aria-hidden="true">
+           definition.
+
+           dir="auto" on the line and on each half of it, so the browser lays
+           each string out from the text it actually holds: a line of Arabic or
+           Hebrew reads right to left and a line of English does not, and
+           neither is declared anywhere (record 0006 AC-11, carried here by
+           record 0002's nineteenth amendment; design/registry.md
+           "Transcript line"). No list of right to left languages exists
+           anywhere in this project and none may be added: a direction guessed
+           from the language setting would be wrong the moment a Hebrew speaker
+           dictates an English product name, which is exactly what this gets
+           right. Both halves carry it as well as the line, because the grey
+           tail can be in a different script from the settled words in front of
+           it, which is what the multilingual model does by design. -->
+      <div class="pill__line" aria-hidden="true" dir="auto">
         <div class="pill__line-inner">
-          <span class="pill__final"></span><span class="pill__interim"></span>
+          <span class="pill__final" dir="auto"></span><span class="pill__interim" dir="auto"></span>
           <span class="pill__caret"></span>
         </div>
       </div>

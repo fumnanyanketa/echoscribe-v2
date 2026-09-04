@@ -38,6 +38,42 @@ renumbered, reworded or added. The count stays at 7. One cost is carried
 rather than fixed and is named in What this makes harder: closing the dashboard
 also stops the global hotkey, so a person can turn dictation off across the
 whole machine by closing a window.
+**Amended:** 2026-09-04, third of the day, by `/architect`, for plan rows 3 and
+4 together. **The rail gains two destinations, and this is the amendment The
+decision said each of plan rows 3, 4 and 5 would bring.** It is one amendment
+for two records deliberately, because both were designed in the same session and
+both change the same fixed list: reading two separate amendments to one list
+invites each to be taken for the whole change.
+
+- `settings.languages`, for record 0006, "speak in your language".
+- `settings.vocabulary`, for record 0005, "teach it your words".
+
+**The rail's order is the comp's**, which `design/registry.md`'s
+`Section sub-nav` row already names: Dictation, Languages, Vocabulary,
+Transcription. So the two new items go between the two that exist rather than
+after them, and the landing destination is untouched: it is still Settings, on
+Dictation, and it moves to History when plan row 5 is designed, exactly as The
+decision says.
+
+**Nothing else about this record changes.** No new command: both features hand
+their screens out through `get_rail`'s existing identifiers, and each has its
+own commands in its own feature. No new event, in either direction. **Nothing in
+`src-tauri/capabilities/` is added or widened**, and `dashboard.json` still
+grants `core:event:allow-listen` and `core:event:allow-unlisten` and nothing
+else, because neither new screen listens to anything. `src/shell/rail.js` gains
+one wording row each and `src/shell/dashboard.js` gains one entry each in the
+table that says which destination opens which screen, both of which are the
+shape those two files were written for.
+
+**AC-2 now covers four destinations rather than two**, and it is not reworded:
+every item in the rail opens a screen, and after these two records' third
+milestones each of the four does. It was recorded as met for `settings` and
+`settings.dictation` on 2026-09-04 and as not met for `settings.transcription`
+until that half landed; the same standard applies to these two, and neither
+identifier is added to the rail before its screen exists. **The count stays at
+7** and no criterion is renumbered, reworded or added. Still open's question
+"what the Transcription section holds beyond the saved key row" is untouched:
+these are two new sections, not additions to that one.
 **Weight:** medium
 **Plan row:** none of its own. It serves rows 1 to 5, and row 2's settings
 screen is the first thing that cannot be built without it.
@@ -142,6 +178,15 @@ plainer: a nav item that opens nothing is a promise the app cannot keep.
 This means the rail ships holding one nav item and looks sparse, which is
 honest, and it means each of plan rows 3, 4 and 5 amends this record to add
 its own item as it lands.
+
+**Corrected 2026-09-04 by the third amendment of that day.** Two of the three
+have landed. Languages and Vocabulary are in the rail now, for records 0006 and
+0005, in the comp's order: Dictation, Languages, Vocabulary, Transcription.
+History is still not in the rail at all, not even greyed out, and every word of
+the reasoning above still applies to it and to anything else unbuilt. The rule
+that made this correction possible is the one this paragraph states: an item
+joins when its screen exists, and neither of the two was added before its own
+third milestone.
 
 **Nothing here decides that History, Languages or Vocabulary exist, or
 when.** Plan rows 3, 4 and 5 already say they are being built and in what
@@ -397,7 +442,7 @@ the same file, the way the dictate feature's store does beside sign in's.
 |---|---|---|
 | The signed in account id | AC-1, AC-4, AC-7 | The Clerk session held in the Rust core, per record 0003. Never passed in from the interface. |
 | Whether the dashboard may be shown at all | AC-1, AC-7 | Two things Rust already knows: the auth state from record 0003, and the presence of a `deepgram_credential` row for the account, which is record 0002's own source for whether a key exists. |
-| Which sections the rail holds | AC-2 | This record. A fixed list, one entry per feature that is built: today Settings alone, with Dictation and Transcription beneath it. Handed to the interface by Rust, never a list the interface holds, for the same reason `get_hotkey` hands out the two hotkeys: a screen must not be able to invent a destination. A section joins the list by an amendment to this record when its own feature record is written. |
+| Which sections the rail holds | AC-2 | This record. A fixed list, one entry per feature that is built: today Settings alone, with Dictation, Languages, Vocabulary and Transcription beneath it, in that order, which is the comp's. Handed to the interface by Rust, never a list the interface holds, for the same reason `get_hotkey` hands out the two hotkeys: a screen must not be able to invent a destination. A section joins the list by an amendment to this record when its own feature record is written. **Languages and Vocabulary joined on 2026-09-04** by the third amendment of that day, for records 0006 and 0005. |
 | What a person reads for each rail item | AC-2 | `design/registry.md`, which owns wording. Rust hands out identifiers, not labels, exactly as `get_hotkey` hands out stored values and the screen decides what a person reads. |
 | The landing destination | AC-1 | This record. Settings, on its Dictation sub-section. It moves to History when plan row 5 is designed, by an amendment carried in that record and here. |
 | Whether the dashboard remembers the last section | AC-1 | This record. It does not. The landing destination is where it opens, every time. |
