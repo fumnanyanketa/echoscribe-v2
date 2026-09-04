@@ -205,6 +205,83 @@ are new, both are this feature's, both are emitted by `deepgram_key.rs` and
 listened to in Rust only, and **neither reaches a web view, so neither widens
 any file in `src-tauri/capabilities/`**. No criterion is renumbered, reworded or
 added. The count stays at 33.
+**Amended:** 2026-09-04, the sixteenth, by `/architect` under `/develop`'s
+gate option 3, authorised by the user the same day while they were away. Two
+halves, and the second is the larger one.
+
+First, **milestone 5's settings screen owed this record two sentences a person
+reads.** Its gate found six values with no named source, the user answered all
+six on 2026-09-04, and they are written up in
+`docs/evidence/dictate-with-a-hotkey/milestone-5-screen-decisions-owed.md`. Two
+of the six are this record's: the one caption beneath the two hotkey rows and
+the one caption beneath the sound switch. Both are carried in below as Value
+sourcing rows, so nothing downstream has to read an evidence file to know what
+a person is told. The other four are `design/registry.md`'s and are handed
+there in the same sitting.
+
+Second, **AC-12's visible half is settled.** `design/registry.md`'s `Secret
+field` has read "masked, trailing fragment, replace and remove, locally-stored
+wording" since the design was locked, and no record said what any of that meant
+or what either action did. Four things are settled here and each has a Value
+sourcing row below: where the saved key is read, what is shown of it, what
+Replace does, and what Remove does.
+
+**Replace happens in place, on the Settings surface, and not in the small dark
+window.** Record 0004 gives that window everything with exactly one way
+forward, and this is the opposite shape: a person on a settings screen came
+deliberately and has several things they could do. `design/registry.md` already
+registers `Secret field, empty` as the Settings variant, so the state Replace
+opens is one this design system holds rather than one this build invents. **The
+key already saved stays in force until Deepgram accepts a new one**, which
+costs nothing to promise, because `save_deepgram_key` writes neither the vault
+entry nor the row on any failing path: a rejected paste leaves the old key
+working, dictation working and the row untouched, and backing out leaves the
+surface exactly as it was. One thing the empty variant must **not** carry on
+this route is its blocker sentence, "Dictation is off until this is set". On
+this route that is false. The replacing state says the true thing instead, that
+the saved key stays in force until a new one is accepted.
+
+**Remove asks once, in place, before anything is deleted.** No comp draws that
+question and this is where it is decided, for two reasons of which the first
+would be enough. AC-12 means this app can never show the key again, so a
+misclick on a button sitting a few pixels from Replace destroys something a
+person cannot recover from inside EchoScribe: they have to go back to Deepgram
+and make another key. And Remove is not only a settings change. With no key
+saved, record 0004's invariant that a signed-in person with a key has a
+dashboard stops holding, so the dashboard is destroyed and the guided setup
+screen is what is on screen. A window should not be taken away without warning.
+The question lives on the row itself and is **never a modal**: modals are on
+`design/registry.md`'s "not in the registry, on purpose" list and this does not
+become the app's first one. `/canvas` owes one registry row for each of the two
+states, and both are states of a component that is already registered.
+
+**Nothing in Rust is new.** `get_deepgram_key_info`, `save_deepgram_key` and
+`clear_deepgram_key` have existed since milestone 3, `clear_deepgram_key`
+already emits `dictation:key_cleared`, and record 0004's shell already listens
+for it. So no command is added, no event is added, and **nothing in
+`src-tauri/capabilities/` is widened**, which is what makes the inline shape
+cheap as well as right.
+
+**One thing the build owes that nothing had named**, found while settling this
+and written down here rather than left for the build to trip over.
+`src/main.js` does not listen for `dictation:key_cleared`. Before Remove is
+pressed it has last drawn the at-rest state, which is a deliberately empty
+page, because the dashboard held the screen. So the shell would show the small
+window over a page with nothing on it, and the person would be looking at a
+blank 760x540 window. That window's router has to re-read the state on this
+signal, exactly as it already does on the three it listens to, and it then
+mounts the guided setup screen because no key is saved. Again no new event and
+no new command: the signal has been emitted since record 0004's third
+milestone.
+
+**What stays open.** What the Transcription section holds beyond the saved key
+row is record 0004's Still open question and it stays there; this amendment
+settles the saved key row and nothing else on that surface. It adds AC-34 and
+AC-35 and takes the count to 35, on the ninth amendment's own reasoning: what
+was missing here is not a list of causes but two promises a person can act on,
+and nothing in this record said either was possible. No existing criterion is
+renumbered or reworded, and one bullet in Interface surface is corrected in
+place, because Replace gives `save_deepgram_key` a second caller.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -327,6 +404,15 @@ great.
   words appear on the pill and nowhere else: they are never typed at my
   cursor, never saved, and when the final wording comes out differently
   nothing at my cursor has to be taken back.
+- **AC-34**: Settings, Transcription offers one way to replace the saved
+  key: I paste a new one and it is checked against Deepgram the same way my
+  first one was. Until Deepgram accepts it the key I already had stays in
+  force and dictation keeps working, a key Deepgram rejects changes nothing,
+  and backing out changes nothing.
+- **AC-35**: Settings, Transcription offers one way to remove the saved key,
+  and it asks me once before anything is deleted. If I go through with it the
+  key is gone from this machine, the hotkey no longer opens the microphone,
+  and the guided setup screen is what I see. If I back out, nothing changes.
 
 ## The decision
 
@@ -1096,6 +1182,14 @@ One migration, creating all three tables.
 | Which dictations are saved, and what their text holds | AC-17, AC-18 | This record, settled 2026-09-02 by the thirteenth amendment, which is also what AC-17's word "completed" means. A row when, and only when, at least one finalised phrase reached the cursor, whatever ended the dictation: you stopped it, either cap, a Deepgram failure, the microphone dying. Its `text` is exactly the phrases that were typed, in order, with the same single joining space that was typed between them, so what is stored can never differ from what is in the person's document. A dictation that typed nothing leaves no row at all, which covers both a silent dictation and a password refusal. Nothing unfinished is ever in it, per AC-33. The rule lives in one place, `Store::save_dictation`, so no way of ending a dictation can write a different shape of row. |
 | The sentence when a setting will not save | AC-12, AC-19, AC-21 | This record, settled 2026-09-02 by the fourteenth amendment. Code `SETTING_NOT_SAVED`, sentence "This setting could not be saved, so it is unchanged." Fixed wording, held in one place in Rust like every other sentence on this surface, so no screen invents its own. It says both things the person needs: the change did not happen, and what is still on screen is therefore true, which is honest only because `design/registry.md` already fixed the behaviour that the shown choice does not move when a write is refused. No action follows it: the control is its own retry. It is the only cause the settings screen can reach for a write, because `not_signed_in` and `not_ready` cannot happen on a screen only reachable while signed in, and `unknown_hotkey` cannot happen while the two rows come from `get_hotkey`. |
 | The sentence when a setting will not read | AC-12, AC-19, AC-21 | This record, settled 2026-09-02 by the fourteenth amendment. Code `SETTINGS_NOT_READ`, sentence "These settings could not be read, so none is shown." Fixed wording, same one place in Rust. When `get_hotkey` or `get_dictation_sounds` fails as the screen opens, the section is that one line and **no control is drawn at all**, neither hotkey row and no switch. A control drawn without a chosen value would be showing a setting the app cannot read, and a person could leave the screen believing a hotkey is in force that is not. `/canvas` owes `design/registry.md` one row for this state. |
+| The caption beneath the two hotkey rows | AC-19 | This record, settled by the user 2026-09-04 and carried in by the sixteenth amendment: "Double tap to start dictating, double tap again to stop. The left and right keys both count." Fixed wording, one caption for both rows and not one per row, as `design/registry.md`'s `Hotkey choice` requires. It carries the whole of AC-19's interaction, including that either side of the keyboard counts, which is the one thing the two rows cannot say for themselves. It is the screen's own static wording, in `src/dictate/dictation-settings.js`, and not Rust's: nothing in Rust produces it and no second screen shows it, which is the division the two error sentences above are the other side of. |
+| The caption beneath the sound switch | AC-21 | This record, settled by the user 2026-09-04, same amendment: "Turning sounds off silences the start and stop sounds only. The pill still appears whenever the microphone is open." Fixed wording, same place. The second sentence is AGENTS.md's hard limit said out loud, that the microphone never opens without something visible saying so, and it is the reason AC-21's switch silences sounds and changes nothing else. It is also the one thing a person would otherwise reasonably fear about turning the sounds off. |
+| Where the saved key is read | AC-12 | This record, settled 2026-09-04 by the sixteenth amendment. The Settings, Transcription surface of the dashboard, which is `design/registry.md`'s `Secret field`, and nowhere else. The small dark window never shows a saved key: it holds the guided setup screen, which exists for a key that is not saved yet. |
+| What is shown of the saved key | AC-12 | This record, settled 2026-09-04, and the comp is the source for every part: the label "Deepgram API key", the mono badge "SECRET · STORED LOCALLY", a run of bullet characters, and the last four characters after a middle dot. **The bullets carry no information and must not start to.** The key's length is not stored and must never be, because a length narrows a secret, so the run is a fixed 20 whatever the key was and says only "there is a secret here". The only real characters on screen are `deepgram_credential.key_last_four`, which is the only part of the key this app keeps outside Windows Credential Manager. |
+| The caption beneath the saved key | AC-12 | This record, settled 2026-09-04, in the comp's own words: "Verified <date>. Never leaves this machine." The date is `deepgram_credential.last_validated_at`, the moment Deepgram last accepted the key, written by `save_deepgram_key` and by nothing else. When it is missing the first sentence is dropped and the second stands alone; the date is never taken from `saved_at` instead, because saved is not verified and the sentence would then be a claim nothing had checked. Rendered in the machine's own locale, the same choice `src/shell/account-block.js` made for the signed-in date, and deliberately a second copy rather than a shared one: AGENTS.md makes something shared when a third feature needs it, and two is a coincidence. |
+| What replacing the saved key does | AC-12, AC-34 | This record, settled 2026-09-04 by the sixteenth amendment. The paste field opens in place on the same surface, which is `design/registry.md`'s `Secret field, empty`, and the same `save_deepgram_key` that admits a first key admits this one, with the same four sentences from `deepgram_key.rs` on a failure. Nothing is written on any failing path, so the old key stays in force and dictation keeps working until Deepgram accepts the new one. Not the small dark window: that window is for a single way forward and a settings surface is not that. The empty variant's blocker sentence is not used on this route, because a key is saved and dictation is not off. |
+| What removing the saved key does | AC-12, AC-35 | This record, settled 2026-09-04 by the sixteenth amendment. It asks once, in place on the row, before anything is deleted; only then does `clear_deepgram_key` remove the Credential Manager entry and the row. It is the one irreversible act on this surface, because AC-12 means the app can never show the key again, so a misclick beside Replace cannot be undone from inside EchoScribe. The question lives on the row and is never a modal, which this design system does not draw. Afterwards AC-9 holds again, `dictation:key_cleared` is emitted as it already was, and record 0004's invariant closes the dashboard and leaves the guided setup screen on screen. |
+| The sentence a person reads before the key is removed | AC-35 | This record, settled 2026-09-04: "Dictation stops until another key is saved. EchoScribe cannot show you this one first." Fixed wording, the screen's own, in the same place as the two captions above. It says the two things a person cannot see for themselves: what stops, and that there is no copy to take first. It deliberately claims nothing about what Deepgram's own console will or will not show them, because this project does not control that and a sentence here could not keep the promise. |
 
 ## Interface surface
 
@@ -1105,8 +1199,13 @@ from the session. Every command refuses when nobody is signed in.
 
 - `save_deepgram_key(key)` returns the last four characters on success, or
   a named error: rejected by Deepgram, could not reach Deepgram, or the
-  check did not succeed and Deepgram did not say why. Used only by the setup
-  screen. **Corrected 2026-08-30.** This bullet used to list "no allowance
+  check did not succeed and Deepgram did not say why. **Corrected 2026-09-04.**
+  This bullet used to say "Used only by the setup screen". It has a second
+  caller from the sixteenth amendment: Replace on the Settings, Transcription
+  surface. It is the same check through the same command, deliberately, so that
+  a replacement key is admitted on exactly the terms a first one is. Nothing
+  about what it takes or returns changes.
+  **Corrected 2026-08-30.** This bullet used to list "no allowance
   left" here and to name no catch-all. An exhausted allowance cannot reach
   this command, because Deepgram only ever returns 402 for a transcription
   request. That kind still exists, in the same four kind table in The
