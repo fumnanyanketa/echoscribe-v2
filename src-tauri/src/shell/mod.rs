@@ -478,11 +478,106 @@ mod tests {
             .expect("the close handler no longer asks whether the dashboard is up");
         assert!(
             handler[..branch].contains("api.prevent_close();"),
-            "the small window's close is refused only inside a branch. Whichever              branch that is, the other one lets the window be destroyed, and with              the pill alive that leaves EchoScribe running with nothing on screen"
+            "the small window's close is refused only inside a branch. Whichever branch that is, the other one lets the window be destroyed, and with the pill alive that leaves EchoScribe running with nothing on screen"
         );
         assert!(
             handler.contains(".exit(0)"),
-            "closing the small window no longer ends the app. With no dashboard              behind it that window is the app, and nothing else will ever exit"
+            "closing the small window no longer ends the app. With no dashboard behind it that window is the app, and nothing else will ever exit"
+        );
+    }
+
+    #[test]
+    fn settle_never_asks_about_a_dashboard_it_has_just_destroyed() {
+        // covers: AC-7, as a source guard only. `window.destroy()` is always
+        // posted to the event loop and never run inline, so for the rest of
+        // that turn the dashboard is still gettable and asking whether it
+        // exists gets the answer "still there" (AGENTS.md standing rule 14).
+        // `settle` is the one function that has just ordered the destroy, so it
+        // is the one function that must not ask: it works out `dashboard_up`
+        // itself and hands the answer on. Asking hid the small window over a
+        // dashboard that was already going, so signing out left EchoScribe
+        // running with nothing on screen at all (found live 2026-09-03).
+        // Proving the behaviour needs a real sign out with two real windows, so
+        // /check verify owns that; this stops the asking version being put back
+        // because it reads more simply.
+        let flat = flattened(include_str!("mod.rs"));
+        let start = flat
+            .find("fnsettle(app:&AppHandle){")
+            .expect("the shell no longer has one place that decides both windows");
+        let end = flat[start..]
+            .find("fnsettle_small_window(app:&AppHandle){")
+            .expect("settle_small_window no longer follows settle in this file");
+        let settle = &flat[start..start + end];
+        assert!(
+            !settle.contains("settle_small_window("),
+            "`settle` calls the settle_small_window that asks the system whether the dashboard is open. It has just ordered that window destroyed, so the answer is still yes, and the small window is hidden over a dashboard that is going. It has to pass its own answer to settle_small_window_around instead"
+        );
+        let destroyed = settle
+            .find("dashboard_window::close(")
+            .expect("`settle` no longer destroys the dashboard when it is not due");
+        assert!(
+            !settle[destroyed..].contains("dashboard_window::is_open("),
+            "`settle` asks whether the dashboard is open after ordering it destroyed. That answer is always still there, and acting on it leaves EchoScribe running with no window on screen"
+        );
+    }
+
+    #[test]
+    fn the_small_window_is_hidden_in_exactly_one_place() {
+        // covers: AC-6 and AC-7, as a source guard only, and it is the one
+        // guard that would have caught both of 2026-09-03's bugs. EchoScribe
+        // can be left with nothing on screen in exactly two ways: hide the
+        // small window with no dashboard behind it, or destroy it without
+        // ending the app. The second is guarded above. The first holds only
+        // while there is a single place in this whole feature that hides that
+        // window. A second hiding place anywhere is another door to the same
+        // state, and it would not be found by reading this file.
+        //
+        // `flattened` keeps comments, on purpose, so the guards below it can
+        // tell a call from a mention of one. That costs this test one false
+        // positive: a comment writing `.hide()` with its brackets counts. If
+        // that is why this failed, reword the comment, not the code.
+        for (name, source) in [
+            ("shell/mod.rs", include_str!("mod.rs")),
+            (
+                "shell/dashboard_window.rs",
+                include_str!("dashboard_window.rs"),
+            ),
+            ("shell/geometry.rs", include_str!("geometry.rs")),
+            ("shell/rail.rs", include_str!("rail.rs")),
+            ("shell/store.rs", include_str!("store.rs")),
+        ] {
+            let expected = usize::from(name == "shell/mod.rs");
+            let found = flattened(source).matches(".hide()").count();
+            assert_eq!(
+                found, expected,
+                "{name} hides a window in {found} place(s), and should hide one in {expected}. The small window is hidden in one place only, and that place asks what is behind it first. A second hiding place is a second way to leave EchoScribe with nothing on screen"
+            );
+        }
+    }
+
+    #[test]
+    fn the_one_place_that_hides_the_small_window_asks_what_is_behind_it() {
+        // covers: AC-6 and AC-7, as a source guard only. The count above is
+        // worth nothing if the one place stops consulting the dashboard, which
+        // is the shape both of 2026-09-03's bugs had: the window went away and
+        // nothing was revealed. Deliberately loose about how the condition is
+        // written, because the promise is that the answer is consulted at all,
+        // not the order the two halves are tested in.
+        let flat = flattened(include_str!("mod.rs"));
+        // Past the signature, not at it: the parameter is called `dashboard_up`
+        // too, so a region that started at the signature would match itself and
+        // pass while the condition was gone. It did, on this test's first run.
+        let signature = "fnsettle_small_window_around(app:&AppHandle,dashboard_up:bool){";
+        let start = flat
+            .find(signature)
+            .expect("the shell no longer has one function that shows or hides the small window")
+            + signature.len();
+        let hide = flat[start..]
+            .find(".hide()")
+            .expect("the one place that hides the small window has moved out of that function");
+        assert!(
+            flat[start..start + hide].contains("dashboard_up"),
+            "the small window is hidden without consulting whether a dashboard is there to reveal. Hiding it with nothing behind it leaves EchoScribe running with no window on screen and the dictation hotkey still held"
         );
     }
 
