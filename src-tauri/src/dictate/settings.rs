@@ -370,13 +370,13 @@ mod tests {
         for sentence in [NOT_SAVED_MESSAGE, NOT_READ_MESSAGE] {
             assert!(
                 !SCREEN.contains(sentence),
-                "src/dictate/dictation-settings.js now holds a sentence this                  file owns. Both settings sentences live in Rust and nowhere                  else (record 0002, fourteenth amendment)"
+                "src/dictate/dictation-settings.js now holds a sentence this file owns. Both settings sentences live in Rust and nowhere else (record 0002, fourteenth amendment)"
             );
         }
         for code in [NOT_SAVED_CODE, NOT_READ_CODE] {
             assert!(
                 !SCREEN.contains(code),
-                "src/dictate/dictation-settings.js now holds an error code                  this file owns. The screen shows the code it is handed"
+                "src/dictate/dictation-settings.js now holds an error code this file owns. The screen shows the code it is handed"
             );
         }
     }
