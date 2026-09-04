@@ -5,6 +5,26 @@
 **Weight:** medium
 **Plan row:** 5
 **Supersedes:** nothing
+**Amended:** 2026-09-04, the first. This record refused one thing rather than
+deciding it, the row's Copy action, and left the count off the row for a
+missing counting rule. The user settled both the same day and this amendment
+carries both. **Copy is built**, on a reading of AGENTS.md's data rules that
+was the user's to give and is written here as a distinction inside the rule
+rather than an exception to it: the app never routes transcribed text through a
+third place of its own accord, and a person taking their own text at their own
+request is not the app routing it. Record 0002's clipboard refusal of
+2026-08-31 stands untouched, because that was the app moving text invisibly as
+a typing mechanism. **The count is built and it counts characters, not words**,
+on the precedent record 0005 set when it counted its vocabulary budget in
+characters. The same rule settles the pill's elapsed and count chip, which is
+record 0002's and is carried there by its twentieth amendment on the same day,
+so one answer unblocks the two things this record's Still open said it would.
+This adds AC-14 and AC-15 and takes the count to 15. No existing criterion is
+renumbered or reworded, AC-13 included: it says EchoScribe never puts a
+transcript on the clipboard "on its own", and a person pressing Copy is not the
+app acting on its own. AGENTS.md is owed the data rule's new wording, which is
+written out below and which `/sync` applies, because this skill never edits
+that file.
 
 **Decided without the user, on their own instruction.** The same standing
 instruction records 0005 and 0006 were written under, given again for this
@@ -82,6 +102,13 @@ in that record and here".
   log or file the app writes.
 - **AC-13**: I can select the text of a dictation and copy it myself.
   EchoScribe never puts it on the clipboard on its own.
+- **AC-14**: Every dictation on the screen says how many characters were
+  typed, and that figure is the same one the pill showed me while I was
+  dictating it. Added 2026-09-04 by the first amendment.
+- **AC-15**: One action on a dictation puts its text, and nothing but its
+  text, on my clipboard, and tells me on the button that it did. Nothing else
+  in EchoScribe ever writes to the clipboard. Added 2026-09-04 by the first
+  amendment.
 
 ## The decision
 
@@ -127,7 +154,10 @@ today. `/canvas` is owed a correction to `Dictation row`, on the same footing as
 comp wins on look.
 
 **The word count is not shown either, and the reason is record 0005's
-reason.** **Decided on the user's behalf.** `Dictation row` draws a word count.
+reason. Reversed 2026-09-04 by the first amendment: a count is shown, and it
+counts characters. This paragraph is kept exactly as it was written, because
+its reasoning is the whole reason the count is not words.** **Decided on the
+user's behalf.** `Dictation row` draws a word count.
 The text is stored, so the value has a source, but the counting rule does not,
 and there is no rule this project can apply that is true in every language it
 now offers. Splitting on spaces is the obvious answer and it reports "1 word"
@@ -143,6 +173,100 @@ which record 0002 left deliberately unbuilt on 2026-08-31 for the same missing
 source, and as `Device row`, which record 0002's milestone 5 left unbuilt on
 2026-09-04. `/canvas` is owed the correction here too, and Still open holds what
 would bring the count back.
+
+**The count is characters, and one string is counted once.** Settled by the
+user on 2026-09-04, on the precedent record 0005 set: that record counts its
+vocabulary budget in characters because a count of words is not script
+independent, and the paragraph above refused a word count for the same reason
+in the same words. So the row says how many characters were typed. It is not a
+compromise for a missing dependency: a character count is the honest figure
+this app can produce for every language `Language list` offers, and it needs
+nothing installed.
+
+Three things follow, and each is a rule rather than a preference.
+
+- **Rust counts, and it counts with `chars().count()`.** The same call record
+  0005's `rules.rs` already uses, so this project has one meaning of "a
+  character" and not two. The count is a sixth field on `DictationView`,
+  computed from `dictation.text` on the way out. The interface never counts:
+  JavaScript's own `String.length` counts UTF-16 code units, so an emoji or any
+  character outside the basic range would come out as two there and as one
+  here, and the same transcript would carry two different numbers depending on
+  which side of the boundary asked. AGENTS.md puts transforming a value apart
+  from displaying it for exactly this.
+- **What is counted is the string that was typed, whole and untouched.** No
+  trimming, no collapsing of spaces, and the joining spaces record 0002 puts
+  between phrases are counted like any other character. The number answers "how
+  much of my document is this", so it counts what went into the document.
+- **The cost, named rather than hidden.** A character here is a Unicode scalar
+  value, which is not always a thing a person can point at. An accented letter
+  typed as a letter plus a combining mark counts two, and a family emoji counts
+  several. Counting what a person would point at means grapheme clusters, which
+  in Rust is a new dependency and therefore the user's decision, exactly as word
+  segmentation was. This goes into Still open rather than being left to be
+  discovered as a bug.
+
+**The same rule settles the pill's chip, and that is record 0002's to carry.**
+`design/registry.md`'s `Elapsed and word count` is drawn, its band is already
+reserved in `pill_window.rs` so that its arrival resizes nothing, and it was
+left unbuilt on 2026-08-31 for this record's missing counting rule and for no
+other reason. It is now unblocked. It counts the same way off the same string:
+Rust already holds `typed`, the exact text that becomes the history row, so the
+running count on the chip and the final count on the row are two readings of
+one string and cannot disagree. That is what AC-14 is a promise about. The chip
+counts **finalised wording only**, which is the user's choice on 2026-09-04:
+Deepgram revises interim wording, so a count including the grey tail would fall
+as a person speaks, and it would not match the row afterwards. Record 0002's
+twentieth amendment holds the chip's own criterion, because the pill belongs to
+that record and this one may not add to it.
+
+**The Copy action is built, and this is not an exception to the data rule.**
+The refusal below is lifted by the user, who was the only one who could lift
+it, and the reading they gave is a distinction inside AGENTS.md's data rule
+rather than a hole in it: **the app never routes transcribed text through a
+third place of its own accord, and a person taking their own text at their own
+request is not the app routing it.** The rule was written to stop this app
+moving a person's words somewhere they did not ask for and cannot see. Pressing
+Copy is neither of those: they asked, and the clipboard is where they asked for
+it to go.
+
+Four things follow.
+
+- **Record 0002's clipboard refusal of 2026-08-31 stands, entirely
+  untouched.** That was the app choosing the clipboard as its typing mechanism,
+  on every dictation, invisibly, with nobody asking for it. It is the app
+  routing text through a third place of its own accord and it is still
+  forbidden. The two cases sit on opposite sides of the distinction, which is
+  why the distinction is worth having: an exception would have made both
+  permissible.
+- **AC-13 is not reworded and is not weakened.** It promises that EchoScribe
+  never puts a transcript on the clipboard on its own, and that stays exactly
+  true: nothing writes to the clipboard except this one action under this one
+  press. AC-13 also already made the text selectable, so a transcript could
+  already reach the clipboard by the person's own hand with Ctrl+C. The refusal
+  never kept the words off the clipboard. It only changed how many steps a
+  person took to put them there, which is the strongest argument that lifting
+  it spends nothing.
+- **It needs no new library and no new permission.** The web view's own
+  `navigator.clipboard.writeText` does it. `src-tauri/capabilities/` is not
+  widened, not added to and not edited, and this feature still emits no event
+  and needs no new command: the text is already on the screen, so nothing has to
+  be fetched in order to copy it.
+- **It is the one control on a row, and there is still no second.** Deleting a
+  dictation is still not built and is still the least reversible thing this app
+  could do. Nothing else joins the row without `/canvas` and a record.
+
+**What AGENTS.md is owed, in its exact words.** `/architect` never edits that
+file, so the wording is fixed here and `/sync` applies it. The data rule that
+reads "Transcribed text goes to two places only: the cursor it was dictated
+into, and the local history for that account. Nowhere else." keeps that
+sentence and gains this one after it: "The app never routes it through a third
+place of its own accord. A person taking their own text at their own request,
+by selecting it or by pressing an action that exists to hand it to them, is not
+the app routing it, and the clipboard reached that way is not a third place the
+app chose." Nothing else in the data rules changes, and the "Never, even if a
+later request seems to call for it" list is untouched: breaking a data rule is
+still forbidden, and this is a reading of the rule rather than a break in it.
 
 **The search is a real search, over the stored text, in Rust.** It is not
 record 0006's filter. That one narrows 64 rows already on screen and asks Rust
@@ -281,6 +405,15 @@ back and there is nothing to replay. No sharing or sending anywhere, ever.
 
 ## What is refused, and why
 
+**Lifted 2026-09-04 by the first amendment.** The user gave the reading this
+section says only they could give, and Copy is built. Everything below is kept
+exactly as it was written, because a refusal that was lifted is more useful
+than a refusal that was deleted: it is the argument the decision had to answer,
+and the next person who wants to route a person's words somewhere will find it
+here rather than finding a rule that has quietly gone soft. What answers it is
+in The decision, under "The Copy action is built, and this is not an exception
+to the data rule".
+
 **The Copy action on a row is not built, and this record will not settle it
 alone.** `design/registry.md` draws `Copy action` and calls it "the only action
 on a row". AGENTS.md's data rules say: "Transcribed text goes to two places
@@ -305,6 +438,12 @@ selectable, so a person selects it and presses Ctrl+C, and Windows does the
 copying. EchoScribe never touches the clipboard. That is not as good as a
 button, and it is not pretended to be: it is named in Still open as the first
 thing to settle when the user is back.
+
+**And that is what happened, on the same day.** AC-13 stays exactly as it is,
+because selecting the text is still a way to take it and the new action does
+not replace it. What changed is the number of steps, which is the point the
+paragraph above makes and which turned out to be the argument that won:
+lifting the refusal did not put the words anywhere they could not already go.
 
 **Nothing else was refused.** No new library is needed, nothing costs money, and
 `src-tauri/capabilities/` is untouched: the dashboard listens to the same two
@@ -396,7 +535,13 @@ Rules that must always hold:
 | What a person reads for that duration | AC-2 | The screen. **Decided on the user's behalf**: whole seconds below a minute, minutes and seconds above it. Rounded, never a millisecond figure, because nobody reads a dictation's length to three decimal places. |
 | The language it ran in | AC-2 | `dictation.language`, added by record 0002's nineteenth amendment for record 0006. The code the dictation was asked with, never what Deepgram detected. |
 | What a person reads for the language | AC-2 | `design/registry.md`'s `Language tag`, which already says: mono, the literal code. So `en`, `zh-TW`, `multi`. No wording is owed and none is invented: this is the one value on the row that is a code on purpose. |
-| The word count | AC-2 | **Nowhere, and it is therefore not shown.** Counting words correctly in every language this app offers needs Unicode word segmentation, which is a new dependency and the user's decision. See The decision, and Still open. |
+| The word count | AC-2 | **Nowhere, and it is therefore not shown.** Counting words correctly in every language this app offers needs Unicode word segmentation, which is a new dependency and the user's decision. See The decision, and Still open. **Superseded 2026-09-04 by the first amendment**: the row carries a count of characters instead, on the two rows below. A count of words is still not shown and the reasoning in this row is still why. |
+| How many characters were typed | AC-2, AC-14 | Rust, `dictation.text.chars().count()`, as a sixth field on `DictationView`. Added 2026-09-04 by the first amendment. The same call record 0005's `rules.rs` counts its budget with, so this project has one meaning of "a character". Never counted in the interface: `String.length` there counts UTF-16 code units and would disagree with this for an emoji or anything outside the basic range. |
+| What a person reads for that count | AC-14 | This record, "The wording of the screen": the number then the word `characters`, and `character` at one. The user's choice on 2026-09-04, over the comp's abbreviated `84 w` shape, because this project writes plain words and both surfaces have the room. |
+| The same count while a dictation is running | AC-14 | Record 0002, its twentieth amendment, off the same `typed` string this row is a reading of, so the chip and the row cannot disagree. Finalised wording only. |
+| What Copy puts on the clipboard | AC-15 | The transcript already on the screen, exactly as `dictation.text` holds it and nothing else with it: no time, no duration, no language. The interface does it with `navigator.clipboard.writeText`; no command is added and no event is emitted, because the value is already there. |
+| What a person reads after pressing Copy | AC-15 | This record, "The wording of the screen": the button itself reads `Copied` for 2 seconds and then reads `Copy` again. 2 seconds is not invented here, it is the hold record 0002's eleventh amendment already fixed for the pill's last words. A clipboard write is otherwise silent, so a press with no answer cannot be told from a button that did nothing. |
+| What Copy looks like | AC-15 | `design/registry.md`'s `Secondary button`, the primitive this screen already uses for the older action, chosen by the user on 2026-09-04 over waiting for `/canvas` to draw a new component. It is the same precedent this record already set for the older action: an approved primitive rather than an invented one. `Copy action` is owed a fill-in by `/canvas`, and it is a row correction rather than a drawing. |
 | The source application | AC-2 | **Nowhere. It is not stored and this record does not add it.** See The decision. |
 | Which dictations match a search | AC-5 | The store, matching `dictation.text` case insensitively against the typed query with SQLite's `LIKE`, the query bound as a parameter with its `%`, `_` and escape characters escaped. Never a string joined into SQL. |
 | How many matched | AC-5 | Rust, from a count over the same query and the same account, so the number beside the search and the rows below it come from one moment. |
@@ -429,6 +574,14 @@ because Rust knows it from the session, and it refuses when nobody is signed in.
 Nothing else. No write command, no delete command, and no command that takes a
 row and does something with it, because there is nothing on this screen that
 changes anything.
+
+**Amended 2026-09-04 by the first amendment, and the surface is unchanged
+except for one field.** `get_history` returns the same shape with a sixth value
+on each row, the character count, so no signature changes and nothing new is
+invoked. The Copy action adds no command at all: the transcript is already on
+the screen, and the web view's own `navigator.clipboard.writeText` puts it on
+the clipboard. Still no event in either direction, and
+`src-tauri/capabilities/` is still not widened, not added to and not edited.
 
 **No event, in either direction.** This feature emits none and listens to none.
 The dashboard's two events are the offline row's and are untouched, and
@@ -524,6 +677,16 @@ Two milestones, each leaving the project working.
    not exist" test loses its one sentinel in the same change, per standing rule
    11, because after this there is no unbuilt section left for it to name.
 
+A third, added 2026-09-04 by the first amendment, after the two above were
+built and tested:
+
+3. **The count and the Copy action.** The count field on `DictationView` and
+   its `chars().count()`, the count on the row's metadata line beside the
+   duration where the comp puts it, the Copy button as the `Secondary button`
+   primitive, its `Copied` hold, and one guard that keeps the clipboard write
+   to this one place. The pill's chip is the same day's work and lives in
+   record 0002's own build plan, because the pill is that record's.
+
 ## What this makes harder
 
 - **Two features now read one table, and only one of them owns it.** A column
@@ -548,7 +711,13 @@ Two milestones, each leaving the project working.
   this is narrow, and it is exactly the kind of narrow gap that gets rediscovered
   as a bug.
 - **`design/registry.md` and this record disagree in three places until
-  `/canvas` runs**: the source app, the word count and the Copy action. The rule
+  `/canvas` runs**: the source app, the word count and the Copy action.
+  **Two of the three closed on 2026-09-04 by the first amendment**, and they
+  closed by the record moving to the comp rather than the other way round: a
+  count is on the row, though it counts characters and not words, and Copy is
+  built. Both rows are owed a `/canvas` fill-in, and neither is a drawing: the
+  count is the comp's own place on the row and Copy is a primitive already on
+  the list. The source app is still refused and that row still stands. The rule
   this project applies is that the record wins on content and the comp wins on
   look, and all three are content, but a reader of the registry alone would build
   three things this record does not.
@@ -557,27 +726,50 @@ Two milestones, each leaving the project working.
 - **AGENTS.md's data rule now has a visible cost.** A person can see their
   transcript and cannot press a button to copy it. That is the rule working
   rather than failing, and it will look like a missing feature to anybody who
-  has not read this record.
+  has not read this record. **No longer true from 2026-09-04**, and what
+  replaces it is harder in a quieter way: the data rule now carries a
+  distinction, and a distinction has to be applied rather than just obeyed.
+  Anybody adding a route for transcribed text has to decide which side of it
+  they are on, and the honest answer is not always the convenient one. The two
+  worked examples are in the rule's own paragraph in The decision, and record
+  0002's clipboard refusal is the one that says no.
+- **There is now exactly one clipboard write in this app, and it must stay
+  exactly one.** A second one added anywhere, for any reason, is a data rule
+  question and not a convenience. The guard the build adds makes a second one
+  fail the build rather than trusting the next reader to know that.
 
 ## Still open
 
-- **Whether the Copy action may be built.** The one thing this record refuses
-  rather than decides, and the first to settle when the user is back. It needs
-  a reading of AGENTS.md's data rule that only the user can give: is a person
-  pressing Copy the app sending their words somewhere, or the person taking
-  their own? If it may be built, it needs no new library: the web view's own
-  `navigator.clipboard.writeText` does it, and nothing in
-  `src-tauri/capabilities/` changes.
+- ~~**Whether the Copy action may be built.**~~ **Closed 2026-09-04 by the
+  first amendment.** The user gave the reading: a person taking their own text
+  at their own request is not the app routing it. Copy is built, with no new
+  library and no change to `src-tauri/capabilities/`, exactly as this bullet
+  said it would need. What the answer left behind is a rule with a distinction
+  in it, which is in "What this makes harder".
 - **How a person deletes a dictation, or all of them.** Record 0002's data model
   says history is kept "until the person deletes it", and there is no route.
   `design/registry.md` says Copy is the only action on a row, so a second one is
   a `/canvas` decision, and deleting a transcript is the least reversible thing
   this app could do. It needs its own conversation and probably its own record.
-- **Whether the word count comes back.** It needs either a named counting rule
-  the user gives, or Unicode word segmentation, which is a new dependency and
-  therefore the user's decision. The same question settles the pill's elapsed
-  and word count chip, which record 0002 left unbuilt on 2026-08-31 for the same
-  reason, so one answer unblocks two things.
+- ~~**Whether the word count comes back.**~~ **Closed 2026-09-04 by the first
+  amendment**, and closed the first of the two ways this bullet named: the user
+  gave a counting rule rather than a dependency. It counts characters, on record
+  0005's precedent. One answer did unblock two things, as this bullet said it
+  would: the row's count and the pill's chip, the second carried by record
+  0002's twentieth amendment.
+- **Whether the count should count graphemes rather than characters.** What is
+  counted is a Unicode scalar value, so an accented letter typed as a letter
+  plus a combining mark counts two and a family emoji counts several. Counting
+  what a person would point at needs grapheme cluster segmentation, a new
+  dependency and therefore the user's decision, which is the same wall word
+  segmentation hit. Named here on 2026-09-04 so that it is a known narrowness
+  rather than a bug somebody finds. It is the same shape as this record's
+  ASCII-only case folding in search.
+- **Whether anything else on a row should be copyable.** Copy takes the
+  transcript and nothing else, so a person wanting the time and the language
+  with it still selects the row by hand. If that turns out to be what people
+  actually want, it is a wording decision about what EchoScribe writes into
+  somebody else's document, which is why it was not guessed at.
 - **Whether the source application should be captured at all.** Not shown here
   and not stored. If it is ever wanted, it is a column on `dictation`, an
   amendment to record 0002, a change to the capture path in a shipped feature,
@@ -605,6 +797,15 @@ static wording, in `src/history/history.js`, and not Rust's, the same division
 those two records' screens are on and the opposite of the one refusal sentence,
 which is Rust's.
 
+**Two rows were added on 2026-09-04 by the first amendment and they are the
+user's own words rather than decided on their behalf.** One sentence already
+here was re-read against the Copy action and stands unchanged: the empty
+state's "What you say is saved here, on this machine, and nowhere else" is a
+claim about what EchoScribe stores, and Copy stores nothing. The clipboard is
+on the same machine, it holds nothing until a person asks, and the app puts
+nothing in it otherwise, so the sentence is still true in the careful sense it
+was written in.
+
 | What | The words | Why these |
 |---|---|---|
 | The search field's label | "Search your history" | "Search" and not record 0006's "Find", and the difference is the point: that filter narrows rows already on screen, and this asks the store a question and brings back rows that were not. It says whose history, which is AC-9 said quietly, the same job "Your words" does on the vocabulary surface. |
@@ -614,6 +815,8 @@ which is Rust's.
 | The action that brings older rows | "Show older dictations" | It says both what arrives and that they are older, so a person can tell it from a refresh. It is drawn only when there are older ones, so it never says nothing happened. |
 | The empty state's first line | "Nothing dictated yet." | What has not happened, in three words, which is the first thing `design/design-system.md`'s empty state rule asks for. |
 | The empty state's paragraph | "Press the hotkey anywhere on this machine, speak, and the words appear where your cursor already is. What you say is saved here, on this machine, and nowhere else." | Two sentences doing the rule's two remaining jobs: where the words will go, and that they stay on this machine. The second sentence is careful in the same way record 0005's caption is: it claims what this app controls, which is that nothing about a dictation is stored anywhere but this machine, and it claims nothing about the service that transcribed it, because a sentence here could not keep that promise. |
+| The count on a row | "{n} characters." At one: "1 character." | Added 2026-09-04 by the first amendment, and **this one is the user's own choice**, not decided on their behalf like the rest of this table. The plain word in full, over the comp's abbreviated "84 w", because this project writes plain words everywhere else and both surfaces have the room for it. The same wording on the pill's chip, so one figure reads one way wherever a person meets it. |
+| The Copy action | "Copy", then "Copied" for 2 seconds | Added 2026-09-04 by the first amendment, the user's own choice. "Copy" and not "Copy text" or "Copy transcript": there is one thing on the row to copy. "Copied" in the past tense on the button itself, rather than a message somewhere else on the screen, because the answer belongs where the press was. 2 seconds is record 0002's eleventh amendment's hold, reused rather than reinvented. |
 | The empty state's one action | "Change the hotkey" | The rule asks for one thing to do next plus one way to change the setup. The thing to do next is pressing the hotkey, which the keys above it already are, and cannot be a button. So the one action is the other half, and it goes to Settings, Dictation, where the hotkey is chosen. |
 
 ## Answered at the gate
@@ -664,7 +867,11 @@ refused, and why".
    correction `design/registry.md` is owed for `Dictation row` and the reason
    `Filter chip` is not built.
 2. That the **word count is not shown**, because no counting rule this project
-   can apply is true in every language it offers.
+   can apply is true in every language it offers. **Reversed by the user on
+   2026-09-04**, in the first amendment, and reversed in the way this list
+   exists to allow: a count is shown, and it counts characters. Item 2 is the
+   one thing on this list a person changed their mind about, which is worth
+   leaving visible.
 3. That the search is a **real search over the stored text in Rust**, matching a
    case insensitive substring with SQLite's `LIKE`, wildcards escaped, and that
    its ASCII-only case folding is named rather than fixed.
@@ -697,6 +904,12 @@ refused, and why".
     history draws no search field, that a new search starts again at the newest
     page, and that a query of only spaces is no query.
 
+**Nothing in the first amendment is on this list.** Everything it settles was
+decided by the user, in the conversation of 2026-09-04, and the two things it
+settles are precisely the two this record would not decide alone: a reading of
+a hard limit, and a counting rule. That is the list working, not being
+bypassed.
+
 ## References
 
 - `src-tauri/src/dictate/store.rs`, read 2026-09-04, whose own opening comment
@@ -709,3 +922,18 @@ refused, and why".
   this record moves, and the capability question it closed.
 - `design/design-system.md`, Empty states, whose four-part rule was written for
   this screen's empty state.
+
+Added 2026-09-04 by the first amendment:
+
+- Record 0005, "teach it your words", The decision, for the character budget
+  and the argument that a count of words is not script independent. It is the
+  precedent the counting rule rests on, and `src-tauri/src/vocabulary/rules.rs`
+  is where `chars().count()` already means what it means here.
+- Record 0002, "dictate with a hotkey", its ninth amendment for the clipboard
+  refusal this amendment leaves standing, its eleventh for the 2 second hold
+  the Copied state reuses, and its twentieth for the pill's chip, which is the
+  other half of the same counting rule.
+- `src-tauri/src/dictate/transcribe.rs`, read 2026-09-04, for `typed`, the
+  string the chip counts and the history row is written from. One string, two
+  readings, which is what makes AC-14's "the same figure" checkable rather
+  than hopeful.

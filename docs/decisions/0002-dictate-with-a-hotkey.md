@@ -346,6 +346,22 @@ stays at 35: nothing this record promised a person has changed, and record
 0005's own fourteen criteria carry everything new. Nothing in
 `src-tauri/capabilities/` is touched, no command is added here, and no event is
 added in either direction.
+**Amended:** 2026-09-04, the twentieth, by `/architect`, and it is the pill's
+half of one decision record 0007 carries the rest of. `design/registry.md`
+draws `Elapsed and word count` on the pill, `pill_window.rs` has reserved its
+band since 2026-08-31 so that its arrival resizes nothing, and it was left
+unbuilt on that date for one reason and no other: no counting rule this project
+could apply was true in every language it offers. The user settled the rule on
+2026-09-04. **It counts characters, not words**, on record 0005's precedent,
+and the chip is built. It counts **finalised wording only**, off the same
+`typed` string that becomes the history row, so the running figure on the chip
+and the final figure on the row are two readings of one string. This adds AC-36
+and takes the count to 36. It corrects the scope of one line in "What the
+system should refuse to do", the clipboard line, which is worded broadly enough
+to read as forbidding what record 0007 now builds on a screen: **the refusal
+itself is unchanged and nothing about typing changes.** No other criterion is
+renumbered or reworded. Record 0007's first amendment, of the same day, holds
+the reasoning for the counting rule and for the Copy action.
 **Amended:** 2026-09-04, the nineteenth, by `/architect`, for plan row 4.
 Record 0006, "speak in your language", is written, and it closes this record's
 last Still open bullet, the one that said the language "is fixed to English
@@ -520,6 +536,11 @@ great.
   and it asks me once before anything is deleted. If I go through with it the
   key is gone from this machine, the hotkey no longer opens the microphone,
   and the guided setup screen is what I see. If I back out, nothing changes.
+- **AC-36**: While I am dictating, once I have been going for 20 seconds, the
+  pill shows how long I have been speaking and how many characters have been
+  typed. The count only ever goes up, and when the dictation ends it is the
+  same figure History shows for it. Added 2026-09-04 by the twentieth
+  amendment.
 
 ## The decision
 
@@ -1097,6 +1118,55 @@ pill's events are unchanged. This was held during the `/debug` sitting of
 2026-08-31 on purpose, so every test there ran against unchanged typing;
 that hold ended with the sitting.
 
+**The elapsed and count chip, settled 2026-09-04 by the twentieth
+amendment.** The chip is `design/registry.md`'s `Elapsed and word count`, drawn
+there in full, and this amendment supplies the one thing the drawing could not:
+what the number is. Five rules, and the first is the only one that was ever in
+question.
+
+- **It counts characters, with `chars().count()`, in Rust.** Record 0005's
+  precedent, and record 0007's first amendment of the same day carries the
+  argument: a count of words is not script independent, and splitting on spaces
+  reports one word for a paragraph of Chinese. The count rides on the existing
+  `dictation:text` event as a second field beside the phrase, taken from
+  `typed` after the phrase has been appended, so it is a count of exactly what
+  reached the cursor. No new event, and `src-tauri/capabilities/pill.json` is
+  not touched: it already allows the pill to listen and nothing more.
+- **It counts finalised wording only, and therefore never goes down.** The
+  user's choice on 2026-09-04. `dictation:interim` is revised as Deepgram
+  changes its mind, so a count including the grey tail would fall while a
+  person is speaking, and it would not match the row in History afterwards.
+  This is also the only reading consistent with what this record already
+  refuses: an unfinished transcript is handed to the pill to draw and to
+  nothing else, and a number derived from it and shown beside a finished figure
+  would be that transcript escaping as a fact.
+- **The elapsed figure is the interface's, and it is the one thing here the
+  interface computes.** The pill ticks it once a second from
+  `dictation:opened`, which it already listens for, in the comp's own `M:SS`
+  shape with the seconds zero padded. A clock is not a decision, and a per
+  second event from Rust would be traffic for a value the page can read off
+  its own wall. There is no hour case to design: AC-8 closes a dictation at 5
+  minutes, so the largest figure the chip can ever show is `5:00`.
+- **The clock stops when the dictation ends, and the chip keeps its last
+  figures while the pill holds.** Every ending that puts words on the pill
+  holds them for 2 seconds under the eleventh amendment. The chip is part of
+  what is held: freezing it is the honest thing, because the dictation is over,
+  and a clock still running under a finished transcript would be the pill
+  asserting something false.
+- **It appears at 20 seconds and not before, which is the registry's rule and
+  not this record's.** The band is already there and already empty, so nothing
+  resizes and nothing moves when the chip arrives, which is what the twelfth
+  amendment's footprint rule exists to guarantee. A dictation shorter than 20
+  seconds shows no chip at all and that is not a failure state: a person who
+  has been speaking for eight seconds knows how long they have been speaking.
+
+What this costs, named rather than hidden: for the first 20 seconds of every
+dictation the reserved band is visibly empty, which was already true and is now
+true beside a chip a person has seen before. And the pill gains a timer, which
+is the first thing on that page that changes without an event arriving. It is
+cleared on `dictation:closed` in the same place the meter is flattened, so
+there is one path out and not two.
+
 **The pill's one geometry, settled 2026-08-31 by the twelfth amendment.**
 The pill is one size for its whole life: the drawn listening form, 472x52,
 from the moment it opens, before a word has been said, to the moment it
@@ -1286,6 +1356,10 @@ One migration, creating all three tables.
 | Which of the three screens an error kind belongs on | AC-13, AC-28, AC-30, AC-32 | Rust, once, in this feature where the kinds are minted, carried to the interface as a field on `dictation:error`. Added 2026-09-03 by the fifteenth amendment, and it was the user's choice that day. The interface inspects no kind and can only mount the screen it is named, so `MIC_ERROR_KINDS` and `isDeepgramErrorKind` are gone from it. Record 0004's shell reads the same classifier through one named function, so this table has exactly one copy. |
 | What is asked of Deepgram on the stream | AC-3, AC-4, AC-33 | This record: `nova-3`, punctuation on, interim results on. Settled 2026-08-31. **Corrected 2026-09-04 by the eighteenth and nineteenth amendments**, which took two things off this row and gave each to its own record. The language is record 0006's `language_for_dictation`, English until a person chooses otherwise, and the custom vocabulary is record 0005's `terms_for_dictation`, sent as `keyterm`. Both are read once at the moment the microphone opens and reused by the one reconnect, so neither changes inside a dictation. This row used to say the language "stays plan row 4's to widen"; plan row 4 has widened it. |
 | The language a dictation ran in | AC-17 | Record 0006, through `language_for_dictation`, read at the moment the microphone opens and carried to `save_dictation` on the close rather than read again, so the row records the language the stream was actually opened with. Added 2026-09-04 by the nineteenth amendment. |
+| How long a person has been dictating, on the chip | AC-36 | The pill's own page, ticking once a second from `dictation:opened`, which it already listens for. Added 2026-09-04 by the twentieth amendment. The comp's `M:SS` shape with the seconds zero padded, frozen at the ending and cleared on `dictation:closed`. No hour case exists, because AC-8 closes a dictation at 5 minutes. A per second event from Rust was rejected: a clock is not a decision, and the page can read this off its own wall. |
+| How many characters have been typed, on the chip | AC-36 | Rust, `typed.chars().count()` taken after the phrase is appended, carried as a second field on the existing `dictation:text`. Added 2026-09-04 by the twentieth amendment. `typed` is the string `save_dictation` writes, so the chip's figure and record 0007's row figure are two readings of one string and cannot disagree. Finalised wording only, so it never falls. The interface never counts: `String.length` there counts UTF-16 code units and would disagree for an emoji. |
+| What a person reads for that count | AC-36 | Record 0007's first amendment, the same wording on both surfaces: the number then the word `characters`, and `character` at one. |
+| When the chip appears | AC-36 | `design/registry.md`'s `Elapsed and word count`: after 20 seconds. Its band is part of the fixed footprint from the first moment, per the twelfth amendment, so its arrival resizes nothing and moves nothing. |
 | Which way round transcribed wording reads on the pill | AC-33 | The browser, from `dir="auto"` on the transcript line and its interim tail. Nothing declares a direction per language and no list of right to left languages is held anywhere. Added 2026-09-04 by the nineteenth amendment, for record 0006's AC-11. |
 | Unfinished wording on the pill | AC-33 | Deepgram's interim results on the live stream, carried to the pill by `dictation:interim` and read by nothing else. Never typed, never stored, never logged. |
 | The sentence and action for a key not allowed to stream | AC-30, AC-32 | This record: the fifth key kind table in The decision, `deepgram_key_not_allowed`. The action reuses `open_deepgram_console()`, so no new outside address. Its live trigger is undecided until the first spike in Still open runs; the 403 mapping in `deepgram_key.rs` is a documented guess until then. |
@@ -1508,9 +1582,28 @@ call for it.**
 - Put the dictated words on the clipboard. Typing is simulated character
   keystrokes or the direct character channel, never paste, settled
   2026-08-31. A future request for paste is a new decision against a data
-  rule AGENTS.md holds as a hard limit, not a tuning.
+  rule AGENTS.md holds as a hard limit, not a tuning. **Scope corrected
+  2026-09-04 by the twentieth amendment, and the refusal is unchanged.** This
+  line is about how words reach the cursor, which is all it was ever written
+  about: this feature never routes a person's words through the clipboard, on
+  its own, invisibly, as a mechanism, and paste is still refused for every app
+  including the ones on the collapse list. It was worded broadly enough to read
+  as "the clipboard is forbidden everywhere in EchoScribe", and record 0007's
+  first amendment of the same day builds a Copy action on the History screen
+  under a reading of AGENTS.md's data rule that the user gave: a person taking
+  their own text at their own request is not the app routing it. The two are on
+  opposite sides of that distinction. Nothing in this feature copies anything,
+  and nothing in this feature may.
 
 ## Build plan
+
+**Step 5a, added 2026-09-04 by the twentieth amendment.** The elapsed and
+count chip: the count field on `dictation:text` from `typed`, the chip in
+`pill.html` and `pill.css` inside the band already reserved for it, the once a
+second tick from `dictation:opened`, the freeze on an ending and the clear on
+`dictation:closed`. It changes no geometry, so it does not re-open the AC-27
+live click proof. It is the last thing this record left unbuilt for a missing
+source.
 
 1. **The hotkey and the pill.** Double tap Ctrl detection with the no
    other key guard, the always on top pill opening and closing with its
