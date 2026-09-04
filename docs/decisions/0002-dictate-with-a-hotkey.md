@@ -282,6 +282,52 @@ was missing here is not a list of causes but two promises a person can act on,
 and nothing in this record said either was possible. No existing criterion is
 renumbered or reworded, and one bullet in Interface surface is corrected in
 place, because Replace gives `save_deepgram_key` a second caller.
+**Amended:** 2026-09-04, the seventeenth, by `/develop` under its gate's option
+3, authorised by the user the same day. The sixteenth amendment settled where
+the saved key is read and what Replace and Remove do. Building it the same hour
+found four things left over, and every one of them is a word a person reads, so
+none could be chosen quietly in a stylesheet. All four are one sentence each and
+none of them is a behaviour, which is what makes them option 3 rather than a
+route back to `/architect`.
+
+1. **The sentence that stands where `Secret field, empty`'s blocker sentence
+   would be.** The sixteenth amendment says that variant's "Dictation is off
+   until this is set" must not be used while replacing, because it is false
+   there, and it says the true thing must take its place. It did not say the
+   words. They are: "Your saved key stays in force until Deepgram accepts a new
+   one."
+2. **The verify action's label.** `design/registry.md`'s `Key setup action` has
+   two labels for two routes, "Verify & finish" on first run and "Verify" on the
+   AC-9 path, and Replace is a third route. It is **"Verify"**, because nothing
+   is being finished: a person is on a settings surface and stays there.
+3. **The label on backing out of either state.** It is **"Cancel"**, the same
+   word in the replacing state and in the removing state, so one word means one
+   thing on this surface.
+4. **The wording of the link out to get a key.** It is **"Get a free key from
+   Deepgram"**, the key setup screen's own words for the same action through the
+   same command, `open_deepgram_signup`, so one action has one name across the
+   app rather than the comp's "Where do I get a key?" beside it.
+
+All four go into Value sourcing below. No criterion is renumbered, reworded or
+added and the count stays at 35.
+
+**One thing the build changed that is not a decision**, recorded here because it
+touches a sentence this record fixed. `clear_deepgram_key` used to delete the
+credential entry first and the row second, and return an error if either failed.
+Remove now shows a refused write as "This setting could not be saved, so it is
+unchanged.", and on the old order that sentence could be false: the row was
+deleted whatever the vault did, so a vault error returned a failure over an
+account whose key had in fact gone, and `dictation:key_cleared` was never
+emitted, which would have left record 0004's shell holding a dashboard for an
+account with no key. The row is deleted first now. If it will not delete,
+nothing has been removed anywhere and the sentence is exactly true. If it is
+gone, the app has no key from that instant whatever happens next, so the event
+is emitted there, before the vault is touched; an entry that then will not
+delete is said on stderr and is not a failure a person is shown, because from
+where they are standing the key is removed and the next save under the same name
+overwrites the leftover. This is AGENTS.md standing rule 14 in its ordinary
+shape: the return value said the work was not finished, and the effect the rest
+of the app depends on had already landed.
 **Weight:** heavy
 **Plan row:** 2
 **Supersedes:** nothing
@@ -1190,6 +1236,10 @@ One migration, creating all three tables.
 | What replacing the saved key does | AC-12, AC-34 | This record, settled 2026-09-04 by the sixteenth amendment. The paste field opens in place on the same surface, which is `design/registry.md`'s `Secret field, empty`, and the same `save_deepgram_key` that admits a first key admits this one, with the same four sentences from `deepgram_key.rs` on a failure. Nothing is written on any failing path, so the old key stays in force and dictation keeps working until Deepgram accepts the new one. Not the small dark window: that window is for a single way forward and a settings surface is not that. The empty variant's blocker sentence is not used on this route, because a key is saved and dictation is not off. |
 | What removing the saved key does | AC-12, AC-35 | This record, settled 2026-09-04 by the sixteenth amendment. It asks once, in place on the row, before anything is deleted; only then does `clear_deepgram_key` remove the Credential Manager entry and the row. It is the one irreversible act on this surface, because AC-12 means the app can never show the key again, so a misclick beside Replace cannot be undone from inside EchoScribe. The question lives on the row and is never a modal, which this design system does not draw. Afterwards AC-9 holds again, `dictation:key_cleared` is emitted as it already was, and record 0004's invariant closes the dashboard and leaves the guided setup screen on screen. |
 | The sentence a person reads before the key is removed | AC-35 | This record, settled 2026-09-04: "Dictation stops until another key is saved. EchoScribe cannot show you this one first." Fixed wording, the screen's own, in the same place as the two captions above. It says the two things a person cannot see for themselves: what stops, and that there is no copy to take first. It deliberately claims nothing about what Deepgram's own console will or will not show them, because this project does not control that and a sentence here could not keep the promise. |
+| The sentence where the empty field's blocker sentence would be | AC-12, AC-34 | This record, settled 2026-09-04 by the seventeenth amendment: "Your saved key stays in force until Deepgram accepts a new one." Fixed wording, the screen's own, in `src/dictate/transcription-settings.js`. It is the one sentence on this surface that exists because another one would have been a lie: `Secret field, empty`'s "Dictation is off until this is set" is true on first run and false while a working key is saved, and a person replacing a key needs telling that the old one is still doing its job. |
+| The label on the verify action | AC-34 | This record, settled 2026-09-04 by the seventeenth amendment: "Verify". `design/registry.md`'s `Key setup action` already has two labels for two routes and this is a third, so it takes the AC-9 path's word rather than first run's "Verify & finish": nothing is being finished, because a person is on a settings surface and stays there. Its busy label is the key setup screen's own, "Checking key", for the same reason. |
+| The label on backing out | AC-34, AC-35 | This record, settled 2026-09-04 by the seventeenth amendment: "Cancel", the same word in the replacing state and in the removing state, so one word means one thing on this surface. It is the only control on the surface that appears in two states, and giving it two names would make a person read it twice. |
+| The wording of the link out to get a key, on this surface | AC-12, AC-34 | This record, settled 2026-09-04 by the seventeenth amendment: "Get a free key from Deepgram", which is the key setup screen's own words for the same action through the same command, `open_deepgram_signup`. Not the comp's "Where do I get a key?" beside it: one action has one name across the app, and the address is a fixed literal in Rust either way, so nothing here supplies or sees it. |
 
 ## Interface surface
 

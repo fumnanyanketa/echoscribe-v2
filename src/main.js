@@ -53,7 +53,11 @@ async function render() {
     try {
       savedKey = await invoke("get_deepgram_key_info");
     } catch (err) {
-      app.replaceChildren(fatal("The core did not answer: " + err));
+      // The refusal carries a machine reason, not a sentence: from 2026-09-04
+      // this command hands out the settings surface's error line, and the two
+      // refusals it can make here have no sentence at all, by design. So the
+      // reason is what goes on screen, where it used to be the whole object.
+      app.replaceChildren(fatal("The core did not answer: " + reasonOf(err)));
       return;
     }
     if (savedKey) {
@@ -79,6 +83,13 @@ function unmountCurrent() {
     currentUnmount();
     currentUnmount = null;
   }
+}
+
+/** The machine cause of a refusal, for the one message above. Never a sentence
+ *  a person was meant to read: those come from Rust with a code beside them,
+ *  and this is the fallback for a state nobody designed. */
+function reasonOf(err) {
+  return (err && err.reason) || String(err);
 }
 
 function fatal(message) {
@@ -215,6 +226,19 @@ listen("dictation:needs_key", () => {
   });
   currentScreen = "key-setup";
 });
+// The saved key was removed (record 0002 AC-35, settled 2026-09-04 by that
+// record's sixteenth amendment). Nothing has gone wrong: a person pressed
+// Remove on Settings, Transcription and was asked once first. What it changes is
+// record 0004's invariant, so Rust is closing the dashboard and showing this
+// window instead, and this window is the one that has to have something on it.
+//
+// Without this listener it would not. This page last drew the at-rest state,
+// which is deliberately an empty page, because the dashboard held the screen. So
+// the shell would show a blank 760x540 window over nothing. Re-reading the state
+// is all that is needed: no key is saved, so the guided setup screen is what
+// render mounts, which is exactly where a person who has just removed their key
+// should be.
+listen("dictation:key_cleared", () => render());
 // The core reached the point of knowing it cannot reach Clerk this launch. The
 // screen is already showing the stored identity; this makes sure the "working
 // offline" marker is on it (record 0003 AC-14).

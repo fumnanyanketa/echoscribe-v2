@@ -27,6 +27,15 @@
 //! no screen invents its own. The screen draws the code and the sentence it is
 //! handed; it does not know either one. The screen itself is
 //! `src/dictate/dictation-settings.js`, on the dashboard's white surface.
+//!
+//! **The surface has a second section from 2026-09-04, and it reads the same
+//! two sentences.** The fourteenth amendment's Value sourcing rows name AC-12
+//! alongside AC-19 and AC-21, so the saved Deepgram key on Settings,
+//! Transcription says a refused write and a failed read in exactly these
+//! words. Its two commands live in `deepgram_key.rs`, because everything about
+//! the key does, and they return the `SettingError` below rather than a second
+//! shape of their own. That is why the constructors are visible to the rest of
+//! this feature: one error line, one place, two sections.
 
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
@@ -69,7 +78,7 @@ impl SettingError {
     /// Nobody is signed in. Unreachable from this screen, which only exists
     /// while somebody is, so it carries no line (record 0002, fourteenth
     /// amendment).
-    fn not_signed_in() -> Self {
+    pub(super) fn not_signed_in() -> Self {
         Self {
             reason: "not_signed_in",
             code: None,
@@ -79,7 +88,7 @@ impl SettingError {
 
     /// The dictate feature is not up yet. Unreachable for the same reason, and
     /// it carries no line for the same reason.
-    fn not_ready() -> Self {
+    pub(super) fn not_ready() -> Self {
         Self {
             reason: "not_ready",
             code: None,
@@ -89,7 +98,7 @@ impl SettingError {
 
     /// A read failed as the screen opened. The one cause the read half can
     /// reach, so the one code it can show.
-    fn not_read() -> Self {
+    pub(super) fn not_read() -> Self {
         Self {
             reason: "could_not_read",
             code: Some(NOT_READ_CODE),
@@ -100,7 +109,7 @@ impl SettingError {
     /// A write did not happen. Every way a write can fail ends here, because
     /// every one of them leaves the setting unchanged, which is exactly what
     /// the sentence says. `reason` keeps the true cause for the log.
-    fn not_saved(reason: &'static str) -> Self {
+    pub(super) fn not_saved(reason: &'static str) -> Self {
         Self {
             reason,
             code: Some(NOT_SAVED_CODE),

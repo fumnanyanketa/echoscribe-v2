@@ -30,6 +30,7 @@ use serde_json::json;
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::key_vault;
+use super::settings::SettingError;
 use super::store::SavedKey;
 use super::Dictate;
 
@@ -404,13 +405,20 @@ pub fn save_deepgram_key(app: AppHandle, key: String) -> Result<String, KeyError
 /// The last four characters of the saved key, when it was saved and when it was
 /// last checked, or nothing if no key is saved. Never returns the key
 /// (record 0002 AC-12).
+///
+/// It refuses with the settings surface's own error line, `SettingError`,
+/// because from 2026-09-04 one of its two readers is that surface: the saved
+/// key row on Settings, Transcription draws `SETTINGS_NOT_READ` and no control
+/// at all when this fails, the same state and the same words as the Dictation
+/// section beside it. Its other reader is the small dark window's router, which
+/// only ever asks whether there is a key at all and reads the reason for a log.
 #[tauri::command]
-pub fn get_deepgram_key_info(app: AppHandle) -> Result<Option<KeyInfo>, &'static str> {
+pub fn get_deepgram_key_info(app: AppHandle) -> Result<Option<KeyInfo>, SettingError> {
     let Some(account_id) = crate::sign_in::account_id_from(&app) else {
-        return Err("not_signed_in");
+        return Err(SettingError::not_signed_in());
     };
     let Some(state) = app.try_state::<Dictate>() else {
-        return Err("not_ready");
+        return Err(SettingError::not_ready());
     };
     state
         .store
@@ -418,23 +426,46 @@ pub fn get_deepgram_key_info(app: AppHandle) -> Result<Option<KeyInfo>, &'static
         .map(|saved| saved.map(KeyInfo::from))
         .map_err(|e| {
             eprintln!("dictate: could not read the saved key info: {e}");
-            "could_not_read"
+            SettingError::not_read()
         })
 }
 
-/// Remove both the credential entry and the row. After this, AC-9 holds again:
+/// Remove both the row and the credential entry. After this, AC-9 holds again:
 /// the next hotkey press opens the setup screen instead of the microphone.
+///
+/// **The row goes first, and that ordering is the whole correctness of this
+/// function.** It is Remove on the Settings, Transcription surface from
+/// 2026-09-04, and a refused write there says "This setting could not be saved,
+/// so it is unchanged.", so every failure has to leave that sentence true.
+///
+///   * The row will not delete: nothing has been removed anywhere, the account
+///     still has its key, and the sentence is exactly true.
+///   * The row is gone: the app has no key from this instant, whatever happens
+///     next, so `dictation:key_cleared` is emitted here and not after the
+///     vault. Record 0004's shell must not be left holding a dashboard for an
+///     account with no key.
+///   * The row is gone and the entry will not delete: an orphaned entry nobody
+///     can reach, which the next save under the same name overwrites. It is
+///     said on stderr and it is not a failure a person is shown, because from
+///     where they are standing the key is removed and there is nothing they
+///     could do about the leftover.
+///
+/// The old order did the opposite, and both of its failures were dishonest: a
+/// vault error returned before the event, leaving the row deleted and the
+/// dashboard up over an account with no key, and either error claimed the
+/// setting was unchanged when the row had already gone.
 #[tauri::command]
-pub fn clear_deepgram_key(app: AppHandle) -> Result<(), &'static str> {
+pub fn clear_deepgram_key(app: AppHandle) -> Result<(), SettingError> {
     let Some(account_id) = crate::sign_in::account_id_from(&app) else {
-        return Err("not_signed_in");
+        return Err(SettingError::not_signed_in());
     };
     let Some(state) = app.try_state::<Dictate>() else {
-        return Err("not_ready");
+        return Err(SettingError::not_ready());
     };
 
     // The entry name comes from the row when there is one, so an entry saved
-    // under an older naming scheme is still the one that gets removed.
+    // under an older naming scheme is still the one that gets removed. Read
+    // before the row is deleted, because after that there is nothing to read.
     let target = state
         .store
         .deepgram_key_for(&account_id)
@@ -443,25 +474,19 @@ pub fn clear_deepgram_key(app: AppHandle) -> Result<(), &'static str> {
         .map(|saved| saved.credential_target)
         .unwrap_or_else(|| key_vault::target_for(&account_id));
 
-    let vault = key_vault::delete(&target);
-    // The row goes whatever the vault did, so the app never believes in a key
-    // it cannot reach. A vault entry left behind is overwritten by the next
-    // save under the same name.
-    let row = state.store.clear_deepgram_key(&account_id);
-
-    if let Err(e) = vault {
-        eprintln!("dictate: could not clear the Deepgram key entry: {e}");
-        return Err("could_not_clear");
-    }
-    if let Err(e) = row {
+    if let Err(e) = state.store.clear_deepgram_key(&account_id) {
         eprintln!("dictate: could not clear the Deepgram key row: {e}");
-        return Err("could_not_clear");
+        return Err(SettingError::not_saved("could_not_clear"));
     }
 
-    // The other side of `dictation:key_saved`: after this AC-9 holds again, so
-    // the app is back in a pre-shell state and record 0004's dashboard is no
-    // longer due. The shell listens for this.
+    // The other side of `dictation:key_saved`, and it is emitted the moment the
+    // row is gone: AC-9 holds again from here, the app is back in a pre-shell
+    // state, and record 0004's dashboard is no longer due.
     let _ = app.emit("dictation:key_cleared", json!({}));
+
+    if let Err(e) = key_vault::delete(&target) {
+        eprintln!("dictate: could not clear the Deepgram key entry: {e}");
+    }
     Ok(())
 }
 

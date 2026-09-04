@@ -17,6 +17,7 @@
 import { mountRail, setActive, itemFor } from "./rail.js";
 import { mountAccountBlock, setOffline } from "./account-block.js";
 import { mountDictationSettings } from "../dictate/dictation-settings.js";
+import { mountTranscriptionSettings } from "../dictate/transcription-settings.js";
 
 /** Which destination opens which screen. The same shape and the same reason as
  *  rail.js's wording table: Rust hands out identifiers and this side decides
@@ -29,6 +30,7 @@ import { mountDictationSettings } from "../dictate/dictation-settings.js";
  *  This page is the dashboard's router, and routing is all it does with them. */
 const SCREEN = {
   "settings.dictation": mountDictationSettings,
+  "settings.transcription": mountTranscriptionSettings,
 };
 
 const { invoke } = window.__TAURI__.core;
