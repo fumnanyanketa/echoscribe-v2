@@ -691,4 +691,247 @@ mod tests {
             assert!(address.starts_with("https://"), "{address} must be https");
         }
     }
+
+    /* ---- The saved key row on Settings, Transcription ------------------
+     *
+     * Record 0002 AC-12, AC-34 and AC-35, built 2026-09-04 against that
+     * record's sixteenth and seventeenth amendments.
+     *
+     * Several of these are source guards, and each says so. They exist where
+     * the promise lives in an ordering or in a call being absent, which is
+     * exactly what a running app cannot be asked about cheaply and what a
+     * later tidy-up is most likely to undo. What a person actually sees is
+     * `/check verify`'s, and the two things needing a real Deepgram key are
+     * named in this build's report as permanently manual.
+     */
+
+    /// One file's source, minus its Rust tests, flattened, so a guard survives
+    /// a formatter or a prettier moving a call across lines. The same helper as
+    /// `settings.rs`'s and `shell/mod.rs`'s, and it keeps comments on purpose,
+    /// so a guard can tell a call from a comment saying one is absent.
+    fn flattened(source: &str) -> String {
+        source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("a source file always has a first part")
+            .chars()
+            .filter(|c| c.is_ascii() && !c.is_ascii_whitespace())
+            .collect()
+    }
+
+    /// The screen that draws the saved key. Read raw as well as flattened,
+    /// because one guard below is about a character that is not ASCII.
+    const SCREEN: &str = include_str!("../../../src/dictate/transcription-settings.js");
+
+    #[test]
+    fn the_saved_key_row_is_handed_only_what_ac12_allows() {
+        // covers: AC-12. `KeyInfo` is the whole of what the interface is ever
+        // told about a saved key, so what it carries is what AC-12's "only the
+        // last four characters" comes down to. A field added here is a field on
+        // a screen, and the entry name in particular must never cross: it is
+        // the address of the real key in Windows Credential Manager.
+        let info = KeyInfo::from(SavedKey {
+            key_last_four: "5f2a".to_string(),
+            credential_target: "deepgram:acct_test".to_string(),
+            saved_at: "2026-09-04T09:00:00Z".to_string(),
+            last_validated_at: Some("2026-09-04T09:00:00Z".to_string()),
+        });
+
+        let value = serde_json::to_value(&info).expect("KeyInfo serialises");
+        let object = value.as_object().expect("KeyInfo is an object");
+        let mut names: Vec<&str> = object.keys().map(String::as_str).collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            ["last_four", "last_validated_at", "saved_at"],
+            "get_deepgram_key_info now hands the interface a different set of fields. Only these three may ever cross, and none of them is the key (record 0002 AC-12)"
+        );
+        assert_eq!(object["last_four"], "5f2a");
+
+        let json = serde_json::to_string(&info).expect("KeyInfo serialises");
+        assert!(
+            !json.contains("deepgram:acct_test"),
+            "the credential entry name is on its way to a screen. It is the address of the real key in Windows Credential Manager and it never leaves Rust"
+        );
+    }
+
+    #[test]
+    fn the_row_is_never_told_how_long_the_key_was() {
+        // covers: AC-12, as a source guard only. The mask is a fixed run of
+        // bullets and record 0002's sixteenth amendment is explicit that it
+        // carries no information: a length narrows a secret, and the length is
+        // not stored for exactly that reason. The tempting change is to draw
+        // one bullet per character, which looks more honest and is the one
+        // thing this must never do.
+        assert!(
+            SCREEN.contains("repeat(20)"),
+            "the mask on the saved key row is no longer a fixed run. If it is now drawn from the key's own length, it is telling a person something record 0002 refuses to store (AC-12)"
+        );
+        let flat = flattened(SCREEN);
+        assert!(
+            !flat.contains("last_four.length"),
+            "the saved key row reads the length of the fragment it was given. Nothing on this surface may be derived from how long the key was"
+        );
+    }
+
+    #[test]
+    fn the_verified_date_is_never_the_date_the_key_was_saved() {
+        // covers: AC-12. The caption says "Verified <date>", and the date is
+        // `last_validated_at`, the moment Deepgram last accepted the key. When
+        // there is none the sentence is dropped. Falling back to `saved_at`
+        // would put the word Verified in front of a date nothing had checked,
+        // which is a claim rather than a gap.
+        // The read, not the word. `flattened` keeps comments on purpose, and
+        // this screen's own comment says in as many words that `saved_at` is
+        // deliberately not used, which a guard looking for the bare name would
+        // count. Both ways the field could actually be read are covered.
+        let flat = flattened(SCREEN);
+        for read in [".saved_at", "[\"saved_at\"]"] {
+            assert!(
+                !flat.contains(read),
+                "the saved key row reads saved_at. The caption in front of that date says Verified, and being saved is not being verified (record 0002, sixteenth amendment)"
+            );
+        }
+    }
+
+    #[test]
+    fn the_pasted_key_is_a_password_field_from_the_first_keystroke() {
+        // covers: AC-12, AC-34, as a source guard only. Replace puts a paste
+        // field on a light reading surface, which is the first time in this app
+        // a key is typed anywhere but the dark window. AC-12's "never shown
+        // again" covers the new one being pasted too, and the masking is the
+        // field's own type.
+        let flat = flattened(SCREEN);
+        assert!(
+            flat.contains("input.type=\"password\""),
+            "the paste field on the saved key row is no longer a password field. The key would then be on screen in plain text, which record 0002 AC-12 refuses"
+        );
+        assert!(
+            !flat.contains("input.type=\"text\""),
+            "the paste field on the saved key row is a plain text field"
+        );
+    }
+
+    #[test]
+    fn both_key_commands_hand_out_the_settings_surfaces_one_error_line() {
+        // covers: AC-12, AC-19, AC-21, as a source guard only, and it is record
+        // 0002's fourteenth amendment held across two files. The Transcription
+        // section and the Dictation section beside it say a refused write and a
+        // failed read in the same words, from the one place that holds them. A
+        // second error shape here is how two truths start: one gets reworded
+        // and the other does not.
+        let flat = flattened(include_str!("deepgram_key.rs"));
+        for signature in [
+            "pubfnget_deepgram_key_info(app:AppHandle)->Result<Option<KeyInfo>,SettingError>",
+            "pubfnclear_deepgram_key(app:AppHandle)->Result<(),SettingError>",
+        ] {
+            assert!(
+                flat.contains(signature),
+                "a command on the saved key row no longer returns SettingError. Its section of Settings would then say a failure in words nothing else on that surface uses (record 0002, fourteenth amendment)"
+            );
+        }
+    }
+
+    #[test]
+    fn removing_a_key_deletes_the_row_before_the_entry_and_says_so_in_between() {
+        // covers: AC-35, as a source guard only, and this ordering is the whole
+        // correctness of Remove. Three things in one order, and each swap is a
+        // different lie:
+        //
+        //   row, then event, then entry.
+        //
+        // Entry before row was the old order, and a failed entry delete then
+        // returned "this setting could not be saved, so it is unchanged" over
+        // an account whose row had already gone, with no event emitted, leaving
+        // record 0004's shell holding a dashboard for an account with no key.
+        // Event after the entry has the same hole one step along. Proving it for
+        // real needs a credential store that refuses a delete, which is not
+        // something a test can arrange on this machine, so the order is guarded
+        // here instead of being re-derived by the next person who reads the
+        // function and finds the entry delete more natural first.
+        let flat = flattened(include_str!("deepgram_key.rs"));
+        let start = flat
+            .find("pubfnclear_deepgram_key(app:AppHandle)")
+            .expect("clear_deepgram_key is no longer a command in this file");
+        let body = &flat[start..];
+        let row = body
+            .find("state.store.clear_deepgram_key(&account_id)")
+            .expect("clear_deepgram_key no longer deletes the row");
+        let event = body
+            .find("\"dictation:key_cleared\"")
+            .expect("clear_deepgram_key no longer says the key is gone");
+        let entry = body
+            .find("key_vault::delete(&target)")
+            .expect("clear_deepgram_key no longer removes the credential entry");
+
+        assert!(
+            row < event,
+            "clear_deepgram_key says the key is gone before the row is deleted. If the delete then fails, record 0004's shell has already closed the dashboard for an account that still has a key"
+        );
+        assert!(
+            event < entry,
+            "clear_deepgram_key removes the credential entry before it says the key is gone. An entry that will not delete then returns a failure and no event, leaving the shell holding a dashboard for an account whose row has already gone"
+        );
+    }
+
+    #[test]
+    fn the_key_can_never_be_removed_without_the_question_being_asked() {
+        // covers: AC-35, as a source guard only. Remove sits a few pixels from
+        // Replace, and AC-12 means this app can never show the key again, so a
+        // misclick destroys something no screen here can give back. The
+        // question is the whole of the protection, and the way it gets lost is
+        // somebody wiring the row's Remove straight to the command because the
+        // extra step reads as friction.
+        let flat = flattened(SCREEN);
+        assert_eq!(
+            flat.matches("invoke(\"clear_deepgram_key\")").count(),
+            1,
+            "the saved key row calls clear_deepgram_key in more than one place. Exactly one of them can be the one behind the question"
+        );
+
+        let start = flat
+            .find("functionsavedWell(ctx){")
+            .expect("the saved key row no longer has a resting state");
+        let end = start
+            + flat[start..]
+                .find("functionmask()")
+                .expect("mask no longer follows savedWell in this screen");
+        assert!(
+            !flat[start..end].contains("clear_deepgram_key"),
+            "Remove on the resting saved key row removes the key straight away. It must set the asking state instead: one misclick would otherwise destroy a key this app can never show again (record 0002 AC-35)"
+        );
+    }
+
+    #[test]
+    fn the_question_hands_the_keyboard_to_cancel_and_not_to_remove() {
+        // covers: AC-35, as a source guard only. Once the question is up, the
+        // keyboard goes to the way out. A person who pressed Remove with the
+        // keyboard has their finger on Enter, and focus landing on the
+        // confirming button turns the question into a formality.
+        let flat = flattened(SCREEN);
+        assert!(
+            flat.contains("cancel.dataset.focusFirst=\"true\""),
+            "the way out of the remove question is no longer marked as where focus goes"
+        );
+        assert!(
+            flat.contains("querySelector(\"[data-focus-first]\")"),
+            "the remove question no longer hands the keyboard to Cancel. A second press of Enter would then destroy the key rather than back out (record 0002 AC-35)"
+        );
+    }
+
+    #[test]
+    fn the_small_window_learns_when_the_key_is_removed() {
+        // covers: AC-35, as a source guard only, and it is the one thing record
+        // 0002's sixteenth amendment named as owed by the build. Remove takes
+        // the dashboard away, because record 0004's invariant stops holding,
+        // and the small window is what is revealed. That window's router last
+        // drew the at-rest state, which is a deliberately empty page. Without
+        // this listener a person who removes their key is looking at a blank
+        // 760x540 window with nothing on it and no way forward.
+        let flat = flattened(include_str!("../../../src/main.js"));
+        assert!(
+            flat.contains("listen(\"dictation:key_cleared\""),
+            "the small window's router no longer re-reads the state when the key is removed. It last drew the empty at-rest page, so Remove leaves a person looking at a blank 760x540 window (record 0002, sixteenth amendment)"
+        );
+    }
 }

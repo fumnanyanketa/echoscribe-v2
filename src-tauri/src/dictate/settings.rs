@@ -370,23 +370,39 @@ mod tests {
             "the not-read sentence appears more than once in settings.rs"
         );
 
-        // And the screen holds neither. It draws the code and the sentence it
-        // is handed on the command's error, and it does not know either one, so
-        // a change here reaches a person without a second file having to agree.
-        // Same shape as the two guards in mod.rs and error_screen.rs, which
-        // read src/main.js for the same reason.
-        const SCREEN: &str = include_str!("../../../src/dictate/dictation-settings.js");
-        for sentence in [NOT_SAVED_MESSAGE, NOT_READ_MESSAGE] {
-            assert!(
-                !SCREEN.contains(sentence),
-                "src/dictate/dictation-settings.js now holds a sentence this file owns. Both settings sentences live in Rust and nowhere else (record 0002, fourteenth amendment)"
-            );
-        }
-        for code in [NOT_SAVED_CODE, NOT_READ_CODE] {
-            assert!(
-                !SCREEN.contains(code),
-                "src/dictate/dictation-settings.js now holds an error code this file owns. The screen shows the code it is handed"
-            );
+        // And neither screen on this surface holds either. Each draws the code
+        // and the sentence it is handed on the command's error, and knows
+        // neither one, so a change here reaches a person without a second file
+        // having to agree. Same shape as the two guards in mod.rs and
+        // error_screen.rs, which read src/main.js for the same reason.
+        //
+        // **Both screens, from 2026-09-04.** The surface gained a second
+        // section that day, the saved Deepgram key on Settings, Transcription,
+        // and the fourteenth amendment's Value sourcing rows name AC-12
+        // alongside AC-19 and AC-21. Guarding only the first screen would have
+        // left the second free to grow the copy this test exists to stop.
+        for (name, screen) in [
+            (
+                "src/dictate/dictation-settings.js",
+                include_str!("../../../src/dictate/dictation-settings.js"),
+            ),
+            (
+                "src/dictate/transcription-settings.js",
+                include_str!("../../../src/dictate/transcription-settings.js"),
+            ),
+        ] {
+            for sentence in [NOT_SAVED_MESSAGE, NOT_READ_MESSAGE] {
+                assert!(
+                    !screen.contains(sentence),
+                    "{name} now holds a sentence this file owns. Both settings sentences live in Rust and nowhere else (record 0002, fourteenth amendment)"
+                );
+            }
+            for code in [NOT_SAVED_CODE, NOT_READ_CODE] {
+                assert!(
+                    !screen.contains(code),
+                    "{name} now holds an error code this file owns. A screen shows the code it is handed"
+                );
+            }
         }
     }
 }
