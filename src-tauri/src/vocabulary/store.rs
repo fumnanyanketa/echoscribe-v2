@@ -307,6 +307,71 @@ mod tests {
             .is_err());
     }
 
+    /// A real file on disk, with the `account` table the sign-in feature makes.
+    /// The in-memory store cannot answer "after closing and reopening the app",
+    /// because there is nothing to close. Same helper, same shape, as the
+    /// dictate feature's store.
+    fn a_fresh_database_file() -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "echoscribe-vocabulary-test-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let conn = Connection::open(&path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE account (id TEXT PRIMARY KEY NOT NULL);
+             INSERT INTO account (id) VALUES ('acct_one'), ('acct_two');",
+        )
+        .unwrap();
+        path
+    }
+
+    #[test]
+    fn words_survive_closing_and_reopening_the_app() {
+        // covers: AC-2's second half and AC-4's third. "Still there after
+        // closing and reopening the app" and "still gone after a restart" are
+        // the two halves of the same promise, and neither can be answered by an
+        // in-memory database, because there is nothing to close. So this one
+        // uses a real file, closes it, and opens it again, which is as close to
+        // a restart as a test gets.
+        let path = a_fresh_database_file();
+        let removed_id;
+        {
+            let store = Store::open(&path).expect("first open");
+            store
+                .add_term("acct_one", "Fumnanya Nketa", "2026-09-04T10:00:00Z")
+                .unwrap();
+            store
+                .add_term("acct_one", "EchoScribe", "2026-09-04T10:00:01Z")
+                .unwrap();
+            store
+                .add_term("acct_one", "gone by morning", "2026-09-04T10:00:02Z")
+                .unwrap();
+            removed_id = store
+                .terms_for("acct_one")
+                .unwrap()
+                .into_iter()
+                .find(|t| t.term == "gone by morning")
+                .expect("it was just added")
+                .id;
+            store.remove_term("acct_one", removed_id).unwrap();
+        }
+
+        let store = Store::open(&path).expect("second open");
+        // The two that were added are there, still newest first, and the one
+        // that was removed is still gone.
+        assert_eq!(
+            words(&store, "acct_one"),
+            vec!["EchoScribe", "Fumnanya Nketa"]
+        );
+
+        drop(store);
+        let _ = std::fs::remove_file(&path);
+    }
+
     #[test]
     fn opening_an_already_migrated_file_changes_nothing() {
         // covers: record 0005's data model, "one migration, creating one table

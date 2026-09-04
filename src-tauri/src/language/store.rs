@@ -198,6 +198,53 @@ mod tests {
             .is_err());
     }
 
+    /// A real file on disk, with the `account` table the sign-in feature makes.
+    /// The in-memory store cannot answer "after closing and reopening the app",
+    /// because there is nothing to close.
+    fn a_fresh_database_file() -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "echoscribe-language-test-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let conn = Connection::open(&path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE account (id TEXT PRIMARY KEY NOT NULL);
+             INSERT INTO account (id) VALUES ('acct_one'), ('acct_two');",
+        )
+        .unwrap();
+        path
+    }
+
+    #[test]
+    fn a_chosen_language_survives_closing_and_reopening_the_app() {
+        // covers: AC-2's second half, and AC-8 across a restart. "Still in
+        // force after closing and reopening the app" cannot be answered by an
+        // in-memory database, because there is nothing to close. Two accounts,
+        // because the promise is per account and the interesting failure is one
+        // row overwriting the other.
+        let path = a_fresh_database_file();
+        {
+            let store = Store::open(&path).expect("first open");
+            store
+                .save_language("acct_one", "ja", "2026-09-04T10:00:00Z")
+                .unwrap();
+            store
+                .save_language("acct_two", "pl", "2026-09-04T10:00:01Z")
+                .unwrap();
+        }
+
+        let store = Store::open(&path).expect("second open");
+        assert_eq!(store.language_for("acct_one").unwrap(), "ja");
+        assert_eq!(store.language_for("acct_two").unwrap(), "pl");
+
+        drop(store);
+        let _ = std::fs::remove_file(&path);
+    }
+
     #[test]
     fn opening_an_already_migrated_file_changes_nothing() {
         // covers: record 0006's data model. Every launch after the first runs

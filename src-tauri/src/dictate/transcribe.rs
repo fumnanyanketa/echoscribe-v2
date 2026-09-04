@@ -381,12 +381,18 @@ async fn run(
     }
 }
 
-/// Open the socket, with everything this feature asks of Deepgram.
+/// Everything this feature asks of Deepgram for one stream, as options.
 ///
-/// `asked` carries the two things that are the person's rather than this
-/// record's, and it is borrowed rather than taken so that the one reconnect
-/// attempt asks for exactly the same thing this call did.
-async fn connect(client: &Deepgram, asked: &Asked) -> Result<WebsocketHandle, DeepgramError> {
+/// Pure, and separate from [`connect`] for one reason: **it is the only place
+/// in this app where what is asked of an outside service is decided, and it is
+/// worth being able to assert the exact query rather than trust a reading of
+/// the code.** The tests at the bottom of this file do exactly that, through
+/// the SDK's own `Options::urlencoded`, which is what makes record 0005's AC-14
+/// and record 0006's AC-3 and AC-12 provable rather than argued.
+///
+/// Called from [`connect`] and from nowhere else, so the first connection and
+/// the one reconnect attempt cannot ask for different things.
+fn stream_options(asked: &Asked) -> Options {
     let mut options = Options::builder()
         .model(MODEL)
         // The account's chosen language, from record 0006, read once before the
@@ -411,11 +417,18 @@ async fn connect(client: &Deepgram, asked: &Asked) -> Result<WebsocketHandle, De
     if !asked.keyterms.is_empty() {
         options = options.keyterms(asked.keyterms.iter().map(String::as_str));
     }
-    let options = options.build();
+    options.build()
+}
 
+/// Open the socket, with everything this feature asks of Deepgram.
+///
+/// `asked` carries the two things that are the person's rather than this
+/// record's, and it is borrowed rather than taken so that the one reconnect
+/// attempt asks for exactly the same thing this call did.
+async fn connect(client: &Deepgram, asked: &Asked) -> Result<WebsocketHandle, DeepgramError> {
     client
         .transcription()
-        .stream_request_with_options(options)
+        .stream_request_with_options(stream_options(asked))
         // The microphone is downmixed to one channel of signed 16-bit samples
         // before it gets here, at whatever rate the device runs at. One channel
         // because this is one person dictating: sending two would have Deepgram
@@ -817,5 +830,259 @@ mod tests {
         assert_eq!(RECONNECT_WINDOW, Duration::from_secs(5));
         let at_48k = 48_000 * RECONNECT_WINDOW.as_secs() as usize;
         assert_eq!(at_48k, 240_000, "five seconds of 48 kHz mono samples");
+    }
+
+    /* ---- What is actually asked of Deepgram ---------------------------
+     *
+     * Records 0005 and 0006 both come down to one query string, and these
+     * tests read it rather than reading the code that builds it. The seam is
+     * `stream_options`, and the assertion goes through the SDK's own
+     * `Options::urlencoded`, so what is checked is the text that leaves this
+     * machine and not this file's intentions about it.
+     */
+
+    /// This file's own source, minus its tests, flattened so a guard survives
+    /// a formatter moving a call across lines. The same helper, for the same
+    /// reason, as the ones in `settings.rs`, `lib.rs` and the two new features.
+    fn this_file_flattened() -> String {
+        include_str!("transcribe.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("a source file always has a first part")
+            .chars()
+            .filter(|c| c.is_ascii() && !c.is_ascii_whitespace())
+            .collect()
+    }
+
+    /// An `Asked` for a test, so each one below says only what it is about.
+    fn asked(language: &'static str, keyterms: &[&str]) -> Asked {
+        Asked {
+            language,
+            keyterms: keyterms.iter().map(|t| t.to_string()).collect(),
+            sample_rate: 48_000,
+        }
+    }
+
+    /// The query `stream_options` produces, exactly as Deepgram receives it.
+    fn query(asked: &Asked) -> String {
+        stream_options(asked)
+            .urlencoded()
+            .expect("the options always serialise")
+    }
+
+    #[test]
+    fn an_account_with_no_words_asks_for_exactly_what_it_did_before() {
+        // covers: record 0005 AC-10, and record 0006 AC-1's default. This is
+        // the whole of "dictation works exactly as it did before this feature
+        // existed", and it is the one test that would catch either feature
+        // changing the request for somebody who has not used it. English,
+        // nova-3, punctuation, and no keyterm parameter at all.
+        assert_eq!(
+            query(&asked("en", &[])),
+            "model=nova-3&language=en&punctuate=true"
+        );
+    }
+
+    #[test]
+    fn the_chosen_language_is_what_is_asked_for() {
+        // covers: record 0006 AC-3, AC-5. The Rust half of "the words come out
+        // in that language": Deepgram is told which one. That the words then
+        // come back right is Deepgram's to do and /check verify's to prove.
+        // `multi` is included because AC-5 is about it and because it is the
+        // one entry that is not a language.
+        for language in ["ja", "pl", "zh-HK", "multi", "he"] {
+            let q = query(&asked(language, &[]));
+            assert!(
+                q.contains(&format!("language={language}")),
+                "the query {q:?} does not ask for {language}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_custom_vocabulary_is_asked_for_as_keyterm() {
+        // covers: record 0005 AC-3. One `keyterm` per word, in the order the
+        // list came in, which is the order the screen shows.
+        assert_eq!(
+            query(&asked("en", &["Fumnanya", "EchoScribe"])),
+            "model=nova-3&language=en&punctuate=true&keyterm=Fumnanya&keyterm=EchoScribe"
+        );
+    }
+
+    #[test]
+    fn a_word_holding_an_ampersand_cannot_add_a_parameter_of_its_own() {
+        // covers: record 0005 AC-14, and its risk section's first threat. A
+        // custom word goes into the query of the streaming address, so a word
+        // reading `&language=de` reaching it unencoded would change what is
+        // asked of Deepgram, silently, on every dictation. This is the test
+        // that says it cannot: the language asked for is still English, and the
+        // word arrives as one encoded value.
+        let q = query(&asked("en", &["a&language=de"]));
+        assert_eq!(
+            q,
+            "model=nova-3&language=en&punctuate=true&keyterm=a%26language%3Dde"
+        );
+        // Said the other way round, because the assertion above would also
+        // pass if the encoding changed shape: there is exactly one language in
+        // this request and it is the one that was chosen.
+        assert_eq!(q.matches("language=").count(), 1);
+        assert!(!q.contains("language=de"));
+    }
+
+    #[test]
+    fn a_word_with_a_space_in_it_stays_one_word() {
+        // covers: record 0005 AC-3. A phrase is the point of allowing spaces,
+        // and a phrase split into two keyterms would boost two ordinary words
+        // instead of one name. Deepgram's documented form for this is a plus
+        // sign inside one value.
+        let q = query(&asked("en", &["Fumnanya Nketa"]));
+        assert!(
+            q.ends_with("keyterm=Fumnanya+Nketa"),
+            "the query {q:?} does not carry the phrase as one keyterm"
+        );
+        assert_eq!(q.matches("keyterm=").count(), 1);
+    }
+
+    #[test]
+    fn the_vocabulary_and_a_chosen_language_are_asked_for_together() {
+        // covers: record 0006 AC-12, "the words I have added still apply in
+        // the language I picked". Deepgram documents keyterm as working for
+        // nova-3 monolingual and multilingual alike, and this is the half this
+        // project controls: both parameters are on the same request, neither
+        // dropping the other. Whether Deepgram then honours them in Japanese
+        // is /check verify's, and both records name it as unproven.
+        let q = query(&asked("ja", &["Nketa"]));
+        assert_eq!(q, "model=nova-3&language=ja&punctuate=true&keyterm=Nketa");
+        let q = query(&asked("multi", &["EchoScribe", "Fumnanya"]));
+        assert!(q.contains("language=multi"));
+        assert_eq!(q.matches("keyterm=").count(), 2);
+    }
+
+    #[test]
+    fn a_word_in_a_non_latin_script_survives_the_request_whole() {
+        // covers: record 0005 AC-3, AC-14, and record 0006 AC-12. The budget
+        // is counted in characters precisely so that a Japanese or Arabic term
+        // is a legitimate one, so a term in one has to arrive intact. Encoded
+        // rather than mangled, and one value rather than several.
+        let q = query(&asked("ja", &["エコー"]));
+        assert!(
+            q.ends_with("keyterm=%E3%82%A8%E3%82%B3%E3%83%BC"),
+            "the query {q:?} does not carry the Japanese term intact"
+        );
+        assert_eq!(q.matches("keyterm=").count(), 1);
+    }
+
+    #[test]
+    fn punctuation_is_asked_for_in_every_language() {
+        // covers: record 0006 AC-3. Record 0006 says punctuation stays on for
+        // every language, on Deepgram's documentation alone, and its Still open
+        // records that what happens for a language that does not support it is
+        // undocumented. This test does not settle that. It settles the half
+        // this file owns: that no language turns punctuation off here, which is
+        // the change somebody would reach for if a language ever refused it,
+        // and which the record says must be an amendment rather than a quick
+        // edit.
+        for language in ["en", "ja", "ar", "multi"] {
+            assert!(
+                query(&asked(language, &[])).contains("punctuate=true"),
+                "punctuation is not asked for in {language}"
+            );
+        }
+    }
+
+    #[test]
+    fn what_is_asked_of_deepgram_is_decided_in_exactly_one_place() {
+        // covers: record 0005 AC-3 and record 0006 AC-4, as a source guard.
+        // The first connection and the one reconnect attempt must ask for the
+        // same thing: a reconnect that sent a different language would change
+        // language mid dictation, and one that dropped the keyterms would
+        // quietly stop using a person's words halfway through a sentence. Both
+        // go through `connect`, which goes through `stream_options`, and this
+        // is what keeps it that way. The behaviour needs a real socket dying
+        // mid dictation, which is /check verify's; this only stops a second
+        // options builder appearing.
+        let flat = this_file_flattened();
+        assert_eq!(
+            flat.matches("Options::builder()").count(),
+            1,
+            "transcribe.rs now builds Deepgram options in more than one place. \
+             The first connection and the reconnect would then be able to ask \
+             for different things (record 0005 AC-3, record 0006 AC-4)"
+        );
+        assert_eq!(
+            flat.matches("stream_options(asked)").count(),
+            1,
+            "connect no longer takes its options from stream_options"
+        );
+        // And the reconnect asks with the same `asked` it was handed, rather
+        // than reading either feature again.
+        assert!(
+            flat.contains("connect(client,asked).await"),
+            "the reconnect no longer passes the same `asked` the first \
+             connection used"
+        );
+        for feature in ["crate::vocabulary", "crate::language"] {
+            assert!(
+                !flat.contains(feature),
+                "transcribe.rs now reads {feature} itself. Both are read once \
+                 in mod.rs before the microphone opens, and reading either \
+                 here would let a change reach a dictation already running"
+            );
+        }
+    }
+
+    #[test]
+    fn neither_the_language_nor_a_word_is_ever_logged() {
+        // covers: record 0005 AC-13, and record 0006's risk section. A person's
+        // custom vocabulary is personal data by record 0005's own reckoning,
+        // and a log is a file. `Asked`'s own doc comment promises this; this is
+        // the test that keeps the promise.
+        let flat = this_file_flattened();
+        for forbidden in ["{asked", "{language}", "keyterms:?", "asked:?"] {
+            assert!(
+                !flat.contains(forbidden),
+                "transcribe.rs now puts {forbidden} in a log line, which would \
+                 write a person's own words or their language to a file"
+            );
+        }
+    }
+
+    #[test]
+    fn the_pill_lays_transcribed_words_out_in_their_own_direction() {
+        // covers: record 0006 AC-11's pill half. A line of Arabic or Hebrew in
+        // a container that declares left to right is shown backwards, and the
+        // whole mechanism is one attribute on the transcript line and its two
+        // halves. It is a source guard because the rendering itself needs a
+        // running app and a person who can read the script; what this catches
+        // is the attribute being tidied away as decoration, which is exactly
+        // what it looks like.
+        //
+        // Same shape as the guards in mod.rs and error_screen.rs, which read
+        // src/main.js for the same reason.
+        const PILL: &str = include_str!("../../../src/dictate/pill.html");
+        for element in ["pill__line\"", "pill__final\"", "pill__interim\""] {
+            let at = PILL
+                .find(element)
+                .unwrap_or_else(|| panic!("the pill no longer has a {element}"));
+            let tag_end = PILL[at..]
+                .find('>')
+                .expect("an element always closes its tag");
+            assert!(
+                PILL[at..at + tag_end].contains("dir=\"auto\""),
+                "the pill's {element} no longer carries dir=\"auto\", so a line \
+                 of Arabic or Hebrew would be shown backwards (record 0006 \
+                 AC-11)"
+            );
+        }
+        // And no list of right to left languages appeared beside it, which
+        // record 0006 and design/registry.md both forbid: a direction guessed
+        // from the setting is wrong the moment a Hebrew speaker dictates an
+        // English product name.
+        for hint in ["dir=\"rtl\"", "rtl-languages", "RTL_LANGUAGES"] {
+            assert!(
+                !PILL.contains(hint),
+                "the pill now holds {hint}. dir=\"auto\" is the whole mechanism"
+            );
+        }
     }
 }

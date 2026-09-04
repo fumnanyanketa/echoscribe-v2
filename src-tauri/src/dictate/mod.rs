@@ -966,6 +966,101 @@ mod tests {
     /// and so owns the clearing half of AC-32.
     const SHELL: &str = include_str!("../../../src/main.js");
 
+    /// This file's own source, minus its tests, flattened.
+    fn this_file_flattened() -> String {
+        flattened(
+            include_str!("mod.rs")
+                .split("#[cfg(test)]")
+                .next()
+                .expect("a source file always has a first part"),
+        )
+    }
+
+    #[test]
+    fn the_language_and_the_words_are_read_before_the_microphone_opens() {
+        // covers: record 0005 AC-3 and record 0006 AC-4, and this is the guard
+        // that carries both of them. Each says a change made while dictating
+        // applies to the *next* dictation, and the only thing that makes that
+        // true is where these two reads sit: before the device is opened, once,
+        // so there is no later moment at which either could be asked again.
+        //
+        // It is a source guard because proving it for real means changing a
+        // setting during a live dictation, which is /check verify's. What this
+        // catches is the ordinary tidy-up that moves a read closer to where its
+        // value is used, which would look like an improvement and would quietly
+        // turn both promises into a race.
+        let flat = this_file_flattened();
+
+        let language_at = flat
+            .find("crate::language::language_for_dictation(app)")
+            .expect("mod.rs no longer reads the chosen language for a dictation");
+        let terms_at = flat
+            .find("crate::vocabulary::terms_for_dictation(app)")
+            .expect("mod.rs no longer reads the custom vocabulary for a dictation");
+        let microphone_at = flat
+            .find("microphone::open(")
+            .expect("mod.rs no longer opens the microphone");
+
+        assert!(
+            language_at < microphone_at,
+            "the chosen language is now read after the microphone opens. A \
+             language changed during a dictation could then reach it, which \
+             record 0006's AC-4 forbids"
+        );
+        assert!(
+            terms_at < microphone_at,
+            "the custom vocabulary is now read after the microphone opens. A \
+             word added during a dictation could then reach it, which record \
+             0005's AC-3 forbids"
+        );
+
+        // And each is read exactly once, so there is no second read that could
+        // return something different.
+        assert_eq!(
+            flat.matches("crate::language::language_for_dictation")
+                .count(),
+            1,
+            "the chosen language is read more than once in mod.rs"
+        );
+        assert_eq!(
+            flat.matches("crate::vocabulary::terms_for_dictation")
+                .count(),
+            1,
+            "the custom vocabulary is read more than once in mod.rs"
+        );
+    }
+
+    #[test]
+    fn the_history_row_records_the_language_the_dictation_actually_ran_in() {
+        // covers: record 0006 AC-7, as a source guard on the one thing a unit
+        // test cannot see. `save_dictation` takes a language, and the value
+        // passed has to be the one the stream was opened with rather than a
+        // fresh read: a person who changes their language after speaking and
+        // before the dictation closes would otherwise get a row claiming words
+        // were transcribed in a language they were not.
+        //
+        // The store's own test proves the column holds what it is given. This
+        // proves what it is given comes from `Finished`, which comes from
+        // `Live`, which was filled when the microphone opened.
+        let flat = this_file_flattened();
+        assert!(
+            flat.contains("finished.language"),
+            "the history row no longer takes its language from the finished \
+             dictation (record 0006 AC-7)"
+        );
+        assert!(
+            flat.contains("language:self.language"),
+            "Live no longer hands its own language to Finished, so the row \
+             would carry something read at the close rather than at the open"
+        );
+        assert!(
+            !flat.contains("save_dictation(&finished.account_id,&finished.text,&finished.started_at,finished.duration_ms,crate::language"),
+            "the history row now reads the language afresh at the close, which \
+             would let a change made mid dictation land on a row it did not \
+             apply to (record 0006 AC-7)"
+        );
+    }
+
     /// One listener's own text out of the interface shell, flattened. It ends
     /// at that registration's closing brace, so a comment sitting between two
     /// listeners is never read as part of either.
