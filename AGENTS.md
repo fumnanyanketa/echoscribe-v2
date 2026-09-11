@@ -339,6 +339,31 @@ caution.
     is exactly why it is written down: the framework's documented default is
     correct and simply unreachable here.
 
+Rule 19 is a different shape from 14 to 18. Those are about trusting a report.
+This one is about a fact that six places have to agree on, where nothing makes
+them.
+
+19. **When every feature folder needs the same literal, the folder rule is
+    what makes it drift, and only a test across all of them will catch it.**
+    Feature folders do not import from each other, so each one declares what
+    it needs. Applied to a behaviour that is fine. Applied to **one fact about
+    the world that must be identical everywhere**, it is six chances to be
+    wrong. `const DB_FILE` is the proof: `sign_in`, `dictate` and `shell` say
+    `echoscribe.sqlite3`, and `vocabulary`, `language` and `history` say
+    `echoscribe.db`, so the app opens two databases while every comment in it,
+    including `lib.rs`, promises one. Custom words and the language choice
+    cannot save and history cannot be read at all, which is the screen the app
+    lands on. Found 2026-09-11 by `/check review` on a second model, after it
+    had survived 342 passing tests and a clean clippy. **The reason no test saw
+    it is the part worth keeping**: every store's tests open an in-memory
+    database or their own temp file and hand-create the schema in the
+    connection under test, so each feature is proved against a file shaped the
+    way that feature imagines, and never against the file it actually gets.
+    A shared fact needs one home and one test that boots every `init()`
+    against a single real path. Two copies held by a guard is the sanctioned
+    answer at two, per the shared-module rule above; six copies held by nothing
+    is how this happened.
+
 ## Things to know about this project
 
 - Rust has fewer training examples than JavaScript. Expect core changes
@@ -353,8 +378,17 @@ caution.
 - Bring-your-own-key adds a real setup step. Every new person needs a
   Deepgram account and a key before dictation works at all. Treat that
   first-run screen as load-bearing, not as a form.
-- `src/main.js` is empty and `src-tauri/src/lib.rs` is the untouched Tauri
-  starter. Nothing in this repository is a pattern to copy yet.
+- **Corrected 2026-09-11 by `/sync`.** This bullet used to read "`src/main.js`
+  is empty and `src-tauri/src/lib.rs` is the untouched Tauri starter. Nothing
+  in this repository is a pattern to copy yet." None of that is true any more
+  and it was telling every session the opposite of the truth. `src/main.js` is
+  247 lines and is the small window's router; `src-tauri/src/lib.rs` is 104
+  lines and wires up six features in a deliberate order. There are now roughly
+  16,600 lines of Rust and 5,000 of interface, and **there are patterns worth
+  copying**: the source guard that reads a file's own text and fails the build
+  when a promise leaves it, the one `Mutex<Option<Live>>` taken with `.take()`
+  that makes an ending idempotent, and error types that hold every sentence a
+  person reads in one place. Copy those.
 - **This project has no JavaScript test runner, so no screen has automated
   coverage of what it draws.** Eleven interface files draw something today,
   the pill and ten screens, and not one of them is exercised by any test:
