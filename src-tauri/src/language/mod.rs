@@ -33,7 +33,7 @@ use store::Store;
 
 /// The same file every other feature opens. One SQLite file on the person's own
 /// machine holds everything EchoScribe persists (AGENTS.md data rules).
-const DB_FILE: &str = "echoscribe.db";
+const DB_FILE: &str = "echoscribe.sqlite3";
 
 /// The mono code and the one sentence of `design/registry.md`'s
 /// `Setting error line` when a write is refused (record 0006).
