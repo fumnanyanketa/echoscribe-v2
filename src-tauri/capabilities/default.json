@@ -1,9 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
+  "description": "The small dark window: sign-in, the key setup, and the two error screens. It listens to the auth and dictation events that route it and invokes this application's commands, and nothing else; its pages touch only `__TAURI__.core` and `__TAURI__.event`, checked 2026-10-02 across main.js and every screen it mounts. It held `core:default` from the scaffold until that date, which the 2026-09-11 review flagged: that grant includes window, webview, menu and tray permissions no page here uses. Now it is granted exactly what the pill and the dashboard are, and `pill.json` is the shape this file copies. Application commands appear nowhere in this list because no per-command grant exists for them in Tauri's permission system; what stops this window reaching a command it should not is the `not_signed_in` refusal already in Rust.",
   "windows": ["main"],
-  "permissions": [
-    "core:default"
-  ]
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
 }
