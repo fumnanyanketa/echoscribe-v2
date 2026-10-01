@@ -21,11 +21,17 @@
   --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
 
   /* ---- Type scale ----------------------------------------------------- */
-  /* Seven steps. Nothing in the interface uses a size that is not here. */
-  --text-micro: 11px;   /* mono labels, state codes, badges */
-  --text-xs: 12px;      /* captions, timestamps, metadata */
-  --text-sm: 13px;      /* list rows, nav items, secondary body */
-  --text-md: 14px;      /* body, the transcript line in the pill */
+  /* The comp's own values, restored on the user's instruction of 2026-10-01:
+     the comp is the authority, pixel for pixel, so the scale carries its
+     half-pixel steps rather than the rounded ones this file used to hold.
+     Where the comp draws a size between two steps, the component states the
+     literal with a comment naming the comp element it copies. */
+  --text-nano: 10.5px;  /* the smallest mono badges: v2, SECRET, REQUIRED */
+  --text-micro: 11px;   /* mono chips, state codes, nav counts */
+  --text-meta: 11.5px;  /* mono metadata: history when and duration, email */
+  --text-xs: 12.5px;    /* captions, hints, account name */
+  --text-sm: 13.5px;    /* list rows, nav items, error sentences */
+  --text-md: 14.5px;    /* body, the transcript line in the pill */
   --text-lg: 19px;      /* section heading */
   --text-xl: 23px;      /* screen heading, first-run heading */
   --text-2xl: 27px;     /* display, one per screen at most */
@@ -59,11 +65,15 @@
   --space-16: 64px;
 
   /* ---- Radius --------------------------------------------------------- */
-  --radius-xs: 2px;   /* meter bars, mono chips, tags. The default. */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;  /* cards and panels */
+  /* The comp's values, restored 2026-10-01 with the type scale above. */
+  --radius-xs: 2px;   /* meter bars, violet lead bar. The default. */
+  --radius-sm: 4px;   /* mono code chips, badges */
+  --radius-key: 5px;  /* keycaps */
+  --radius-md: 6px;   /* small row buttons: Copy, Replace, Remove */
+  --radius-ctl: 7px;  /* nav items, standard buttons, filter chips */
+  --radius-lg: 8px;   /* inputs, the search field, key rows */
+  --radius-card: 10px;/* cards */
+  --radius-xl: 12px;  /* the window */
   --radius-pill: 999px;
 
   --border-width: 1px;
@@ -82,10 +92,15 @@
   /* ---- Dark surfaces -------------------------------------------------- */
   --color-pill: #16171c;            /* the floating pill, the darkest thing */
   --color-pill-raised: #1c1e25;     /* inner wells inside the pill */
-  --color-pill-border: #33353d;     /* decorative separators only */
+  --color-pill-border: #34363f;     /* the comp's pill border and dividers */
   --color-pill-border-control: #676971; /* 3.3:1 on pill. Control edges. */
+  --color-pill-warn: #1b1917;       /* error pill fill, warning kinds */
+  --color-pill-warn-border: #3d372c;
+  --color-pill-danger: #1c1618;     /* error pill fill, danger kinds */
+  --color-pill-danger-border: #40302f;
   --color-rail: #121317;            /* the persistent left nav rail */
   --color-rail-active: #22242c;
+  --color-rail-active-border: #30333d; /* the comp's edge on the raised fill */
   --color-rail-border: #26282f;     /* decorative separators only */
   --color-rail-border-control: #6c6e75; /* 3.7:1 on rail. Control edges. */
   --color-onboarding: #101116;      /* the first-run window */
@@ -99,11 +114,18 @@
   /* ---- Ink on dark ---------------------------------------------------- */
   --color-ink-on-dark: #f2f2f5;          /* 15.6:1 on pill */
   --color-ink-on-dark-heading: #f4f4f6;  /* 16.4:1 on onboarding */
+  --color-ink-on-dark-soft: #c9ccd6;     /* account name, the pill's chip */
   --color-ink-on-dark-secondary: #b6bac6; /* 9.7:1 on onboarding */
   --color-ink-interim: #a1a5b4;          /*  7.6:1 on pill. Unsettled text. */
   --color-ink-nav: #a7abb6;              /*  7.4:1 on rail */
+  --color-ink-hint: #9a9daa;             /* the pill's "go ahead", v2 badge */
   --color-ink-on-dark-caption: #9198a8;  /*  6.4:1 on onboarding */
-  --color-ink-grip: #8b909e;             /*  4.6:1 on pill. The drag handle. */
+  --color-ink-interim-rule: #7d8394;     /* the dotted rule under interim text */
+  --color-ink-count: #74788a;            /* nav counts. Redundant numbers. */
+  /* The comp's drawn value, restored 2026-10-01. 2.9:1 on pill: a non-text
+     decorative handle with a 44px hit area and a grab cursor, exempt under
+     1.4.11, and the comp's contrast note says so in its own words. */
+  --color-ink-grip: #6b7080;
 
   /* ---- Accent --------------------------------------------------------- */
   /* Violet means one thing only: the microphone is open. It is never

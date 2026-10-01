@@ -44,12 +44,19 @@ PAIRS = [
     ("Final transcript in pill", "--color-ink-on-dark", "--color-pill", "text"),
     ("Interim transcript in pill", "--color-ink-interim", "--color-pill", "text"),
     ("Pill status label", "--color-accent-on-dark", "--color-pill", "text"),
-    ("Pill drag grip", "--color-ink-grip", "--color-pill", "nontext"),
+    # The comp's drawn value, restored 2026-10-01 by the user. 2.9:1: a
+    # non-text decorative handle with a 44px hit area and a grab cursor,
+    # exempt under 1.4.11, in the comp's own words.
+    ("Pill drag grip", "--color-ink-grip", "--color-pill", "decor"),
     ("Level meter fill", "--color-accent", "--color-pill", "nontext"),
     ("Warning label in pill", "--color-warning-on-dark", "--color-pill", "text"),
     ("Error label in pill", "--color-danger-on-dark", "--color-pill", "text"),
     ("Text in pill well", "--color-ink-on-dark", "--color-pill-raised", "text"),
-    ("Elapsed and word count chip", "--color-ink-on-dark-secondary", "--color-pill", "text"),
+    ("Elapsed and word count chip", "--color-ink-on-dark-soft", "--color-pill", "text"),
+    ("Pill hint", "--color-ink-hint", "--color-pill", "text"),
+    ("Interim dotted rule", "--color-ink-interim-rule", "--color-pill", "decor"),
+    ("Error sentence on fault fill", "--color-ink-on-dark", "--color-pill-danger", "text"),
+    ("Error code on fault fill", "--color-danger-on-dark", "--color-pill-danger", "text"),
     ("Control edge in pill", "--color-pill-border-control", "--color-pill", "nontext"),
 
     ("Heading and body", "--color-ink", "--color-surface", "text"),
@@ -71,6 +78,21 @@ PAIRS = [
     ("Nav item on active row", "--color-ink-nav", "--color-rail-active", "text"),
     ("Active nav item", "--color-surface", "--color-rail-active", "text"),
     ("Control edge on rail", "--color-rail-border-control", "--color-rail", "nontext"),
+    # The comp's 2026-10-01 additions to the rail: the version badge, the
+    # count at a nav item's right edge, the account name, and the initials
+    # disc the user restored to violet.
+    ("Version badge on rail", "--color-ink-hint", "--color-rail", "text"),
+    # 4.24:1, deliberate, per the comp's own contrast table: "redundant
+    # numbers beside already-labelled nav items". The label alone carries
+    # the destination; the count is never the only signal for anything.
+    # The user chose the comp's drawn value on 2026-10-01.
+    ("Nav count on rail", "--color-ink-count", "--color-rail", "decor"),
+    ("Account name on rail", "--color-ink-on-dark-soft", "--color-rail", "text"),
+    # 4.35:1, deliberate: the comp draws white initials on the violet disc,
+    # and the display name sits in full beside the disc, so the two letters
+    # are a marker and never the only way a person is named. The user chose
+    # the comp's drawn disc on 2026-10-01 over the earlier neutral fill.
+    ("Initials on violet disc", "--color-surface", "--color-accent", "decor"),
     # The offline row in the account block (record 0003 AC-14, drawn 2026-09-03).
     # Its two parts are measured against the rail ground rather than borrowing the
     # on-dark pairs above, which are all measured on --color-onboarding.

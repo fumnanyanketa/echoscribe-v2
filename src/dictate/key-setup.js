@@ -47,7 +47,7 @@ export function mountKeySetup(root, options) {
 
 function draw(ctx, focusTarget) {
   const column = el("section", "keysetup");
-  column.append(brandLockup());
+  column.append(stepRow());
 
   column.append(
     withText(el("h1", "keysetup__heading"), "Add your Deepgram key"),
@@ -116,7 +116,11 @@ function draw(ctx, focusTarget) {
   // hold focus for.
   verify.disabled = ctx.pasted.trim() === "";
 
-  field.append(badge, input, verify);
+  // The comp's order inside the field: the violet dot, the key itself, the
+  // SECRET badge, then the action at the right edge.
+  const dot = el("span", "keysetup__field-dot");
+  dot.setAttribute("aria-hidden", "true");
+  field.append(dot, input, badge, verify);
   form.append(label, field);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -233,13 +237,18 @@ function setBusy(button, label) {
   button.textContent = label;
 }
 
-function brandLockup() {
-  const brand = el("div", "keysetup__brand");
-  brand.append(
-    el("span", "keysetup__brand-dot"),
-    withText(el("span", "keysetup__brand-word"), "EchoScribe"),
-  );
-  return brand;
+/** The comp's step row in place of a brand lockup: this window is step two of
+ *  the first run, sign-in being step one, and both bars are lit because both
+ *  steps are reached. The bars are decoration beside the words, so a screen
+ *  reader hears the words alone. */
+function stepRow() {
+  const row = el("div", "keysetup__step");
+  row.append(withText(el("span", "keysetup__step-words"), "STEP 2 OF 2"));
+  const bars = el("span", "keysetup__step-bars");
+  bars.setAttribute("aria-hidden", "true");
+  bars.append(el("i"), el("i"));
+  row.append(bars);
+  return row;
 }
 
 function el(tag, className) {

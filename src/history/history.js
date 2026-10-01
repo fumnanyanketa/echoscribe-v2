@@ -145,6 +145,7 @@ function drawReadFailure(ctx, err) {
 function draw(ctx) {
   const state = { ctx, line: errorLine() };
   const screen = el("section", "history");
+  state.screen = screen;
 
   // A history with nothing in it draws no search field at all (record 0007,
   // answered at the gate). It is not the no-matches state: an empty history is
@@ -163,6 +164,9 @@ function draw(ctx) {
   state.list = el("div", "history__list-group");
   screen.append(state.list);
 
+  // The comp centres the empty state's column in the whole surface.
+  screen.classList.toggle("history--empty", neverDictated);
+
   ctx.root.replaceChildren(screen);
   paintList(state);
 
@@ -178,9 +182,17 @@ function draw(ctx) {
 function searchGroup(state) {
   const group = el("div", "history__search-group");
 
+  // The comp draws no visible label; this one is for a screen reader, and the
+  // stylesheet keeps it off screen without hiding it from one.
   const label = withText(el("label", "history__label"), "Search your history");
   label.id = "history-search-label";
   label.htmlFor = "history-search-field";
+
+  // The comp's field: one bordered box holding the ring, the words and the
+  // count together.
+  const wrap = el("div", "history__field-wrap");
+  const ring = el("span", "history__field-ring");
+  ring.setAttribute("aria-hidden", "true");
 
   const field = el("input", "history__field");
   field.id = "history-search-field";
@@ -192,19 +204,18 @@ function searchGroup(state) {
   // as the pill's transcript line and a dictation row: nothing declares a
   // direction and no list of right to left languages exists anywhere.
   field.dir = "auto";
-  // It has a real label directly above it, so a placeholder repeating that
-  // label would be noise that vanishes exactly when a person still wants it.
   field.value = state.ctx.query;
   field.addEventListener("input", () => search(state, field.value));
 
   // The count is read out and not only repainted, because a search rearranges
   // the list under somebody who may not be able to see it happen, and here the
   // rows that arrive were not on screen a moment ago.
-  const count = el("p", "history__count");
+  const count = el("span", "history__count-inline");
   count.setAttribute("aria-live", "polite");
   count.setAttribute("aria-atomic", "true");
 
-  group.append(label, field, count);
+  wrap.append(ring, field, count);
+  group.append(label, wrap);
   state.count = count;
   state.field = field;
   paintCount(state);
@@ -225,14 +236,12 @@ function paintCount(state) {
     state.count.hidden = true;
     return;
   }
+  // The comp's own wording inside the field: "7 results", mono and terse,
+  // singular at one. The no-matches sentence under the list keeps the fuller
+  // wording, so a count of zero is never the only thing said.
   const n = view.total;
   state.count.hidden = false;
-  state.count.textContent =
-    n === 0
-      ? "No dictations match."
-      : n === 1
-        ? "1 dictation matches."
-        : n + " dictations match.";
+  state.count.textContent = n === 1 ? "1 result" : n + " results";
 }
 
 /** A new search. It throws away every page already loaded and starts again at
@@ -312,6 +321,16 @@ function paintList(state) {
 function dictationRow(row) {
   const item = el("li", "history__row");
 
+  // The comp's left column: when it was said over how long it ran, both mono.
+  const when = el("div", "history__row-when");
+  when.append(
+    withText(el("span", "history__when"), whenOf(row.started_at)),
+    withText(el("span", "history__how-long"), howLongOf(row.duration_ms)),
+  );
+
+  // The comp's middle column: the words, then the quiet facts beneath them.
+  const main = el("div", "history__row-main");
+
   // The whole transcript, wrapped, never truncated and never collapsed:
   // truncating hides the one thing this screen exists to show, and an expand
   // control is a component nothing draws. It is selectable, which is not
@@ -323,20 +342,23 @@ function dictationRow(row) {
 
   const meta = el("p", "history__meta");
   meta.append(
-    withText(el("span", "history__when"), whenOf(row.started_at)),
-    withText(el("span", "history__how-long"), howLongOf(row.duration_ms)),
-    // Beside the duration, which is where the comp puts it, and it counts
-    // characters rather than words (record 0007, first amendment). The number
-    // itself is Rust's: this side never counts, because `String.length` here
-    // counts UTF-16 code units and would disagree with Rust for an emoji.
-    withText(el("span", "history__count"), countOf(row.characters)),
+    // The character count, a quiet fact, and it counts characters rather than
+    // words (record 0007, first amendment). The number itself is Rust's: this
+    // side never counts, because `String.length` here counts UTF-16 code units
+    // and would disagree with Rust for an emoji.
+    withText(el("span", "history__char-count"), countOf(row.characters)),
     // design/registry.md "Language tag": mono, a literal code, on every row
     // including English ones. The code the dictation was asked with, never
     // what Deepgram detected.
     withText(el("span", "history__language"), row.language),
   );
+  main.append(text, meta);
 
-  item.append(text, meta, copyAction(row.text));
+  // The comp's right column: the one action, top aligned.
+  const actions = el("div", "history__row-actions");
+  actions.append(copyAction(row.text));
+
+  item.append(when, main, actions);
   return item;
 }
 
@@ -459,14 +481,17 @@ function mountEmptyState(state) {
   const ctx = state.ctx;
   const empty = el("div", "history__empty");
 
-  empty.append(withText(el("p", "history__empty-line"), "Nothing dictated yet."));
-  const keys = el("p", "history__empty-keys");
-  empty.append(keys);
+  // The comp's four parts, in its order: the mono eyebrow, the display line
+  // holding the hotkey as a keycap, one paragraph, then the action. The comp's
+  // second button and its readiness card wait on features that do not exist
+  // yet (a scratchpad, a named device), so they are planned rather than faked.
+  empty.append(
+    withText(el("p", "history__empty-eyebrow"), "NOTHING DICTATED YET"),
+  );
+  const line = el("p", "history__empty-line");
+  empty.append(line);
   empty.append(withText(el("p", "history__empty-text"), EMPTY_PARAGRAPH));
 
-  // The rule's "one thing to do next" is pressing the hotkey, which the keys
-  // above already are and which cannot be a button. So the one action is the
-  // other half of the rule, the way to change the setup.
   const change = withText(el("button", "history__empty-action"), "Change the hotkey");
   change.type = "button";
   change.addEventListener("click", () => {
@@ -475,29 +500,34 @@ function mountEmptyState(state) {
   empty.append(change);
 
   state.list.replaceChildren(empty);
-  fillKeys(ctx, keys);
+  fillLine(ctx, line);
 }
 
-async function fillKeys(ctx, keys) {
+/** The display line, with the real hotkey as the comp draws keys: never the
+ *  comp's own Ctrl Space, which is not this app's hotkey. If the hotkey cannot
+ *  be read the line still says what to do, without naming a key. */
+async function fillLine(ctx, line) {
   let choice;
   try {
     choice = await invoke("get_hotkey");
   } catch (err) {
     console.error("history: the hotkey could not be read: " + reasonOf(err));
+    line.textContent = "Press your hotkey in any app and start talking.";
     return;
   }
   if (ctx.disposed) return;
   const wording = HOTKEY[choice && choice.chosen];
   if (!wording) {
     console.warn("history: no wording for the hotkey " + (choice && choice.chosen));
+    line.textContent = "Press your hotkey in any app and start talking.";
     return;
   }
-  // design/registry.md "Hotkey choice": the Keycap primitive for the one
-  // modifier, then the plain wording, so one hotkey looks like one thing
-  // wherever it is shown.
-  keys.replaceChildren(
+  // design/registry.md "Keycap": the one modifier as a key, inside the comp's
+  // display sentence, worded for the double tap this app actually listens for.
+  line.replaceChildren(
+    document.createTextNode("Double tap "),
     withText(el("span", "history__keycap"), wording.key),
-    withText(el("span", "history__keys-words"), wording.words),
+    document.createTextNode(" in any app and start talking."),
   );
 }
 
@@ -524,13 +554,25 @@ function noop() {}
 function whenOf(startedAt) {
   const at = new Date(startedAt);
   if (Number.isNaN(at.getTime())) return startedAt;
-  return at.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+  // The comp's own shapes: "Today 11:47", "Yesterday 17:31", and the dated
+  // form for anything older. The words and the clock stay the machine's
+  // locale; only the shape is the comp's.
+  const time = at.toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
   });
+  const now = new Date();
+  const startOfDay = (d) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOfDay(now) - startOfDay(at)) / 86400000);
+  if (days === 0) return "Today " + time;
+  if (days === 1) return "Yesterday " + time;
+  const date = at.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: at.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  });
+  return date + " " + time;
 }
 
 /** The count in the plain word, in full, and singular at one (record 0007,
@@ -549,15 +591,14 @@ function countOf(characters) {
   return characters === 1 ? "1 character" : characters + " characters";
 }
 
-/** Whole seconds below a minute, minutes and seconds above it (record 0007).
- *  Rounded, never a millisecond figure: nobody reads a dictation's length to
- *  three decimal places. */
+/** The comp's M:SS clock, which is also the pill chip's, so one duration looks
+ *  like one thing wherever it is shown. Rounded, never a millisecond figure:
+ *  nobody reads a dictation's length to three decimal places. */
 function howLongOf(durationMs) {
   const seconds = Math.max(0, Math.round(durationMs / 1000));
-  if (seconds < 60) return seconds + "s";
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
-  return minutes + "m " + String(rest).padStart(2, "0") + "s";
+  return minutes + ":" + String(rest).padStart(2, "0");
 }
 
 /* ---- Setting error line ---------------------------------------------- */

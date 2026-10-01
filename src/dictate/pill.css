@@ -54,8 +54,7 @@
   background: var(--color-pill);
   font-family: var(--font-mono);
   font-size: var(--text-micro);
-  letter-spacing: var(--tracking-mono);
-  color: var(--color-ink-on-dark-secondary);
+  color: var(--color-ink-on-dark-soft); /* the comp's #c9ccd6 */
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -94,10 +93,19 @@
 
 /* A word ending and a dead microphone swap the violet channel for one danger
  * edge (design/registry.md "Error pill", "Pill, MIC STOPPED"): violet only
- * ever means an open microphone. */
+ * ever means an open microphone. The fault state also takes the comp's error
+ * tinting: the warm-dark fill and border its error pills carry, so an ending
+ * reads as a different object and not a restyled transcript. The geometry does
+ * not change, per the one-geometry rule (record 0002, twelfth amendment). */
 .pill[data-state="stopped"],
 .pill[data-state="fault"] {
   border-left: 3px solid var(--color-danger-on-dark);
+}
+
+.pill[data-state="fault"] {
+  background: var(--color-pill-danger);
+  border-color: var(--color-pill-danger-border);
+  border-left-color: var(--color-danger-on-dark);
 }
 
 /* Grabbable from any edge, 44px hit area (design-system.md). The cursor is not
@@ -138,7 +146,7 @@
 .pill__meter {
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 2px; /* the comp's bar gap */
   flex: none;
   width: 56px;
   height: 26px;
@@ -167,7 +175,7 @@
   align-self: stretch;
   flex: none;
   width: 1px;
-  margin: var(--space-3) var(--space-2);
+  margin: 11px 12px; /* the comp's own margins on the listening divider */
   background: var(--color-pill-border);
 }
 
@@ -177,7 +185,7 @@
   display: flex;
   align-items: center;
   flex: none;
-  gap: var(--space-2);
+  gap: 9px; /* the comp's gap in the armed form */
 }
 
 .pill[data-state="words"] .pill__signal,
@@ -185,14 +193,30 @@
   display: none;
 }
 
+/* The comp's two-part signal: an outer disc that breathes between faint and
+ * full while swelling, and a solid 6px core that never moves. The outer disc is
+ * this span, the core is its ::after, so the markup stays one element. */
 .pill__ring {
+  position: relative;
   flex: none;
-  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 10px;
   height: 10px;
-  border: 2px solid var(--color-accent);
   border-radius: var(--radius-pill);
-  animation: pill-breathe 1.4s ease-in-out infinite;
+  background: var(--color-accent);
+  animation: pill-breathe 1.6s ease-in-out infinite;
+}
+
+.pill__ring::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  animation: pill-breathe-core 1.6s ease-in-out infinite;
 }
 
 /* The microphone's truth, swapped: the ring only ever means it is open
@@ -201,22 +225,37 @@
   display: none;
 }
 
+/* The comp's breathe keyframes, verbatim. */
 @keyframes pill-breathe {
   0%,
   100% {
-    transform: scale(0.86);
-    opacity: 0.7;
+    opacity: 0.35;
+    transform: scale(1);
   }
   50% {
-    transform: scale(1.12);
     opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+/* The core holds still and stays solid; counter-scale so only the halo moves. */
+@keyframes pill-breathe-core {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(0.740740741); /* 1 / 1.35 */
   }
 }
 
 .pill__label {
   font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  letter-spacing: var(--tracking-mono);
+  font-size: var(--text-xs); /* the comp's 12.5px */
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.06em; /* the comp's tracking on MIC OPEN */
   text-transform: uppercase;
   color: var(--color-accent-on-dark);
   white-space: nowrap;
@@ -227,20 +266,20 @@
 }
 
 .pill__hint-divider {
-  align-self: stretch;
+  align-self: center;
   width: 1px;
-  margin: var(--space-1) 0;
+  height: 14px; /* the comp's own little divider beside MIC OPEN */
   background: var(--color-pill-border);
 }
 
-/* The comp's hint, in the unsettled grey and with no dotted rule: it is not
- * transcript and makes no promise of changing (design/registry.md "Pill
+/* The comp's hint, at its own 12.5px in its own grey, with no dotted rule: it
+ * is not transcript and makes no promise of changing (design/registry.md "Pill
  * before words"). */
 .pill__hint {
   flex: none;
-  margin-left: var(--space-2);
-  font-size: var(--text-md);
-  color: var(--color-ink-interim);
+  margin-left: 9px; /* the signal's gap, continued */
+  font-size: var(--text-xs);
+  color: var(--color-ink-hint);
   white-space: nowrap;
 }
 
@@ -301,7 +340,7 @@
  * interim span is then empty. */
 .pill__interim {
   color: var(--color-ink-interim);
-  border-bottom: 1.5px dotted var(--color-ink-grip);
+  border-bottom: 1.5px dotted var(--color-ink-interim-rule); /* comp #7d8394 */
   padding-bottom: 1px;
 }
 
@@ -324,15 +363,16 @@
 
 /* ---- A word ending ---------------------------------------------------- */
 
-/* The drawn error pill: a mono code over one sentence, nothing truncated, and
- * no action at all (design/registry.md "Error pill"). */
+/* The drawn error pill, in the comp's own arrangement: the mono code in its
+ * bordered chip, then one sentence beside it on the same line, nothing
+ * truncated mid-thought, and no action at all (design/registry.md "Error
+ * pill"; the comp's action buttons are a planned feature, not a drawn one). */
 .pill__fault {
   display: none;
   flex: 1;
   min-width: 0;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--space-hair);
+  align-items: center;
+  gap: 10px; /* the comp's gap between code and sentence */
 }
 
 .pill[data-state="fault"] .pill__fault {
@@ -340,16 +380,26 @@
 }
 
 .pill__fault-code {
+  flex: none;
+  padding: 2px 6px; /* the comp's code chip */
+  border: var(--border-width) solid var(--color-danger-edge);
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: var(--text-micro);
-  letter-spacing: var(--tracking-mono);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.06em; /* the comp's tracking on the code */
   text-transform: uppercase;
   color: var(--color-danger-on-dark);
+  white-space: nowrap;
 }
 
 .pill__fault-text {
-  font-size: var(--text-xs);
+  min-width: 0;
+  font-size: var(--text-sm); /* the comp's 13.5px error sentence */
   color: var(--color-ink-on-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* styles.css already damps animation globally under reduced motion; restate the

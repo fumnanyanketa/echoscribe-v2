@@ -31,6 +31,8 @@ export function mountRail(root, view, onSelect) {
   brand.append(
     el("span", "rail__brand-dot"),
     withText(el("span", "rail__brand-word"), "EchoScribe"),
+    // The comp's version badge beside the wordmark.
+    withText(el("span", "rail__brand-version"), "v2"),
   );
 
   const nav = el("div", "rail__nav");
@@ -86,6 +88,22 @@ export function setActive(root, id) {
  *  its own accessible name rather than this build inventing a heading. */
 export function itemFor(root, id) {
   return root.querySelector('[data-destination="' + id + '"]');
+}
+
+/** Put the comp's faint count at the right edge of one nav item, or clear it
+ *  by passing null. The number is always real and always redundant to the
+ *  label (design/registry.md "Nav count"): the caller hands in a count it got
+ *  from the feature that owns the data, never an estimate. */
+export function setCount(root, id, count) {
+  const item = itemFor(root, id);
+  if (!item) return;
+  let slot = item.querySelector(".rail__item-count");
+  if (!slot) {
+    slot = el("span", "rail__item-count");
+    item.append(slot);
+  }
+  slot.textContent =
+    typeof count === "number" ? count.toLocaleString("en-US") : "";
 }
 
 function navItem(id, label, className, onSelect) {

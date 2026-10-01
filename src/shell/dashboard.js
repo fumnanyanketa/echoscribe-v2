@@ -14,7 +14,7 @@
 // dashboard's capability grants two event permissions and nothing that touches
 // a window.
 
-import { mountRail, setActive, itemFor } from "./rail.js";
+import { mountRail, setActive, itemFor, setCount } from "./rail.js";
 import { mountAccountBlock, setOffline } from "./account-block.js";
 import { mountDictationSettings } from "../dictate/dictation-settings.js";
 import { mountTranscriptionSettings } from "../dictate/transcription-settings.js";
@@ -91,6 +91,7 @@ async function start() {
   railView = view;
   accountBlock = mountRail(rail, view, show);
   show(view.landing);
+  refreshHistoryCount();
 
   try {
     const state = await invoke("get_auth_state");
@@ -116,9 +117,29 @@ async function start() {
 // Settings as the section it is inside. Which sub-sections exist is Rust's
 // answer, read off what get_rail() returned, so this cannot invent a
 // destination.
+/** The comp's count on the History nav item: how many dictations exist, from
+ *  the same command the history screen reads, so the number can never disagree
+ *  with the screen it labels. A refusal clears the count rather than freezing
+ *  a stale one; the label works alone (design/registry.md "Nav count"). */
+async function refreshHistoryCount() {
+  try {
+    const view = await invoke("get_history", {
+      query: null,
+      beforeStartedAt: null,
+      beforeId: null,
+    });
+    setCount(rail, "history", view.total);
+  } catch {
+    setCount(rail, "history", null);
+  }
+}
+
 function show(id) {
   const target = resolve(id);
   setActive(rail, target);
+  // Returning to History is the moment a stale count would be noticed, so the
+  // count is re-read on the way in.
+  if (target === "history") refreshHistoryCount();
   const item = itemFor(rail, target);
   if (item) {
     // The surface takes its accessible name from the rail item that opened it,

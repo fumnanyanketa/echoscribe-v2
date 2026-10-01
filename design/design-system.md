@@ -33,6 +33,15 @@ Violet means the microphone is open. Nothing else. It is not a brand
 colour, not a hover tint, not a way to make a button look important. If
 violet appears anywhere that is not about a live microphone, that is a bug.
 
+**Amended 2026-10-01, by the user.** The comp itself paints violet on a
+fixed set of statics, and the user chose the comp over the stricter reading
+of this rule: the brand dot, the active nav item's lead bar, the account
+initials disc, the signed-in dot, the key field's edge and dot on the
+first-run screen, and that screen's step bars. Those comp-drawn statics are
+the whole exception. Violet still never arrives as a hover tint, a new
+decoration, or anything the comp does not draw, and the live channel (ring,
+meter, caret) still only ever means an open microphone.
+
 The consequence is that the "off" state is not a grey pill. **Off is the
 pill absent from the screen entirely**, so there is nothing idle-looking to
 mistake for something listening.
@@ -43,7 +52,11 @@ A screen is not done until all of these are true. Any one of them false is
 disqualifying, not a nitpick.
 
 1. Every colour, size, space, radius and shadow comes from a token in
-   `src/styles.css`. No literal value in a component, ever.
+   `src/styles.css`, or is the comp's own value stated with a comment naming
+   the comp element it copies. **Amended 2026-10-01, by the user**: the comp
+   is the authority pixel for pixel, and its values do not all sit on one
+   scale, so a component may carry a comp literal where the scale has no
+   step for it. A literal with no comp behind it is still a bug.
 2. Every text and background pair passes AA, and body copy passes AAA.
    Prove it: `python design/check-contrast.py`. Add the pair to that file
    when you introduce one.

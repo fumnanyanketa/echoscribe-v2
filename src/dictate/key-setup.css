@@ -8,59 +8,69 @@
  * and a shape two features share moves to a shared module only when a third
  * needs it.
  *
- * Violet appears exactly once on this screen, on the get-a-key link, and
- * nowhere near the field, the button or a progress bar. Saturated violet stays
- * exclusive to the open microphone (design/design-system.md, the violet rule).
+ * Restyled to the comp's own first-run frame on 2026-10-01, on the user's
+ * instruction that the comp is the authority pixel for pixel: the left-aligned
+ * column with 64px side padding, the step row where a brand lockup used to
+ * be, and the comp's violet-edged key field with its violet dot and tinted
+ * SECRET badge. The violet reservation now excepts the statics the comp
+ * draws, by that same instruction.
  */
 
 .keysetup {
   margin: auto;
   width: 100%;
-  max-width: 26rem;
-  padding: var(--space-10) var(--space-6);
-  text-align: center;
+  box-sizing: border-box;
+  padding: 40px 64px; /* the comp's side padding */
+  text-align: left; /* the comp's column is left aligned */
 }
 
-.keysetup__brand {
+/* The comp's step row: the mono words, then the two lit bars beside them. */
+.keysetup__step {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-8);
+  gap: 9px; /* the comp's row gap */
+  margin-bottom: var(--space-5); /* the comp's 20px column gap */
 }
 
-.keysetup__brand-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: var(--color-accent);
-}
-
-.keysetup__brand-word {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+.keysetup__step-words {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
   letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--color-ink-on-dark-heading);
+  color: var(--color-ink-on-dark-caption);
+}
+
+.keysetup__step-bars {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.keysetup__step-bars i {
+  width: 22px; /* the comp's bar */
+  height: 3px;
+  border-radius: var(--radius-xs);
+  background: var(--color-accent);
 }
 
 /* The one display size on this screen, per the type scale's "one per screen
    at most". */
 .keysetup__heading {
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--space-5);
   font-size: var(--text-2xl);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-  line-height: var(--leading-tight);
+  font-weight: var(--weight-medium); /* the comp's 500 */
+  letter-spacing: -0.015em; /* the comp's tracking */
+  line-height: 1.25; /* the comp's leading */
   color: var(--color-ink-on-dark-heading);
+  text-wrap: pretty;
 }
 
 .keysetup__body {
-  margin: 0 0 var(--space-6);
-  font-size: var(--text-sm);
+  margin: 0 0 var(--space-5);
+  max-width: 56ch; /* the comp's measure */
+  font-size: var(--text-md); /* the comp's 14.5px */
   line-height: var(--leading-prose);
   color: var(--color-ink-on-dark-secondary);
   text-align: left;
+  text-wrap: pretty;
 }
 
 /* design/registry.md "Key setup error line": a mono code, one plain sentence,
@@ -111,31 +121,40 @@
   border: 0;
 }
 
-/* design/registry.md "Key field, dark": a dark well, a SECRET mono badge, and
-   the verify action sitting inside the field's right edge.
-
-   The edge uses the control-edge token for dark windows, never violet. It
-   clears the 3:1 a control boundary needs on this fill (3.27:1, audited in
-   design/check-contrast.py), which --color-pill-border is not allowed to do
-   because that one is for decorative separators. */
+/* design/registry.md "Key field, dark", in the comp's own dress: the dark
+   well with the comp's violet edge, the violet dot at the left, the SECRET
+   badge in its violet tint, and the verify action inside the right edge. */
 .keysetup__field {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
-  background: var(--color-pill-raised);
-  border: var(--border-width) solid var(--color-rail-border-control);
-  border-radius: var(--radius-md);
+  gap: 11px; /* the comp's field gap */
+  padding: 13px 15px; /* the comp's field padding */
+  background: #191b21; /* the comp's input well */
+  border: 1.5px solid var(--color-accent); /* the comp's violet edge */
+  border-radius: 9px; /* the comp's field radius */
   text-align: left;
+}
+
+/* The comp's violet dot at the field's left edge. */
+.keysetup__field-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
 }
 
 .keysetup__badge {
   flex: none;
+  padding: 2px 6px; /* the comp's badge */
+  border: var(--border-width) solid #3b3363; /* the comp's badge edge */
+  border-radius: var(--radius-sm);
+  background: #231d3d; /* the comp's badge tint */
   font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  letter-spacing: var(--tracking-mono);
+  font-size: var(--text-nano);
+  letter-spacing: 0.06em; /* the comp's tracking */
   text-transform: uppercase;
-  color: var(--color-ink-on-dark-caption);
+  color: var(--color-accent-on-dark);
 }
 
 /* Mono, because the key is something a machine produced and a person must
@@ -143,11 +162,11 @@
 .keysetup__input {
   flex: 1 1 auto;
   min-width: 0;
-  padding: var(--space-2) 0;
+  padding: 0;
   border: 0;
   background: transparent;
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-size: 14px; /* the comp's key size */
   letter-spacing: var(--tracking-mono);
   color: var(--color-ink-on-dark);
   /* Dictation types into other applications, so selection is opt-in per
@@ -167,11 +186,11 @@
 
 .keysetup__btn {
   flex: none;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-sm);
+  padding: 8px 15px; /* the comp's verify button */
+  border-radius: var(--radius-ctl);
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  font-size: 13px; /* the comp's button size */
+  font-weight: var(--weight-medium);
   cursor: pointer;
   border: var(--border-width) solid transparent;
 }
@@ -231,14 +250,12 @@
   margin-bottom: var(--space-5);
 }
 
-/* design/registry.md "Get-a-key link". The one violet on this screen, and it
-   is the light on-dark accent rather than the saturated channel, which stays
-   exclusive to an open microphone. 10.21:1 on the window field, audited in
-   design/check-contrast.py.
+/* design/registry.md "Get-a-key link", at the comp's colour and size.
 
    A button that reads as a link, because it opens the system browser rather
    than navigating this window. Underlined, so the colour is not the only
-   thing marking it as the thing to press. */
+   thing marking it as the thing to press; the comp underlines its links on
+   hover, and this one simply starts there. */
 .keysetup__link {
   display: inline-block;
   margin-bottom: var(--space-6);
@@ -246,9 +263,9 @@
   border: 0;
   background: none;
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs); /* the comp's 12.5px link */
   font-weight: var(--weight-medium);
-  color: var(--color-accent-on-dark);
+  color: #a78bfa; /* the comp's link violet on this window */
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
@@ -256,7 +273,7 @@
 
 .keysetup__caption {
   margin: 0;
-  font-size: var(--text-xs);
+  font-size: 12px; /* the comp's closing caption */
   line-height: var(--leading-body);
   color: var(--color-ink-on-dark-caption);
   text-align: left;

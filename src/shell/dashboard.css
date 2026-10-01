@@ -30,7 +30,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: var(--space-5) var(--space-4);
+  padding: 18px 14px; /* the comp's rail padding */
   background: var(--color-rail);
   /* Decorative, so the decorative token is right: it separates two fields that
      already differ, it does not tell you where a control is. */
@@ -43,22 +43,32 @@
 .rail__brand {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 9px; /* the comp's lockup gap */
   padding: 0 var(--space-2) var(--space-5);
 }
 
 .rail__brand-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px; /* the comp's dot */
+  height: 9px;
   border-radius: var(--radius-pill);
   background: var(--color-accent);
 }
 
 .rail__brand-word {
-  font-size: var(--text-sm);
+  font-size: 14px; /* the comp's wordmark size */
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-tight);
   color: var(--color-ink-on-dark-heading);
+}
+
+/* The comp's little version badge beside the wordmark. */
+.rail__brand-version {
+  padding: 1px 5px;
+  border: var(--border-width) solid #33353d; /* the comp's own badge edge */
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-nano);
+  color: var(--color-ink-hint);
 }
 
 .rail__nav {
@@ -75,10 +85,11 @@
 .rail__item {
   display: flex;
   align-items: center;
+  gap: 10px; /* the comp's gap between the lead bar and the label */
   width: 100%;
-  padding: var(--space-2) var(--space-3);
+  padding: 9px 10px; /* the comp's nav item padding */
   border: var(--border-width) solid transparent;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-ctl);
   background: transparent;
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -88,10 +99,41 @@
   cursor: pointer;
 }
 
+/* The comp's lead bar: in every item so the label never shifts, violet only on
+   the active one. The one place outside a live microphone that violet appears
+   in the rail, restored to the comp on the user's instruction of 2026-10-01. */
+.rail__item::before {
+  content: "";
+  flex: none;
+  width: 4px;
+  height: 14px;
+  border-radius: var(--radius-xs);
+  background: transparent;
+}
+
 .rail__item--active {
   background: var(--color-rail-active);
+  border-color: var(--color-rail-active-border); /* the comp's raised edge */
   font-weight: var(--weight-medium);
   color: var(--color-surface);
+}
+
+.rail__item--active::before {
+  background: var(--color-accent);
+}
+
+/* The comp's count at the right edge of a nav item: faint ink, redundant to
+   the label, never the only signal (design/registry.md "Nav count"). */
+.rail__item-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--color-ink-count);
+  font-variant-numeric: tabular-nums;
+}
+
+.rail__item-count:empty {
+  display: none;
 }
 
 /* The section a person is inside, when the thing showing is one of its
@@ -108,8 +150,22 @@
 .rail__sub {
   display: flex;
   flex-direction: column;
-  gap: var(--space-hair);
-  padding-left: var(--space-4);
+  gap: 1px; /* the comp's sub-nav gap */
+  padding: 6px 0 0 28px; /* the comp's indent under the parent item */
+}
+
+/* Sub-nav items are smaller and squarer than their parents in the comp, with
+   no lead bar and no raised edge. */
+.rail__sub .rail__item {
+  gap: 0;
+  padding: 5px 8px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px; /* the comp's sub-nav size */
+}
+
+.rail__sub .rail__item::before {
+  display: none;
 }
 
 /* ---- The account block ---------------------------------------------- */
@@ -122,7 +178,8 @@
   flex-direction: column;
   gap: var(--space-3);
   margin-top: auto;
-  padding-top: var(--space-4);
+  padding-top: 14px; /* the comp's foot padding */
+  padding-left: 6px; /* the comp's foot indent */
   border-top: var(--border-width) solid var(--color-rail-border);
 }
 
@@ -168,17 +225,18 @@
 }
 
 /* Initials, never an avatar image: design/registry.md keeps avatars beyond
-   initials off the list. The fill is the raised rail fill and not violet,
-   because violet only ever means an open microphone. */
+   initials off the list. The comp's violet disc, restored on the user's
+   instruction of 2026-10-01 over the earlier violet-means-microphone
+   repainting; that reservation now excepts the three statics the comp draws. */
 .account__initials {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: var(--space-8);
-  height: var(--space-8);
+  width: 26px; /* the comp's disc */
+  height: 26px;
   border-radius: var(--radius-pill);
-  background: var(--color-rail-active);
+  background: var(--color-accent);
   font-size: var(--text-micro);
   font-weight: var(--weight-semibold);
   color: var(--color-surface);
@@ -186,9 +244,9 @@
 
 .account__name {
   min-width: 0;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--color-ink-nav);
+  font-size: var(--text-xs); /* the comp's 12.5px */
+  font-weight: var(--weight-regular);
+  color: var(--color-ink-on-dark-soft); /* the comp's #c9ccd6 */
   overflow-wrap: anywhere;
 }
 
@@ -207,17 +265,40 @@
   overflow-wrap: anywhere;
 }
 
+/* The comp writes the address in mono at its metadata size. */
+.account__email {
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+}
+
+/* The comp's violet signed-in dot, beside the date line. */
+.account__since {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.account__since::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+}
+
 /* design/registry.md "Secondary button, on dark", unchanged: a control edge and
    a neutral label. It moved here from the signed-in stub record 0004 deleted. */
 .account__signout {
-  padding: var(--space-2) var(--space-4);
+  padding: 8px 12px; /* the comp's Sign out padding */
   border: var(--border-width) solid var(--color-rail-border-control);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-ctl);
   background: transparent;
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs); /* the comp's 12.5px */
+  font-weight: var(--weight-medium);
   color: var(--color-ink-on-dark-secondary);
+  text-align: center;
   cursor: pointer;
 }
 

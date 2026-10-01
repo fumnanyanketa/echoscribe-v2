@@ -31,7 +31,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  padding: var(--space-8);
+  padding: 32px 30px; /* the comp's surface padding */
 }
 
 /* One setting: its label, its control, then the line it says a refused write
