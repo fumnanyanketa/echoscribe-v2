@@ -68,6 +68,17 @@ pub struct Shell {
     /// A nudge that the dashboard has been moved or resized. One thread reads
     /// these, waits for them to stop, and writes the row once.
     moves: Mutex<Sender<()>>,
+    /// Held for the whole of `settle`, so two threads can never both ask "is
+    /// the dashboard open", both hear no, and both build one. That happened
+    /// live on 2026-10-01: `init` runs `settle` on the main thread while the
+    /// sign-in renewal thread's first refresh emits `auth:signed_in`, whose
+    /// listener runs `settle` on the renewal thread. Both builds succeed, the
+    /// second takes the label in Tauri's window map, and the first becomes a
+    /// window no `get_webview_window` can ever reach again: a ghost dashboard
+    /// stacked pixel for pixel behind the real one, unmanageable for the life
+    /// of the process. It is a race, so most launches look fine, which is
+    /// exactly why the gate is a lock and not a boot-order promise.
+    settle_gate: Mutex<()>,
 }
 
 /// Open this feature's database connection, wire up everything that changes
@@ -88,6 +99,7 @@ pub fn init(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         store,
         interruption: Mutex::new(None),
         moves: Mutex::new(moves),
+        settle_gate: Mutex::new(()),
     });
     start_geometry_thread(handle.clone(), move_rx)?;
 
@@ -234,6 +246,18 @@ fn dashboard_is_due(app: &AppHandle) -> bool {
 /// when it is due and destroys it when it is not, then settles the small
 /// window around it.
 fn settle(app: &AppHandle) {
+    // One settle at a time, across all threads. The ask-then-create below is
+    // only safe when nothing else can be between the ask and the create; see
+    // `settle_gate` on [`Shell`] for the night this was learned. A poisoned
+    // lock means a settle panicked, and settling anyway is strictly better
+    // than never settling again.
+    let state = app.try_state::<Shell>();
+    let _one_at_a_time = state
+        .as_ref()
+        .map(|shell| match shell.settle_gate.lock() {
+            Ok(held) => held,
+            Err(poisoned) => poisoned.into_inner(),
+        });
     let dashboard_up = if dashboard_is_due(app) {
         if dashboard_window::is_open(app) {
             true
@@ -518,6 +542,42 @@ mod tests {
         assert!(
             !settle[destroyed..].contains("dashboard_window::is_open("),
             "`settle` asks whether the dashboard is open after ordering it destroyed. That answer is always still there, and acting on it leaves EchoScribe running with no window on screen"
+        );
+    }
+
+    #[test]
+    fn settle_takes_the_gate_before_asking_whether_the_dashboard_exists() {
+        // covers: record 0004's one-dashboard invariant, as a source guard
+        // only. `settle` runs on whichever thread calls it: the main thread at
+        // init, and the sign-in renewal thread when its first refresh emits
+        // `auth:signed_in`. Two threads that both ask "is the dashboard open"
+        // before either has built one both hear no, and both build. The second
+        // build takes the label in Tauri's window map and the first becomes a
+        // ghost: a real window stacked behind the real dashboard that no
+        // `get_webview_window` can ever reach, so nothing can hide, move or
+        // close it for the life of the process (found live 2026-10-01, two
+        // 'Tauri Window' handles at one rect under one pid). The cure is that
+        // the whole decide-and-create is one turn of a lock, so the lock has
+        // to be taken before the first ask. Proving the race needs two real
+        // threads and two real windows, so /check verify owns that; this stops
+        // the gate being dropped because the function reads fine without it.
+        let flat = flattened(include_str!("mod.rs"));
+        let start = flat
+            .find("fnsettle(app:&AppHandle){")
+            .expect("the shell no longer has one place that decides both windows");
+        let end = flat[start..]
+            .find("fnsettle_small_window(app:&AppHandle){")
+            .expect("settle_small_window no longer follows settle in this file");
+        let settle = &flat[start..start + end];
+        let gate = settle
+            .find("settle_gate.lock()")
+            .expect("`settle` no longer takes the settle gate, so two threads can race to build two dashboards again");
+        let first_ask = settle
+            .find("dashboard_is_due(")
+            .expect("`settle` no longer asks whether the dashboard is due");
+        assert!(
+            gate < first_ask,
+            "`settle` asks whether the dashboard is due before taking the gate. The ask-then-create is only safe inside the lock; outside it, two threads can both hear \"no dashboard\" and both build one"
         );
     }
 
