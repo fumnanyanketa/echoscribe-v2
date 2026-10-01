@@ -17,6 +17,12 @@ before any one piece is made great.
 | 3 | Teach it your words | 2 | medium | in progress |
 | 4 | Speak in your language | 2 | medium | in progress |
 | 5 | See what you've said before | 2 | medium | in progress |
+| 6 | Remember which app received each dictation | 3 | medium | not started · needs a decision |
+| 7 | Filter history by app and by date | 3 | light | not started · needs a decision |
+| 8 | The microphone device row | 3 | medium | not started · needs a decision |
+| 9 | Rebind the hotkey, and hold-to-talk | 3 | heavy | not started · needs a decision |
+| 10 | A scratchpad to try dictation in | 3 | light | not started · needs a decision |
+| 11 | Actions on the error pill | 3 | medium | not started · needs a decision |
 
 **Where this really stands, 2026-09-11.** Every row above says "in
 progress" and every row is built. **None of the five has ever passed
@@ -146,6 +152,75 @@ nothing by design, relying on dictate having created the table first, which
 is correct and is defeated by the wrong filename. Not fixed here, by
 instruction. See
 [docs/reviews/2026-09-11-master.md](reviews/2026-09-11-master.md).
+
+**Fixed and proved since.** The one-file fix and its cross-feature guard
+were committed the same day (`76a5c3d`, `6461889`), and the 2026-10-01
+end-to-end verify drove this screen live: history reads, custom words and
+the language choice save, and all three survived a restart. Evidence:
+[docs/evidence/end-to-end-2026-10-01/report.md](evidence/end-to-end-2026-10-01/report.md).
+The rows above still await their own full `/check verify` passes.
+
+## Phase 3: what the comp draws that nothing backs yet
+
+Added 2026-10-01. The user re-shared the original Instrument comp and chose
+to match it pixel for pixel. Most of that was restyling, done the same day.
+These six rows are the comp content that needs real data or a real feature
+behind it, and the user chose to plan them rather than skip them. **Every
+one needs `/architect` before `/develop`**: each puts something new on a
+screen or changes a recorded decision, and none has acceptance criteria
+yet. Order among them is a judgment call; none blocks another.
+
+### 6. Remember which app received each dictation · not started · medium
+
+The comp puts an app chip on every history row and an "All apps" filter
+over the list. Nothing records the receiving app today, so this starts in
+Rust at the moment of typing, and it is new per-dictation data with a
+privacy angle the record must face.
+
+- [ ] Design it: needs a decision record
+
+### 7. Filter history by app and by date · not started · light
+
+The comp's "All apps" and "Any date" buttons beside the search field. The
+app half depends on row 6 existing first.
+
+- [ ] Design it: needs a decision record
+
+### 8. The microphone device row · not started · medium
+
+The comp's Settings row naming the device, with a live level meter and a
+dB figure, and the empty state's readiness card names the device too.
+`design/registry.md` has drawn it since 2026-09-04 and deliberately not
+built it: no acceptance criterion asks for it and none of its three values
+has a source named in record 0002.
+
+- [ ] Design it: needs a decision record, likely an amendment to 0002
+
+### 9. Rebind the hotkey, and hold-to-talk · not started · heavy
+
+The comp draws a Rebind action and the caption "hold to talk · tap to
+toggle". Record 0002's decision is two fixed double-tap choices, so this
+amends a heavy record and touches the keyboard hook.
+
+- [ ] Design it: needs an amendment to record 0002
+
+### 10. A scratchpad to try dictation in · not started · light
+
+The comp's "Try it in a scratchpad" button on the empty history. A small
+window whose only job is to be a safe place for first words.
+
+- [ ] Design it: needs a decision record
+
+### 11. Actions on the error pill · not started · medium
+
+The comp's error pills each carry one button: Add key, Devices, Retry.
+Record 0002 deliberately gave the fault pill no action, so this is a
+reversal that needs the record amended, and the Devices action depends on
+row 8's notion of a device.
+
+- [ ] Design it: needs an amendment to record 0002
+
+---
 
 ## Out of scope (v2)
 
