@@ -323,6 +323,18 @@
 .pill__line-inner {
   display: flex;
   align-items: center;
+  /* Never shrinks. This is the whole sliding mechanism, and it was the bug
+     found live on 2026-10-01: as a default flex item this row was allowed to
+     shrink to its min-width floor, so it always measured exactly as wide as
+     the outer box, the outer box never saw any overflow, its flex-end had
+     nothing to align, and the text spilled out of this row to the RIGHT,
+     clipped, with the newest words the hidden ones. The pill sat on the first
+     words of every long dictation, which is the opposite of its promise.
+     With the shrink refused, this row grows to its content, the outer box's
+     flex-end pins this row's right edge to its own, and the overflow hangs
+     out to the left where the mask fades it. min-width stays, so a short
+     line still fills the box and sits flush left. */
+  flex: none;
   min-width: 100%;
   justify-content: flex-start;
   white-space: pre;

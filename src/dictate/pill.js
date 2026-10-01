@@ -69,7 +69,16 @@ function drawTranscript() {
   finalSpan.textContent = settled;
   // The fade only once the line genuinely overflows; a short line sits flush
   // left with no mask, which is the drawn short state.
-  line.dataset.overflowing = String(line.scrollWidth > line.clientWidth + 1);
+  //
+  // Measured on the inner row, not the outer box. The inner row hangs out of
+  // the outer box to the LEFT (the outer's flex-end pins its right edge), and
+  // scrollWidth never counts left-side overflow in left-to-right writing, so
+  // the outer box reports no overflow while visibly overflowing. The inner
+  // row is sized by its content, so its own width against the outer box's is
+  // the real question. Found live 2026-10-01, together with the shrink bug in
+  // pill.css that had kept this line from ever sliding.
+  const inner = line.firstElementChild;
+  line.dataset.overflowing = String(inner.scrollWidth > line.clientWidth + 1);
 }
 
 /* ---- The elapsed and count chip (AC-36) ------------------------------

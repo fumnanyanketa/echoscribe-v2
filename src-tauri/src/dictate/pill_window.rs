@@ -478,4 +478,42 @@ mod tests {
              the one order in which the check cannot see the fault it exists for"
         );
     }
+
+    #[test]
+    fn the_transcript_line_can_actually_slide_left() {
+        // covers: AC-33's left-fade truncation, as a source guard only. The
+        // inner transcript row must refuse to shrink, and the overflow check
+        // must measure that inner row, or the line never slides at all: a
+        // default flex item shrinks to its min-width floor, measures exactly
+        // as wide as the outer box, and the text spills out of it to the
+        // RIGHT, clipped, with the newest words the hidden ones. The pill then
+        // sits on the first words of every long dictation for its whole run,
+        // which a person watching mid-sentence reads as frozen. Found live on
+        // 2026-10-01 by the user, nine frames deep into a 229-character
+        // dictation whose pill never moved. The outer box cannot be measured
+        // instead: its overflow hangs out to the LEFT, and scrollWidth never
+        // counts left-side overflow in left-to-right writing, so the outer box
+        // reports no overflow while visibly overflowing. Proving the slide
+        // needs a real dictation past 472px of words, so /check verify owns
+        // that; this stops both halves of the cure being simplified away.
+        let css = flattened(include_str!("../../../src/dictate/pill.css"));
+        let inner = css
+            .find(".pill__line-inner{")
+            .expect("pill.css no longer styles the transcript's inner row");
+        let block = &css[inner..css[inner..].find('}').map_or(css.len(), |e| inner + e)];
+        assert!(
+            block.contains("flex:none"),
+            "the transcript's inner row no longer refuses to shrink. It will shrink \
+             to its min-width floor, the outer box will never see overflow, and the \
+             line will sit on the first words of every long dictation instead of \
+             sliding left"
+        );
+        let js = flattened(include_str!("../../../src/dictate/pill.js"));
+        assert!(
+            js.contains("inner.scrollWidth>line.clientWidth"),
+            "the overflow check no longer measures the inner row against the outer \
+             box. Measuring the outer box against itself reports no overflow while \
+             the line visibly overflows leftward, and the fade never appears"
+        );
+    }
 }
