@@ -1,0 +1,21 @@
+What landed in the receiver window (a real Win32 edit control), dictated
+by Windows text-to-speech through the speakers, heard by the real
+microphone, transcribed by Deepgram, and typed by EchoScribe at the
+cursor. Each block is one dictation, 2026-10-01.
+
+Dictation 1 (English), the scripted sentence, landed character-perfect:
+The quick brown fox jumps over the lazy dog.
+(The same dictation also captured and typed ambient room speech before
+the script, which is correct behaviour for an open microphone. That
+prefix is a person's real words, so it lives in local-only/, not here.)
+
+Dictation 2 (German, after switching the language on the Languages
+screen), landed character-perfect including umlauts:
+Guten Abend. Heute testen wir die Diktierfunktion auf Deutsch. Der schnelle braune Fuchs springt über den faulen Hund. Ich spreche langsam und deutlich, damit die Erkennung genau arbeiten kann. Vielen Dank für die Aufmerksamkeit.
+
+Dictation 3 (English, after adding "EchoScribe" on the Vocabulary
+screen), the custom term landed as one word with exact casing:
+I am testing EchoScribe today and listens for my own words.
+(Spoken as "and it listens"; the dropped "it" is a transcription slip of
+the synthetic voice, the same class as the "markets" slip in the filed
+step-4a proof, not a typing fault.)
