@@ -50,6 +50,13 @@ export function mountRail(root, view, onSelect) {
     const children = (item.children || []).filter((child) => LABEL[child.id]);
     if (children.length === 0) continue;
     const sub = el("div", "rail__sub");
+    // Which section owns this sub-nav, so setActive can show it only while
+    // that section is the one showing: the comp draws no sub-nav under a
+    // resting Settings and an open one under an active Settings
+    // (design/registry.md "Section sub-nav", corrected 2026-10-02). It starts
+    // hidden; setActive runs before a person sees the rail.
+    sub.dataset.parent = item.id;
+    sub.hidden = true;
     for (const child of children) {
       sub.append(navItem(child.id, LABEL[child.id], "rail__item rail__item--sub", onSelect));
     }
@@ -82,12 +89,38 @@ export function setActive(root, id) {
       item.removeAttribute("aria-current");
     }
   }
+
+  // The sub-nav of a section is on screen only while that section is the one
+  // showing, which is what the comp's two artboards draw (design/registry.md
+  // "Section sub-nav", corrected 2026-10-02). The parent item says so in words
+  // too, through aria-expanded.
+  for (const sub of root.querySelectorAll(".rail__sub")) {
+    const parent = sub.dataset.parent;
+    const open = id === parent || id.startsWith(parent + ".");
+    sub.hidden = !open;
+    const item = itemFor(root, parent);
+    if (item) item.setAttribute("aria-expanded", open ? "true" : "false");
+  }
 }
 
 /** The element for one destination, so the surface can borrow its wording as
  *  its own accessible name rather than this build inventing a heading. */
 export function itemFor(root, id) {
   return root.querySelector('[data-destination="' + id + '"]');
+}
+
+/** Fold or unfold one section's sub-nav, for a press on the section a person
+ *  is already inside (design/registry.md "Section sub-nav", amended
+ *  2026-10-02 by the user). The screen is untouched: this moves nothing but
+ *  the list. Any navigation afterwards goes through setActive, which puts the
+ *  sub-nav back to its rule, so entering a section afresh always arrives
+ *  unfolded. */
+export function toggleSub(root, parentId) {
+  const sub = root.querySelector('.rail__sub[data-parent="' + parentId + '"]');
+  if (!sub) return;
+  sub.hidden = !sub.hidden;
+  const item = itemFor(root, parentId);
+  if (item) item.setAttribute("aria-expanded", sub.hidden ? "false" : "true");
 }
 
 /** Put the comp's faint count at the right edge of one nav item, or clear it

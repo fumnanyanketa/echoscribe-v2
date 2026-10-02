@@ -61,6 +61,22 @@ System changes proposed: whichever of A or B the user picks gets drawn in
 `design/registry.md` first, then routed to `/develop`. This patrol edited
 no code.
 
+## Second finding, same day: the sub-nav never collapses
+
+Raised by the user after the card landed: the Settings sub-sections are
+always visible in the rail. The comp disagrees with the build. Its History
+artboard draws no sub-nav under a resting Settings (lines 249 to 252), and
+its Settings artboard draws the sub-nav open under an active Settings
+(lines 427 to 434). Permanent visibility is drift, kind: discipline
+against the comp, severity: breaks the look, found by the user. Fix: the
+sub-nav shows only while its section is the one showing. Registry's
+`Section sub-nav` row corrected; routed to `/develop`.
+
+Amended after the user tried it: a second press on Settings folds the
+sub-nav back without changing the screen, and the next press unfolds it.
+The user asked for the fold in so many words, so it is their decision,
+recorded on the registry row.
+
 ## Outcome, same day
 
 The user chose **A, follow the comp**. Registry updated: `Account block`

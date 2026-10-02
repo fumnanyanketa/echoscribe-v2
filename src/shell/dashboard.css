@@ -154,6 +154,15 @@
   padding: 6px 0 0 28px; /* the comp's indent under the parent item */
 }
 
+/* A class with its own display beats the browser's rule for the hidden
+   attribute. Without this the sub-nav could never collapse at all, which is
+   the same bug the offline row shipped on 2026-09-03. The sub-nav is hidden
+   whenever its section is not the one showing (design/registry.md "Section
+   sub-nav", corrected 2026-10-02). */
+.rail__sub[hidden] {
+  display: none;
+}
+
 /* Sub-nav items are smaller and squarer than their parents in the comp, with
    no lead bar and no raised edge. */
 .rail__sub .rail__item {

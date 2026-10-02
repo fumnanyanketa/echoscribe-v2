@@ -14,7 +14,7 @@
 // dashboard's capability grants two event permissions and nothing that touches
 // a window.
 
-import { mountRail, setActive, itemFor, setCount } from "./rail.js";
+import { mountRail, setActive, itemFor, setCount, toggleSub } from "./rail.js";
 import { mountAccountBlock, setOffline } from "./account-block.js";
 import { mountAccountCard } from "./account-card.js";
 import { mountDictationSettings } from "../dictate/dictation-settings.js";
@@ -60,6 +60,9 @@ let authState = null;
 // Where the account card goes, while the Transcription surface is the one
 // showing. Null on every other surface.
 let cardHost = null;
+// The destination whose screen the surface is holding, so a press on a section
+// can tell "enter this section" apart from "fold the section I am inside".
+let currentTarget = null;
 // Whether the app is working offline. `null` means nothing has said yet, which
 // is what lets an event that arrives during startup win over the older snapshot
 // `get_auth_state` returned.
@@ -149,6 +152,16 @@ async function refreshHistoryCount() {
 
 function show(id) {
   const target = resolve(id);
+  // A second press on the section a person is already inside folds its sub-nav
+  // and changes nothing else; the next one unfolds it (design/registry.md
+  // "Section sub-nav", amended 2026-10-02 by the user). `id !== target` is what
+  // says the press was on a section rather than on a destination with its own
+  // screen, and the screen stays because nothing below this line runs.
+  if (id !== target && currentTarget && currentTarget.startsWith(id + ".")) {
+    toggleSub(rail, id);
+    return;
+  }
+  currentTarget = target;
   setActive(rail, target);
   // Returning to History is the moment a stale count would be noticed, so the
   // count is re-read on the way in.
