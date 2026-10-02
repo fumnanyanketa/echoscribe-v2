@@ -221,7 +221,7 @@
 .account__identity {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 10px; /* the comp's foot row gap */
 }
 
 /* Initials, never an avatar image: design/registry.md keeps avatars beyond
@@ -250,58 +250,6 @@
   overflow-wrap: anywhere;
 }
 
-.account__details {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.account__email,
-.account__since {
-  margin: 0;
-  font-size: var(--text-xs);
-  line-height: var(--leading-body);
-  color: var(--color-ink-nav);
-  overflow-wrap: anywhere;
-}
-
-/* The comp writes the address in mono at its metadata size. */
-.account__email {
-  font-family: var(--font-mono);
-  font-size: var(--text-meta);
-}
-
-/* The comp's violet signed-in dot, beside the date line. */
-.account__since {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.account__since::before {
-  content: "";
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: var(--radius-pill);
-  background: var(--color-accent);
-}
-
-/* design/registry.md "Secondary button, on dark", unchanged: a control edge and
-   a neutral label. It moved here from the signed-in stub record 0004 deleted. */
-.account__signout {
-  padding: 8px 12px; /* the comp's Sign out padding */
-  border: var(--border-width) solid var(--color-rail-border-control);
-  border-radius: var(--radius-ctl);
-  background: transparent;
-  font-family: var(--font-sans);
-  font-size: var(--text-xs); /* the comp's 12.5px */
-  font-weight: var(--weight-medium);
-  color: var(--color-ink-on-dark-secondary);
-  text-align: center;
-  cursor: pointer;
-}
-
 /* ---- The reading surface -------------------------------------------- */
 
 /* Always white: the design system has no light and dark theme, so there is no
@@ -312,4 +260,137 @@
   min-width: 0;
   overflow: auto;
   background: var(--color-surface);
+}
+
+/* ---- The account card ------------------------------------------------ */
+
+/* design/registry.md "Account card": the comp's ACCOUNT section (comp lines 550
+   to 566), beneath the Deepgram key on the Settings, Transcription surface.
+   The mail address, the signed-in line and Sign out moved here from the rail
+   foot on 2026-10-02 (design/patrols/2026-10-02-rail-account.md). Mounted by
+   dashboard.js into its own host beside the screen's root, so the screen's own
+   redraws never take it out. */
+.acard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px; /* the comp's settings column gap */
+  /* The screen above ends with the surface's own 32px bottom padding. The comp
+     draws its caption-to-hairline distance at 20px (the 14px column gap plus
+     the hairline's 6px margin), so this section pulls itself up by the
+     difference to land the hairline where the comp does. */
+  margin-top: -18px;
+  padding: 0 30px 32px; /* the comp's surface padding, sides and foot */
+}
+
+.acard__rule {
+  height: 1px;
+  margin: 6px 0; /* the comp's hairline margins */
+  background: var(--color-border-quiet);
+}
+
+.acard__eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-caps);
+  color: var(--color-ink-caption);
+}
+
+/* The card's edge separates, it does not mark a control, so the decorative
+   token is right. */
+.acard__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3); /* the comp's 12px card gaps */
+  max-width: 332px; /* the comp's card: its 392px column minus 30px a side */
+  padding: 16px; /* the comp's card padding */
+  border: var(--border-width) solid var(--color-border-quiet);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.acard__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3); /* the comp's 12px */
+}
+
+/* The card's disc is deliberately the comp's dark one, not the rail's violet:
+   the comp draws the two discs differently and both stand (design/registry.md
+   "Account card"). */
+.acard__initials {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px; /* the comp's card disc */
+  height: 38px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  font-size: 14px; /* the comp's disc initials */
+  font-weight: var(--weight-semibold);
+  color: var(--color-surface);
+}
+
+.acard__who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px; /* the comp's name-over-address gap */
+  min-width: 0;
+}
+
+.acard__name {
+  font-size: 14px; /* the comp's card name size */
+  font-weight: var(--weight-medium);
+  color: var(--color-ink);
+}
+
+.acard__email {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  color: var(--color-ink-caption);
+  overflow-wrap: anywhere;
+}
+
+.acard__since {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2); /* the comp's 8px */
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-ink-secondary);
+}
+
+/* The comp's violet signed-in dot, one of the statics the user ratified on
+   2026-10-01 (design/design-system.md, the violet rule's dated exception). */
+.acard__since::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+}
+
+/* design/registry.md "Secondary button" at the comp's Sign out shape. The edge
+   is the control token rather than the comp's lighter one, because a boundary
+   that tells you where a control is must hold 3:1 (mandate rule 7). */
+.acard__signout {
+  padding: var(--space-2) var(--space-3); /* the comp's 8px 12px */
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-ctl);
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs); /* the comp's 12.5px */
+  font-weight: var(--weight-medium);
+  color: var(--color-ink);
+  text-align: center;
+  cursor: pointer;
+}
+
+.acard__caption {
+  margin: 0;
+  font-size: 12px; /* the comp's account caption */
+  line-height: var(--leading-body);
+  color: var(--color-ink-caption);
 }

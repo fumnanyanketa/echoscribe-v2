@@ -1,18 +1,21 @@
 // The account block, pinned to the foot of the nav rail
 // (design/registry.md "Account block", "Offline row").
 //
-// Everything it shows comes back on `get_auth_state()`'s AccountView: the
-// initials, the name, the mail address and the signed-in date. It never sees a
-// token. Its Sign out calls `sign_out()` and nothing else.
+// The comp's one row and nothing else: the initials disc and the display name
+// (comp line 253). Both come back on `get_auth_state()`'s AccountView, and it
+// never sees a token. The mail address, the signed-in date and Sign out moved
+// to the account card on the Settings, Transcription surface on 2026-10-02,
+// when the user chose the comp over decision 4 of the 2026-10-01 patrol
+// (design/patrols/2026-10-02-rail-account.md); account-card.js beside this
+// file draws them now.
 //
 // It holds the app's one "working offline" sign, which moved here from the
 // signed-in stub in src/sign-in/sign-in.js when record 0004 deleted it. That
 // sign is record 0003's AC-14 and stays record 0003's criterion; this is only
 // where it lives now. The rail is the one surface that is on screen whether or
 // not a person visits a section, which is what "the app shows it is working
-// offline" needs.
-
-const { invoke } = window.__TAURI__.core;
+// offline" needs. That reasoning never depended on Sign out being here, so the
+// sign did not move with it.
 
 // Fixed at design time, both of them (design/registry.md "Offline row"). The
 // sentence never claims the machine has no internet, because the app has
@@ -31,8 +34,8 @@ const OFFLINE_SENTENCE =
  *  have overtaken it. The page holds that one answer and hands it down.
  *
  *  The offline row goes first in the reading order, above the initials and the
- *  name and above Sign out. The block is pinned to the rail foot, so the row's
- *  arrival grows the block upward and nothing already on screen moves. */
+ *  name. The block is pinned to the rail foot, so the row's arrival grows the
+ *  block upward and nothing already on screen moves. */
 export function mountAccountBlock(root, state, offline) {
   const account = state.account;
 
@@ -50,29 +53,7 @@ export function mountAccountBlock(root, state, offline) {
     withText(el("span", "account__name"), account.display_name),
   );
 
-  const details = el("div", "account__details");
-  details.append(
-    withText(el("p", "account__email selectable"), account.email),
-    withText(
-      el("p", "account__since"),
-      "Signed in since " + formatDate(account.signed_in_since),
-    ),
-  );
-
-  const signOut = el("button", "account__signout");
-  signOut.type = "button";
-  signOut.textContent = "Sign out";
-  signOut.addEventListener("click", async () => {
-    try {
-      await invoke("sign_out");
-    } catch (_) {
-      // Signing out always succeeds locally: it empties the session and deletes
-      // the credential entry before it tells Clerk anything, so there is
-      // nothing to show a person here. Rust closes this window either way.
-    }
-  });
-
-  root.replaceChildren(offlineRow, identity, details, signOut);
+  root.replaceChildren(offlineRow, identity);
   setOffline(root, offline);
 }
 
@@ -94,14 +75,4 @@ function el(tag, className) {
 function withText(node, str) {
   node.textContent = str;
   return node;
-}
-
-function formatDate(iso) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
 }

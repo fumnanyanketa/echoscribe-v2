@@ -6,9 +6,10 @@
 //
 // The signed-in confirmation that used to live here is gone. It was a
 // milestone-1 stand-in for the account block, and record 0004 built the real
-// one at the foot of the dashboard's nav rail, which is where its name, its
-// mail address, its date, its Sign out and its "working offline" sign all are
-// now (src/shell/account-block.js).
+// one at the foot of the dashboard's nav rail. The name and the "working
+// offline" sign live there (src/shell/account-block.js); the mail address, the
+// date and Sign out moved to the account card on the Settings, Transcription
+// surface on 2026-10-02 (src/shell/account-card.js).
 //
 // Rust drives the actual sign-in. This module asks it to start or cancel, and
 // listens for the outcome. It never sees a token or a Clerk code.

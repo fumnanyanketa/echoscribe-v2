@@ -2,9 +2,9 @@
 // (record 0004).
 //
 // It asks Rust three things and draws what it is told. `get_rail()` for the
-// sections that exist and which one to land on, `get_auth_state()` for the five
-// things the account block shows, and `sign_out()` when a person presses Sign
-// out. It sends nothing else and emits nothing, ever.
+// sections that exist and which one to land on, `get_auth_state()` for what the
+// account block and the account card show, and `sign_out()` when a person
+// presses Sign out on the card. It sends nothing else and emits nothing, ever.
 //
 // Which section is showing is this page's own business and needs no command and
 // no event. It is drawing, not a decision.
@@ -16,6 +16,7 @@
 
 import { mountRail, setActive, itemFor, setCount } from "./rail.js";
 import { mountAccountBlock, setOffline } from "./account-block.js";
+import { mountAccountCard } from "./account-card.js";
 import { mountDictationSettings } from "../dictate/dictation-settings.js";
 import { mountTranscriptionSettings } from "../dictate/transcription-settings.js";
 import { mountLanguageSettings } from "../language/language.js";
@@ -52,6 +53,13 @@ let accountBlock = null;
 let railView = null;
 // The unmount function of whatever screen the surface is holding.
 let unmountScreen = null;
+// The auth state snapshot, kept for the account card: the card is drawn each
+// time the Transcription surface opens, and the five things it shows cannot
+// change while this window is open, so one read serves every visit.
+let authState = null;
+// Where the account card goes, while the Transcription surface is the one
+// showing. Null on every other surface.
+let cardHost = null;
 // Whether the app is working offline. `null` means nothing has said yet, which
 // is what lets an event that arrives during startup win over the older snapshot
 // `get_auth_state` returned.
@@ -99,7 +107,12 @@ async function start() {
       // The snapshot only fills in when neither event has spoken yet. An event
       // is always the newer truth.
       if (offline === null) offline = state.state === "signed_in_offline";
+      authState = state;
       mountAccountBlock(accountBlock, state, offline);
+      // The other side of the race fillAccountCard names: if the person reached
+      // the Transcription surface before this read came back, its card host is
+      // sitting empty and is filled now.
+      fillAccountCard();
     }
   } catch (err) {
     // Same reasoning: the rail is up and usable, and the block that says who
@@ -156,12 +169,36 @@ function show(id) {
   surface.replaceChildren();
 
   const mount = SCREEN[target];
+  cardHost = null;
   // The second argument is how a screen asks the rail to move, and only the
   // history empty state's one action uses it: design/design-system.md's empty
   // state rule asks for a way to change the setup, and the hotkey is chosen on
   // Settings, Dictation. The four settings screens take one argument and ignore
   // it (record 0007, Interface surface).
-  if (mount) unmountScreen = mount(surface, { go: show });
+  if (mount) {
+    let screenRoot = surface;
+    if (target === "settings.transcription") {
+      // The account card rides beneath the Transcription screen
+      // (design/registry.md "Account card"). The screen gets its own root
+      // because it redraws itself with replaceChildren and the card must
+      // survive those redraws; the card gets its own host so it can be filled
+      // late when the auth state has not arrived yet.
+      screenRoot = document.createElement("div");
+      cardHost = document.createElement("div");
+      surface.append(screenRoot, cardHost);
+      fillAccountCard();
+    }
+    unmountScreen = mount(screenRoot, { go: show });
+  }
+}
+
+/** Draw the account card into its host, once both the host and the auth state
+ *  exist. Called from both sides of that race: the Transcription surface
+ *  opening, and `get_auth_state` coming back. */
+function fillAccountCard() {
+  if (cardHost && authState && !cardHost.hasChildNodes()) {
+    mountAccountCard(cardHost, authState);
+  }
 }
 
 /** The destination that actually gets drawn when `id` is pressed. `id` itself
