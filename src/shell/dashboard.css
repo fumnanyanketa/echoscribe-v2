@@ -1,15 +1,15 @@
-/* The dashboard: the two-tone shell of design/design-system.md's Composition,
- * built at record 0004's geometry.
+/* The dashboard shell, built at record 0004's geometry and arranged by the
+ * 2026-10-02 re-lock, "Night" (design/design-system.md).
  *
- * A persistent dark rail on the left where you navigate, a white surface on the
- * right where you read. Not tabs. The window's size and place are Rust's and
- * arrive before this page is ever shown, so there is no breakpoint here and no
- * layout that depends on one: the design system has no responsive breakpoints,
- * and the window cannot go below 960x640.
+ * One dark room: the rail sits on the near black page where you navigate, and
+ * each screen sits in borderless graphite cards beside it where you read. Not
+ * tabs. The window's size and place are Rust's and arrive before this page is
+ * ever shown, so there is no breakpoint here and no layout that depends on one:
+ * the design system has no responsive breakpoints, and the window cannot go
+ * below 960x640.
  *
- * Every value is a token from styles.css, except the rail's own 232px width,
- * which is a component geometry the comp fixes and design/registry.md's
- * "Offline row" names, the way pill.css states the pill's 472x52.
+ * Values are tokens from styles.css, except where a literal is Night's own
+ * drawn geometry, each marked.
  */
 
 .dashboard-body {
@@ -19,107 +19,120 @@
 
 .dashboard {
   display: grid;
-  /* design/registry.md: the 232px rail. */
-  grid-template-columns: 232px 1fr;
+  grid-template-columns: 236px 1fr; /* Night's rail width */
   height: 100vh;
+  background: var(--color-page);
 }
 
 /* ---- The rail ------------------------------------------------------- */
 
 .rail {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 18px 14px; /* the comp's rail padding */
+  padding: 40px 12px 14px; /* Night's rail padding, the cards' top line */
+  overflow: hidden;
   background: var(--color-rail);
-  /* Decorative, so the decorative token is right: it separates two fields that
-     already differ, it does not tell you where a control is. */
-  border-right: var(--border-width) solid var(--color-rail-border);
 }
 
-/* design/registry.md "Brand lockup": a violet dot and the wordmark. The one
-   place violet is not about an open microphone, and it is registered as such.
-   Same treatment as the sign-in window's, because it is the same component. */
-.rail__brand {
+/* Every item sits above the watermark. */
+.rail__nav,
+.rail__foot {
+  position: relative;
+  z-index: 1;
+}
+
+/* The faded logo bleeding in from the rail's left edge (rail.js
+   `watermark`). It starts past the edge, so the window cuts it, and a mask
+   fades it to nothing before the middle of the rail, which keeps it out from
+   behind the labels. Decoration, so it carries no contrast duty, and it never
+   takes a click. */
+.rail__watermark {
+  position: absolute;
+  top: 50%;
+  left: -48px; /* how far the mark starts past the window's edge */
   display: flex;
   align-items: center;
-  gap: 9px; /* the comp's lockup gap */
-  padding: 0 var(--space-2) var(--space-5);
+  gap: 11px; /* the icon's own bar spacing, at this size */
+  height: 240px; /* the tallest bar */
+  transform: translateY(-74%); /* the rail's empty middle, kept above the foot
+                                  even with Settings unfolded */
+  opacity: 0.28;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, #000 10%, transparent 82%);
+  mask-image: linear-gradient(to right, #000 10%, transparent 82%);
 }
 
-.rail__brand-dot {
-  width: 9px; /* the comp's dot */
-  height: 9px;
+.rail__watermark i {
+  display: block;
+  flex: none;
+  width: 12px; /* the icon's own bar width, at this size */
   border-radius: var(--radius-pill);
   background: var(--color-accent);
-}
-
-.rail__brand-word {
-  font-size: 14px; /* the comp's wordmark size */
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-  color: var(--color-ink-on-dark-heading);
-}
-
-/* The comp's little version badge beside the wordmark. */
-.rail__brand-version {
-  padding: 1px 5px;
-  border: var(--border-width) solid #33353d; /* the comp's own badge edge */
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-nano);
-  color: var(--color-ink-hint);
 }
 
 .rail__nav {
   display: flex;
   flex-direction: column;
-  gap: var(--space-hair);
+  gap: var(--space-1);
+}
+
+/* A section with sub-sections, and the account beneath it, pinned to the foot.
+   Pinned is what makes the offline row's arrival, or the sub-nav unfolding,
+   grow the group upward and move nothing below it. */
+.rail__foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: auto;
 }
 
 /* design/registry.md "Nav item": two states, resting and active. Active gets
    the raised rail fill, which is a lightness change rather than a hue, so it
-   does not rest on colour perception. `aria-current` carries the same fact for
-   a screen reader. There is deliberately no disabled state: the design system
-   does not draw one, and nothing in the rail opens nothing (AC-2). */
+   does not rest on colour perception, and a teal icon. `aria-current` carries
+   the same fact for a screen reader. There is deliberately no disabled state:
+   the design system does not draw one, and nothing in the rail opens nothing
+   (AC-2). */
 .rail__item {
   display: flex;
   align-items: center;
-  gap: 10px; /* the comp's gap between the lead bar and the label */
+  gap: var(--space-3);
   width: 100%;
-  padding: 9px 10px; /* the comp's nav item padding */
-  border: var(--border-width) solid transparent;
-  border-radius: var(--radius-ctl);
+  padding: 11px 12px; /* Night's nav item padding */
+  border: 0;
+  border-radius: var(--radius-lg);
   background: transparent;
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  font-size: 14px; /* Night's nav label size */
   font-weight: var(--weight-regular);
   text-align: left;
   color: var(--color-ink-nav);
   cursor: pointer;
 }
 
-/* The comp's lead bar: in every item so the label never shifts, violet only on
-   the active one. The one place outside a live microphone that violet appears
-   in the rail, restored to the comp on the user's instruction of 2026-10-01. */
-.rail__item::before {
-  content: "";
+.rail__icon {
   flex: none;
-  width: 4px;
-  height: 14px;
-  border-radius: var(--radius-xs);
-  background: transparent;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .rail__item--active {
   background: var(--color-rail-active);
-  border-color: var(--color-rail-active-border); /* the comp's raised edge */
   font-weight: var(--weight-medium);
-  color: var(--color-surface);
+  color: var(--color-ink-on-dark);
 }
 
-.rail__item--active::before {
-  background: var(--color-accent);
+/* The teal on the active item's icon is one of the accent's statics. */
+.rail__item--active .rail__icon,
+.rail__item--within .rail__icon {
+  stroke: var(--color-accent);
+  stroke-width: 1.9;
 }
 
 /* The comp's count at the right edge of a nav item: faint ink, redundant to
@@ -141,7 +154,7 @@
    weight changes, so there is never any doubt which single item is open. */
 .rail__item--within {
   font-weight: var(--weight-medium);
-  color: var(--color-surface);
+  color: var(--color-ink-on-dark);
 }
 
 /* design/registry.md "Section sub-nav": vertical and indented inside the rail,
@@ -150,8 +163,8 @@
 .rail__sub {
   display: flex;
   flex-direction: column;
-  gap: 1px; /* the comp's sub-nav gap */
-  padding: 6px 0 0 28px; /* the comp's indent under the parent item */
+  gap: var(--space-hair);
+  padding-left: 30px; /* Night's indent: the label's own left edge */
 }
 
 /* A class with its own display beats the browser's rule for the hidden
@@ -163,33 +176,27 @@
   display: none;
 }
 
-/* Sub-nav items are smaller and squarer than their parents in the comp, with
-   no lead bar and no raised edge. */
+/* Sub-nav items are smaller than their parents, with no icon. */
 .rail__sub .rail__item {
-  gap: 0;
-  padding: 5px 8px;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 13px; /* the comp's sub-nav size */
-}
-
-.rail__sub .rail__item::before {
-  display: none;
+  padding: 6px 12px; /* tightened 2026-10-02 at the user's request, so the
+                        unfolded Settings group stays clear of the watermark */
+  border-radius: var(--radius-ctl);
+  font-size: var(--text-sm);
 }
 
 /* ---- The account block ---------------------------------------------- */
 
-/* design/registry.md "Account block": pinned to the rail foot, because it is
-   visited twice a year. Pinned is what makes the offline row's arrival grow the
-   block upward and move nothing already on screen. */
+/* design/registry.md "Account block": at the rail foot, beneath Settings, in
+   Night's bordered box. The box edge is decorative: the block is not a
+   control. */
 .account {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-top: auto;
-  padding-top: 14px; /* the comp's foot padding */
-  padding-left: 6px; /* the comp's foot indent */
-  border-top: var(--border-width) solid var(--color-rail-border);
+  margin-top: var(--space-2);
+  padding: 10px 12px; /* Night's account box padding */
+  border: var(--border-width) solid var(--color-rail-border);
+  border-radius: var(--radius-lg);
 }
 
 /* design/registry.md "Offline row": first in the block's reading order, above
@@ -234,41 +241,75 @@
 }
 
 /* Initials, never an avatar image: design/registry.md keeps avatars beyond
-   initials off the list. The comp's violet disc, restored on the user's
-   instruction of 2026-10-01 over the earlier violet-means-microphone
-   repainting; that reservation now excepts the three statics the comp draws. */
+   initials off the list. The teal disc is one of the accent's statics, with
+   near black letters, because white on teal cannot be read. */
 .account__initials {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 26px; /* the comp's disc */
-  height: 26px;
+  width: 22px; /* Night's disc */
+  height: 22px;
   border-radius: var(--radius-pill);
   background: var(--color-accent);
-  font-size: var(--text-micro);
-  font-weight: var(--weight-semibold);
-  color: var(--color-surface);
+  font-size: 10px; /* Night's initials */
+  font-weight: var(--weight-bold);
+  color: var(--color-accent-ink);
 }
 
 .account__name {
   min-width: 0;
-  font-size: var(--text-xs); /* the comp's 12.5px */
+  font-size: var(--text-sm);
   font-weight: var(--weight-regular);
-  color: var(--color-ink-on-dark-soft); /* the comp's #c9ccd6 */
+  color: var(--color-ink-on-dark);
   overflow-wrap: anywhere;
 }
 
 /* ---- The reading surface -------------------------------------------- */
 
-/* Always white: the design system has no light and dark theme, so there is no
-   second look for this to have. What it holds is the screen of whichever
-   destination the rail is on; each screen brings its own stylesheet, and this
-   rule owns only the field behind them. */
+/* The near black page beside the rail. It holds no colour of its own: each
+   screen sits on it in Night's borderless graphite cards, the card frames
+   below, and each screen brings its own stylesheet for what is inside them. */
 .surface {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   min-width: 0;
+  box-sizing: border-box;
+  padding: 40px 14px 14px 10px; /* Night's page padding, beside the rail */
   overflow: auto;
+  background: var(--color-page);
+}
+
+/* One card on the page. The settings screens, and the account card, each sit
+   in one. History draws its own, because its fact cards sit above its list. */
+.surface__card {
+  flex: none;
+  border-radius: var(--radius-card);
   background: var(--color-surface);
+}
+
+/* A Settings section's opening card: its heading, and one sentence saying
+   what the section is for (design/design-system.md, "Night"). */
+.surface__intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 24px 28px; /* Night's intro card padding */
+}
+
+.surface__intro-heading {
+  margin: 0;
+  font-size: 17px; /* Night's section heading */
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink);
+}
+
+.surface__intro-text {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--color-ink-caption);
 }
 
 /* ---- The account card ------------------------------------------------ */
@@ -277,24 +318,14 @@
    to 566), beneath the Deepgram key on the Settings, Transcription surface.
    The mail address, the signed-in line and Sign out moved here from the rail
    foot on 2026-10-02 (design/patrols/2026-10-02-rail-account.md). Mounted by
-   dashboard.js into its own host beside the screen's root, so the screen's own
-   redraws never take it out. */
+   dashboard.js into its own card beside the screen's, so the screen's own
+   redraws never take it out. Night gives it a card of its own, so the comp's
+   hairline above it is gone: the gap between two cards already separates. */
 .acard {
   display: flex;
   flex-direction: column;
   gap: 14px; /* the comp's settings column gap */
-  /* The screen above ends with the surface's own 32px bottom padding. The comp
-     draws its caption-to-hairline distance at 20px (the 14px column gap plus
-     the hairline's 6px margin), so this section pulls itself up by the
-     difference to land the hairline where the comp does. */
-  margin-top: -18px;
-  padding: 0 30px 32px; /* the comp's surface padding, sides and foot */
-}
-
-.acard__rule {
-  height: 1px;
-  margin: 6px 0; /* the comp's hairline margins */
-  background: var(--color-border-quiet);
+  padding: 26px 28px; /* Night's card padding */
 }
 
 .acard__eyebrow {
@@ -314,7 +345,7 @@
   padding: 16px; /* the comp's card padding */
   border: var(--border-width) solid var(--color-border-quiet);
   border-radius: var(--radius-card);
-  background: var(--color-surface);
+  background: var(--color-surface-subtle);
 }
 
 .acard__identity {
@@ -370,8 +401,8 @@
   color: var(--color-ink-secondary);
 }
 
-/* The comp's violet signed-in dot, one of the statics the user ratified on
-   2026-10-01 (design/design-system.md, the violet rule's dated exception). */
+/* The signed-in dot, one of the accent's statics (design/design-system.md,
+   the violet rule's dated exception, teal since "Night"). */
 .acard__since::before {
   content: "";
   flex: none;

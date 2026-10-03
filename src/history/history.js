@@ -39,6 +39,8 @@
 // number beside the search and the list beneath it can never come from two
 // different moments.
 
+import { HOTKEY, factsRow } from "./history-facts.js";
+
 const { invoke } = window.__TAURI__.core;
 
 /** The empty state's paragraph, which is the second and third of the four
@@ -51,16 +53,6 @@ const EMPTY_PARAGRAPH =
   "Press the hotkey anywhere on this machine, speak, and the words appear " +
   "where your cursor already is. What you say is saved here, on this machine, " +
   "and nowhere else.";
-
-/** What a person reads for each hotkey design/registry.md's `Hotkey choice`
- *  allows. The same division as the rail's wording and the hotkey rows on the
- *  settings surface: Rust hands out the stored value and this side decides what
- *  a person reads. A value with no wording here draws no keys at all rather
- *  than putting a machine identifier in front of somebody. */
-const HOTKEY = {
-  double_tap_ctrl: { key: "Ctrl", words: "Double tap Ctrl" },
-  double_tap_alt: { key: "Alt", words: "Double tap Alt" },
-};
 
 /** Mount the history screen into `root`. `go` moves the rail, and the empty
  *  state's one action is the only thing that uses it. Returns an unmount
@@ -138,7 +130,9 @@ function drawReadFailure(ctx, err) {
     return;
   }
   const screen = el("section", "history");
-  screen.append(line);
+  const card = el("div", "history__card");
+  card.append(line);
+  screen.append(card);
   ctx.root.replaceChildren(screen);
 }
 
@@ -155,16 +149,22 @@ function draw(ctx) {
   // would be a control whose every answer is already known.
   const neverDictated = ctx.query === "" && ctx.rows.length === 0;
 
+  // Night's arrangement: the three fact cards, then one card holding the
+  // search and the list. The empty state has neither the facts nor the search:
+  // it is one card, the comp's centred column.
+  const card = el("div", "history__card");
   if (!neverDictated) {
+    screen.append(factsRow(ctx.view && ctx.view.total, () => !ctx.disposed));
     state.search = searchGroup(state);
-    screen.append(state.search.group);
+    card.append(state.search.group);
   }
-  screen.append(state.line);
+  card.append(state.line);
 
   state.list = el("div", "history__list-group");
-  screen.append(state.list);
+  card.append(state.list);
+  screen.append(card);
 
-  // The comp centres the empty state's column in the whole surface.
+  // The comp centres the empty state's column in its card.
   screen.classList.toggle("history--empty", neverDictated);
 
   ctx.root.replaceChildren(screen);
@@ -215,7 +215,9 @@ function searchGroup(state) {
   count.setAttribute("aria-atomic", "true");
 
   wrap.append(ring, field, count);
-  group.append(label, wrap);
+  // Night's card header: the section's name on the left, the search on the
+  // right. The name is the rail's own word for this screen.
+  group.append(withText(el("h1", "history__title"), "History"), label, wrap);
   state.count = count;
   state.field = field;
   paintCount(state);

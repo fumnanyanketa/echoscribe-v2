@@ -45,19 +45,45 @@ export function mountKeySetup(root, options) {
   };
 }
 
+/** The three promises on the card, in the order the preview the user approved
+ *  on 2026-10-02 draws them ("Night", design/design-system.md). Each claims
+ *  only what this app controls: AGENTS.md's data rules, and where the key is
+ *  kept. Icons are SVG path data on a 24 unit grid. */
+const PROMISES = [
+  {
+    icon: ["M5 4h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z", "M8 20h8M12 16v4"],
+    title: "Stays on this machine",
+    text: "Your history lives in one file on this computer and nowhere else.",
+  },
+  {
+    icon: ["M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z", "M19 11a7 7 0 0 1-14 0M12 18v3"],
+    title: "Straight to your Deepgram account",
+    text: "Audio goes from here to Deepgram and is never saved. No EchoScribe server in between.",
+  },
+  {
+    icon: ["M7 11h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z", "M8 11V7a4 4 0 0 1 8 0v4"],
+    title: "Key stored locally",
+    text: "Kept in Windows Credential Manager, and never shown in full again once it is saved.",
+  },
+];
+
 function draw(ctx, focusTarget) {
-  const column = el("section", "keysetup");
-  column.append(stepRow());
+  const screen = el("section", "keysetup");
+  screen.append(tiles("keysetup__tiles keysetup__tiles--top", [90, 170, 250, 140, 200, 70]));
+  screen.append(tiles("keysetup__tiles keysetup__tiles--bottom", [110, 220, 160, 280, 120]));
+
+  const column = el("div", "keysetup__column");
+  screen.append(column);
+  column.append(mark(), stepRow());
 
   column.append(
-    withText(el("h1", "keysetup__heading"), "Add your Deepgram key"),
+    withText(el("h1", "keysetup__heading"), "Connect your Deepgram key"),
     withText(
       el("p", "keysetup__body"),
-      "EchoScribe sends what you say to Deepgram, which turns it into text. " +
-        "A Deepgram key is how Deepgram knows that usage is yours, so you need " +
-        "your own before dictation can start. Your audio goes from this machine " +
-        "to your own Deepgram account and nowhere else.",
+      "EchoScribe turns your voice into text with your own Deepgram account. " +
+        "Here is how your words are kept.",
     ),
+    promiseCard(),
   );
 
   // The error line sits above the action, the same order as the sign-in and
@@ -80,18 +106,11 @@ function draw(ctx, focusTarget) {
   const form = el("form", "keysetup__form");
   form.noValidate = true;
 
-  // The field's accessible name. Visually hidden rather than absent: the drawn
-  // field carries a placeholder and a SECRET badge, and a placeholder is not a
-  // label. Nothing about the look changes.
-  const label = withText(el("label", "keysetup__label"), "Deepgram key");
+  // The field's visible label, above it, as the approved preview draws it.
+  const label = withText(el("label", "keysetup__label"), "Deepgram API key");
   label.htmlFor = "deepgram-key";
 
   const field = el("div", "keysetup__field");
-
-  const badge = withText(el("span", "keysetup__badge"), "SECRET");
-  // Decoration for a screen reader: the field is already named by its label and
-  // announced as a password field, so this would only add noise.
-  badge.setAttribute("aria-hidden", "true");
 
   // type=password is the masking. The key is never rendered in plain text on
   // this screen, at any point, in any state.
@@ -99,7 +118,7 @@ function draw(ctx, focusTarget) {
   input.type = "password";
   input.id = "deepgram-key";
   input.name = "deepgram-key";
-  input.placeholder = "Paste your key";
+  input.placeholder = "paste your key here";
   input.autocomplete = "off";
   input.spellcheck = false;
   input.value = ctx.pasted;
@@ -116,11 +135,8 @@ function draw(ctx, focusTarget) {
   // hold focus for.
   verify.disabled = ctx.pasted.trim() === "";
 
-  // The comp's order inside the field: the violet dot, the key itself, the
-  // SECRET badge, then the action at the right edge.
-  const dot = el("span", "keysetup__field-dot");
-  dot.setAttribute("aria-hidden", "true");
-  field.append(dot, input, badge, verify);
+  // The well holding the key, then Verify beside it.
+  field.append(input, verify);
   form.append(label, field);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -151,20 +167,12 @@ function draw(ctx, focusTarget) {
   // from.
   const link = makeButton(
     "keysetup__link",
-    "Get a free key from Deepgram",
+    "Where do I get a key?",
     () => openFixedPage("open_deepgram_signup"),
   );
-  column.append(link);
+  form.append(link);
 
-  column.append(
-    withText(
-      el("p", "keysetup__caption"),
-      "Your key is kept on this machine, in Windows Credential Manager. " +
-        "EchoScribe never shows it in full again once it is saved.",
-    ),
-  );
-
-  ctx.root.replaceChildren(column);
+  ctx.root.replaceChildren(screen);
 
   // The window was brought forward for exactly this, so hand the keyboard to
   // the field. After a failed check focus goes back to the field too, with the
@@ -237,18 +245,70 @@ function setBusy(button, label) {
   button.textContent = label;
 }
 
-/** The comp's step row in place of a brand lockup: this window is step two of
- *  the first run, sign-in being step one, and both bars are lit because both
- *  steps are reached. The bars are decoration beside the words, so a screen
- *  reader hears the words alone. */
+/** The stepper: this window is step two of the first run, sign-in being step
+ *  one, and both bars are lit because both steps are reached. The bars are
+ *  decoration; the words are for a screen reader. */
 function stepRow() {
   const row = el("div", "keysetup__step");
-  row.append(withText(el("span", "keysetup__step-words"), "STEP 2 OF 2"));
+  row.append(withText(el("span", "keysetup__step-words"), "Step 2 of 2"));
   const bars = el("span", "keysetup__step-bars");
   bars.setAttribute("aria-hidden", "true");
   bars.append(el("i"), el("i"));
   row.append(bars);
   return row;
+}
+
+/** The waveform mark above the stepper, the app's own icon in bars. */
+function mark() {
+  const node = el("div", "keysetup__mark");
+  node.setAttribute("aria-hidden", "true");
+  for (const height of [12, 24, 34, 20, 28, 14]) {
+    const bar = el("i");
+    bar.style.height = height + "px";
+    node.append(bar);
+  }
+  return node;
+}
+
+/** Decorative waveform tiles in a corner of the window. */
+function tiles(className, heights) {
+  const node = el("div", className);
+  node.setAttribute("aria-hidden", "true");
+  for (const height of heights) {
+    const tile = el("i");
+    tile.style.height = height + "px";
+    node.append(tile);
+  }
+  return node;
+}
+
+function promiseCard() {
+  const card = el("ul", "keysetup__promises");
+  for (const promise of PROMISES) {
+    const row = el("li", "keysetup__promise");
+    const words = el("div", "keysetup__promise-words");
+    words.append(
+      withText(el("span", "keysetup__promise-title"), promise.title),
+      withText(el("span", "keysetup__promise-text"), promise.text),
+    );
+    row.append(icon(promise.icon), words);
+    card.append(row);
+  }
+  return card;
+}
+
+function icon(paths) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("class", "keysetup__promise-icon");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  for (const d of paths) {
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  }
+  return svg;
 }
 
 function el(tag, className) {

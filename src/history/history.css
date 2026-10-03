@@ -9,39 +9,143 @@
  * row, and the empty state as the comp's centred 520px column. Values that are
  * not tokens are the comp's own, each marked.
  *
- * It sits on the dashboard's white reading surface, so every colour here is a
- * light-surface token. There is no dark twin: the design system has no light
- * and dark theme, and the reading surface is always white.
+ * Arranged by the 2026-10-02 re-lock, "Night" (design/design-system.md): three
+ * fact cards on the page, then one borderless graphite card holding the search
+ * and the list. Every colour is a reading-surface token, dark since then.
  */
 
+/* The screen fills the page exactly and the page never scrolls here: only the
+   list inside the card does. The fact cards and the search header therefore
+   stay where they are, and no row can ever pass above or behind them. A
+   sticky header on the scrolling page was tried first and failed: it stuck
+   below the page's top padding and rows showed through above it. */
 .history {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  gap: var(--space-3);
   box-sizing: border-box;
-  min-height: 100%;
+  min-height: 0;
 }
 
-/* The empty state centres the comp's column in the whole surface. */
-.history--empty {
+/* One card holding the search and the list, filling the rest of the page. */
+.history__card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+/* The empty state centres the comp's column in its card. Its list area sizes
+   to the column rather than filling the card, or the column would sit at the
+   top instead of the middle. */
+.history--empty .history__card {
   align-items: center;
   justify-content: center;
   padding: 40px; /* the comp's breathing room around the column */
 }
 
-/* ---- The search bar --------------------------------------------------- */
+.history--empty .history__list-group {
+  flex: none;
+}
 
-/* The comp's top bar: the field, with everything else to its right, and one
-   hairline under the whole bar. It stays put while the rows scroll. */
-.history__search-group {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+/* ---- The fact cards --------------------------------------------------- */
+
+.history__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.history__fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 22px 26px; /* Night's fact card padding */
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.history__fact-label {
   display: flex;
   align-items: center;
-  gap: 14px; /* the comp's bar gap */
+  gap: 10px; /* Night's icon gap */
+  margin-bottom: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-mono);
+  color: var(--color-ink-secondary);
+}
+
+/* The teal on each fact's icon is one of the accent's statics. */
+.history__fact-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.history__fact-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px; /* the value line's height, so a late answer moves nothing */
+  font-size: 30px; /* Night's fact value size */
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-ink);
+}
+
+/* The language arrives as a code, so it is mono: a literal, the way every
+   dictation row shows it. */
+.history__fact-value--code {
+  font-family: var(--font-mono);
+  font-size: 26px;
+}
+
+.history__fact-key {
+  padding: 3px 10px;
+  border-radius: var(--radius-ctl);
+  background: var(--color-surface-subtle);
+  font-family: var(--font-mono);
+  font-size: 19px;
+}
+
+.history__fact-times {
+  font-size: 21px;
+}
+
+.history__fact-note {
+  font-size: 13px; /* Night's fact note size */
+  color: var(--color-ink-caption);
+}
+
+/* ---- The search bar --------------------------------------------------- */
+
+/* Night's card header: the name on the left, the field on the right, one
+   hairline under the whole bar. It stays put because it sits outside the one
+   part of the card that scrolls. */
+.history__search-group {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
   padding: 20px 26px; /* the comp's bar padding */
   border-bottom: var(--border-width) solid var(--color-border-quiet);
-  background: var(--color-surface);
+}
+
+.history__title {
+  margin: 0;
+  font-size: 15px; /* Night's card title size */
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink);
 }
 
 /* The comp draws no visible label; the label is for a screen reader. */
@@ -59,14 +163,15 @@
 /* The comp's field: a bordered white box holding the ring, the words and the
    count, in one line. */
 .history__field-wrap {
-  flex: 1;
+  flex: 0 1 340px; /* Night's field width, at the header's right */
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 9px; /* the comp's gap after the ring */
   padding: 9px 12px; /* the comp's field padding */
   border: var(--border-width) solid var(--color-border-control);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: var(--color-surface-sunken);
 }
 
 /* The comp's magnifier stand-in: a small ring. */
@@ -115,7 +220,11 @@
 
 /* ---- The list --------------------------------------------------------- */
 
+/* The one part of the history screen that scrolls. */
 .history__list-group {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -137,7 +246,7 @@
   display: flex;
   gap: 18px; /* the comp's column gap */
   padding: 16px 0; /* the comp's row padding */
-  border-bottom: var(--border-width) solid var(--color-surface-sunken);
+  border-bottom: var(--border-width) solid var(--color-border-quiet);
 }
 
 /* The left column: when it was said, then how long it ran, both mono. */
@@ -158,7 +267,7 @@
 .history__how-long {
   font-family: var(--font-mono);
   font-size: var(--text-meta);
-  color: #8b9098; /* the comp's fainter duration ink */
+  color: var(--color-ink-faint);
   font-variant-numeric: tabular-nums;
 }
 

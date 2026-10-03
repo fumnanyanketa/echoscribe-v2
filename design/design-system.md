@@ -11,13 +11,46 @@ apart within a month, so there is only ever one.
 
 ---
 
+## Re-locked 2026-10-02, by the user: Night
+
+The user chose a new direction from a preview they approved
+(claude.ai artifact "EchoScribe restyle preview", with their own edit
+setting the accent to teal) and asked for it to be applied to the app.
+**Where this section and anything below disagree, this section wins**,
+and the older text stays so its reasoning is not re-invented.
+
+> One dark room. Near black where you navigate, soft graphite cards where
+> you read, one teal channel.
+
+- **Everything is dark.** The white reading surface is gone. The page is
+  near black, and each screen sits in borderless rounded cards one step
+  lighter. There is still no theme toggle: dark is the design.
+- **The accent is teal**, replacing violet everywhere violet was, under the
+  same rule and the same 2026-10-01 exception list. Text on a teal fill is
+  near black, never white.
+- **The rail** loses the brand row (the window title already names the
+  app). Each top level item carries one stroke icon; the active one gets a
+  filled teal icon on a soft raised pill. History sits at the top;
+  Settings, its sub-nav and the account sit at the foot, the account in a
+  bordered box.
+- **History** gains a row of three fact cards above the list: how many
+  dictations exist, the hotkey, and the chosen language code. Real values
+  only, from commands that already exist. Never invented metrics.
+- **Each Settings section** opens with a card holding its heading and one
+  sentence saying what the section is for. `Surface heading`'s "not drawn"
+  is overruled by this choice.
+- **The key setup screen** takes the preview's form: decorative waveform
+  tiles in two corners, the waveform mark, a centred two-step stepper, a
+  card of three promises, and the key field with Verify beside it.
+
 ## The character
 
 > A dark instrument laid on a bright page. Graphite where you navigate,
 > white where you read, one violet channel that only ever means the
 > microphone is open.
 
-Every decision below comes out of that sentence.
+Every decision below comes out of that sentence. **Superseded 2026-10-02 by
+"Night" above.**
 
 ## Why the pill is dark
 

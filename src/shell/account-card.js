@@ -26,8 +26,6 @@ const CAPTION =
 export function mountAccountCard(root, state) {
   const account = state.account;
 
-  const rule = el("div", "acard__rule");
-
   const eyebrow = withText(el("div", "acard__eyebrow"), "ACCOUNT");
   eyebrow.id = "acard-eyebrow";
 
@@ -63,7 +61,7 @@ export function mountAccountCard(root, state) {
 
   const section = el("section", "acard");
   section.setAttribute("aria-labelledby", eyebrow.id);
-  section.append(rule, eyebrow, card, withText(el("p", "acard__caption"), CAPTION));
+  section.append(eyebrow, card, withText(el("p", "acard__caption"), CAPTION));
 
   root.replaceChildren(section);
 }

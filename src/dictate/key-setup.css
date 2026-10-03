@@ -1,85 +1,203 @@
 /* The Deepgram key setup screen (design/registry.md "Deepgram key setup").
- * Reuses the sign-in and onboarding window shell exactly: the dark window
- * field comes from #app (--color-onboarding), one centered column, no nav
- * rail. Every value here is a token from styles.css.
+ * The dark window field comes from #app (--color-onboarding), one centred
+ * column, no nav rail.
  *
  * These rules mirror the sign-in and microphone error screens on purpose and
  * are not imported from them: feature folders do not import from each other,
  * and a shape two features share moves to a shared module only when a third
  * needs it.
  *
- * Restyled to the comp's own first-run frame on 2026-10-01, on the user's
- * instruction that the comp is the authority pixel for pixel: the left-aligned
- * column with 64px side padding, the step row where a brand lockup used to
- * be, and the comp's violet-edged key field with its violet dot and tinted
- * SECRET badge. The violet reservation now excepts the statics the comp
- * draws, by that same instruction.
+ * Rebuilt 2026-10-02 to the preview the user approved, "Night"
+ * (design/design-system.md): decorative waveform tiles in two corners, the
+ * waveform mark, a centred two-step stepper, a card of three promises, and the
+ * key field with Verify beside it. Literals are that preview's own geometry,
+ * each marked.
  */
 
 .keysetup {
-  margin: auto;
-  width: 100%;
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
-  padding: 40px 64px; /* the comp's side padding */
-  text-align: left; /* the comp's column is left aligned */
+  min-height: 100vh;
+  padding: 28px 24px; /* Night's breathing room inside the window */
+  overflow: hidden;
 }
 
-/* The comp's step row: the mono words, then the two lit bars beside them. */
+/* ---- Decoration ------------------------------------------------------ */
+
+/* Waveform tiles in two corners. Decoration only, hidden from a screen
+   reader, and audited as exempt in design/check-contrast.py. */
+.keysetup__tiles {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Night's tile gap at this window's size */
+  pointer-events: none;
+}
+
+.keysetup__tiles--top {
+  top: 18px;
+  left: 18px;
+}
+
+.keysetup__tiles--bottom {
+  right: 18px;
+  bottom: 18px;
+}
+
+/* Heights are set per tile by key-setup.js and scaled here to the window. */
+.keysetup__tiles i {
+  display: block;
+  width: 22px; /* Night's tile width at this window's size */
+  border-radius: var(--radius-lg);
+  background: var(--color-onboarding-tile);
+  transform: scaleY(0.6);
+}
+
+.keysetup__column {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  width: 440px; /* Night's column */
+  max-width: 100%;
+}
+
+/* The waveform mark, in teal: one of the accent's statics. */
+.keysetup__mark {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+}
+
+.keysetup__mark i {
+  display: block;
+  width: 4px;
+  border-radius: var(--radius-xs);
+  background: var(--color-accent);
+  transform: scaleY(0.76);
+}
+
+/* The stepper: both bars lit, because both steps are reached. The words are
+   for a screen reader; the bars are what the eye reads. */
 .keysetup__step {
   display: flex;
   align-items: center;
-  gap: 9px; /* the comp's row gap */
-  margin-bottom: var(--space-5); /* the comp's 20px column gap */
 }
 
 .keysetup__step-words {
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  letter-spacing: var(--tracking-caps);
-  color: var(--color-ink-on-dark-caption);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .keysetup__step-bars {
   display: flex;
-  gap: var(--space-1);
+  gap: 6px; /* Night's stepper gap */
 }
 
 .keysetup__step-bars i {
-  width: 22px; /* the comp's bar */
+  width: 40px; /* Night's stepper bar */
   height: 3px;
   border-radius: var(--radius-xs);
   background: var(--color-accent);
 }
 
-/* The one display size on this screen, per the type scale's "one per screen
-   at most". */
+/* ---- Words ----------------------------------------------------------- */
+
 .keysetup__heading {
-  margin: 0 0 var(--space-5);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-medium); /* the comp's 500 */
-  letter-spacing: -0.015em; /* the comp's tracking */
-  line-height: 1.25; /* the comp's leading */
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
   color: var(--color-ink-on-dark-heading);
-  text-wrap: pretty;
+  text-align: center;
 }
 
 .keysetup__body {
-  margin: 0 0 var(--space-5);
-  max-width: 56ch; /* the comp's measure */
-  font-size: var(--text-md); /* the comp's 14.5px */
-  line-height: var(--leading-prose);
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
   color: var(--color-ink-on-dark-secondary);
-  text-align: left;
+  text-align: center;
   text-wrap: pretty;
 }
+
+/* ---- The promise card ------------------------------------------------ */
+
+.keysetup__promises {
+  display: flex;
+  flex-direction: column;
+  gap: 14px; /* Night's row gap */
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 18px 20px; /* Night's card padding */
+  list-style: none;
+  border-radius: var(--radius-card);
+  background: var(--color-onboarding-tile);
+}
+
+.keysetup__promise {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.keysetup__promise-icon {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  fill: none;
+  stroke: var(--color-ink-on-dark-soft);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.keysetup__promise-words {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-hair);
+}
+
+.keysetup__promise-title {
+  font-size: 13.5px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink-on-dark-heading);
+}
+
+.keysetup__promise-text {
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--color-ink-on-dark-secondary);
+}
+
+/* ---- Error line ------------------------------------------------------- */
 
 /* design/registry.md "Key setup error line": a mono code, one plain sentence,
    the one action beneath. Code and left edge in the danger colour, the same
    three parts in the same order as the sign-in and microphone error lines.
    Two signals and words are one of them, so the colour never carries the
    meaning alone. Empty in the resting state, and it takes no room then. */
+.keysetup__error:empty {
+  display: none;
+}
+
 .keysetup__error:not(:empty) {
-  margin-bottom: var(--space-5);
+  align-self: stretch;
   padding-left: var(--space-3);
   border-left: 2px solid var(--color-danger-on-dark);
   text-align: left;
@@ -102,72 +220,40 @@
   color: var(--color-ink-on-dark-secondary);
 }
 
+/* ---- The key field ---------------------------------------------------- */
+
 .keysetup__form {
-  margin-bottom: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-self: stretch;
 }
 
-/* The field is named for a screen reader without changing what is drawn. Not
-   `display: none`, which would take it out of the accessibility tree along
-   with the visual layout. */
 .keysetup__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
+  font-size: 13px; /* Night's field label */
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-on-dark-soft);
 }
 
-/* design/registry.md "Key field, dark", in the comp's own dress: the dark
-   well with the comp's violet edge, the violet dot at the left, the SECRET
-   badge in its violet tint, and the verify action inside the right edge. */
 .keysetup__field {
   display: flex;
-  align-items: center;
-  gap: 11px; /* the comp's field gap */
-  padding: 13px 15px; /* the comp's field padding */
-  background: #191b21; /* the comp's input well */
-  border: 1.5px solid var(--color-accent); /* the comp's violet edge */
-  border-radius: 9px; /* the comp's field radius */
-  text-align: left;
-}
-
-/* The comp's violet dot at the field's left edge. */
-.keysetup__field-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: var(--color-accent);
-}
-
-.keysetup__badge {
-  flex: none;
-  padding: 2px 6px; /* the comp's badge */
-  border: var(--border-width) solid #3b3363; /* the comp's badge edge */
-  border-radius: var(--radius-sm);
-  background: #231d3d; /* the comp's badge tint */
-  font-family: var(--font-mono);
-  font-size: var(--text-nano);
-  letter-spacing: 0.06em; /* the comp's tracking */
-  text-transform: uppercase;
-  color: var(--color-accent-on-dark);
+  gap: var(--space-2);
 }
 
 /* Mono, because the key is something a machine produced and a person must
-   paste back exactly. The masking is the input type, not a font trick. */
+   paste back exactly. The masking is the input type, not a font trick. The
+   well's edge is a control edge, audited as "Key setup field control edge". */
 .keysetup__input {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  box-sizing: border-box;
+  height: 42px; /* Night's field height */
+  padding: 0 14px;
+  border: var(--border-width) solid var(--color-rail-border-control);
+  border-radius: var(--radius-lg);
+  background: var(--color-pill-raised);
   font-family: var(--font-mono);
-  font-size: 14px; /* the comp's key size */
-  letter-spacing: var(--tracking-mono);
+  font-size: var(--text-sm);
   color: var(--color-ink-on-dark);
   /* Dictation types into other applications, so selection is opt-in per
      element in styles.css. This is a field a person types into, so it opts
@@ -177,7 +263,6 @@
 
 .keysetup__input::placeholder {
   color: var(--color-ink-on-dark-caption);
-  letter-spacing: var(--tracking-mono);
 }
 
 .keysetup__input:read-only {
@@ -186,19 +271,20 @@
 
 .keysetup__btn {
   flex: none;
-  padding: 8px 15px; /* the comp's verify button */
-  border-radius: var(--radius-ctl);
-  font-family: var(--font-sans);
-  font-size: 13px; /* the comp's button size */
-  font-weight: var(--weight-medium);
-  cursor: pointer;
+  padding: 0 20px; /* Night's button padding */
   border: var(--border-width) solid transparent;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans);
+  font-size: 14px; /* Night's button size */
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
 }
 
-/* design/registry.md "Primary button, on dark". */
+/* Night's primary button: the teal fill, near black label. */
 .keysetup__btn--primary {
-  background: var(--color-ink-on-dark-heading);
-  color: var(--color-onboarding);
+  height: 42px;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
 }
 
 /* Nothing pasted yet, so there is nothing to check. Dimmed to the same rung
@@ -208,9 +294,9 @@
   background: var(--color-ink-on-dark-secondary);
 }
 
-/* design/registry.md "Key setup, checking": the "Primary button, on dark,
-   busy" primitive unchanged. Same geometry, label swapped to what is being
-   waited on, light fill breathing on the 1.4s cadence. Never violet. */
+/* design/registry.md "Key setup, checking": the busy primitive. Same geometry,
+   label swapped to what is being waited on, the fill breathing on the 1.4s
+   cadence. */
 .keysetup__btn--busy {
   cursor: default;
   animation: keysetup-btn-busy 1.4s var(--ease-standard) infinite;
@@ -219,7 +305,7 @@
 @keyframes keysetup-btn-busy {
   0%,
   100% {
-    background: var(--color-ink-on-dark-heading);
+    background: var(--color-accent);
   }
   50% {
     background: var(--color-ink-on-dark-secondary);
@@ -238,6 +324,7 @@
 /* design/registry.md "Secondary button, on dark". Only ever drawn for AC-13's
    allowance action, which this screen's own check can never raise. */
 .keysetup__btn--secondary {
+  padding: 10px 18px;
   background: transparent;
   border-color: var(--color-rail-border-control);
   color: var(--color-ink-on-dark-secondary);
@@ -245,36 +332,21 @@
 
 .keysetup__action {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: var(--space-5);
+  justify-content: center;
 }
 
-/* design/registry.md "Get-a-key link", at the comp's colour and size.
-
-   A button that reads as a link, because it opens the system browser rather
-   than navigating this window. Underlined, so the colour is not the only
-   thing marking it as the thing to press; the comp underlines its links on
-   hover, and this one simply starts there. */
+/* design/registry.md "Get-a-key link". A button that reads as a link, because
+   it opens the system browser rather than navigating this window. Underlined,
+   so the colour is not the only thing marking it as the thing to press. */
 .keysetup__link {
-  display: inline-block;
-  margin-bottom: var(--space-6);
+  align-self: flex-start;
   padding: 0;
   border: 0;
   background: none;
   font-family: var(--font-sans);
-  font-size: var(--text-xs); /* the comp's 12.5px link */
-  font-weight: var(--weight-medium);
-  color: #a78bfa; /* the comp's link violet on this window */
+  font-size: 13px; /* Night's link size */
+  color: var(--color-ink-on-dark-soft);
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
-}
-
-.keysetup__caption {
-  margin: 0;
-  font-size: 12px; /* the comp's closing caption */
-  line-height: var(--leading-body);
-  color: var(--color-ink-on-dark-caption);
-  text-align: left;
 }

@@ -76,7 +76,7 @@ PAIRS = [
 
     ("Nav item on rail", "--color-ink-nav", "--color-rail", "text"),
     ("Nav item on active row", "--color-ink-nav", "--color-rail-active", "text"),
-    ("Active nav item", "--color-surface", "--color-rail-active", "text"),
+    ("Active nav item", "--color-ink-on-dark", "--color-rail-active", "text"),
     ("Control edge on rail", "--color-rail-border-control", "--color-rail", "nontext"),
     # The comp's 2026-10-01 additions to the rail: the version badge, the
     # count at a nav item's right edge, the account name, and the initials
@@ -93,6 +93,18 @@ PAIRS = [
     # are a marker and never the only way a person is named. The user chose
     # the comp's drawn disc on 2026-10-01 over the earlier neutral fill.
     ("Initials on violet disc", "--color-surface", "--color-accent", "decor"),
+    # The 2026-10-02 re-lock, "Night": everything dark, teal accent. These are
+    # the pairs the new arrangement draws that nothing above measured.
+    ("Text on a teal fill (CHOSEN, initials, Verify)", "--color-accent-ink", "--color-accent", "text"),
+    ("Teal text on a card", "--color-accent-on-light", "--color-surface", "text"),
+    ("Teal text on the page", "--color-accent-on-light", "--color-page", "text"),
+    ("Danger text on a card", "--color-danger-on-light", "--color-surface", "text"),
+    ("Body on a chosen row", "--color-ink", "--color-surface-subtle", "text"),
+    ("Control edge in a well", "--color-border-control", "--color-surface-sunken", "nontext"),
+    ("Nav item on the page", "--color-ink-nav", "--color-page", "text"),
+    ("Faint count on the page", "--color-ink-count", "--color-page", "text"),
+    ("Key setup promise text on its card", "--color-ink-on-dark-secondary", "--color-onboarding-tile", "text"),
+    ("Key setup tiles on the window", "--color-onboarding-tile", "--color-onboarding", "decor"),
     # The offline row in the account block (record 0003 AC-14, drawn 2026-09-03).
     # Its two parts are measured against the rail ground rather than borrowing the
     # on-dark pairs above, which are all measured on --color-onboarding.

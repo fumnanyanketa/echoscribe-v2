@@ -189,20 +189,58 @@ function show(id) {
   // Settings, Dictation. The four settings screens take one argument and ignore
   // it (record 0007, Interface surface).
   if (mount) {
+    // History draws its own cards, because its fact cards sit above its list.
+    // Every Settings section sits in Night's cards from here: an opening card
+    // with its heading and what it is for, then one card holding the screen.
     let screenRoot = surface;
+    if (INTRO[target]) {
+      surface.append(introCard(item, INTRO[target]));
+      // The screen gets its own root because it redraws itself with
+      // replaceChildren, and the cards around it must survive those redraws.
+      screenRoot = card();
+      surface.append(screenRoot);
+    }
     if (target === "settings.transcription") {
-      // The account card rides beneath the Transcription screen
-      // (design/registry.md "Account card"). The screen gets its own root
-      // because it redraws itself with replaceChildren and the card must
-      // survive those redraws; the card gets its own host so it can be filled
-      // late when the auth state has not arrived yet.
-      screenRoot = document.createElement("div");
-      cardHost = document.createElement("div");
-      surface.append(screenRoot, cardHost);
+      // The account card rides beneath the Transcription screen in a card of
+      // its own (design/registry.md "Account card"), with its own host so it
+      // can be filled late when the auth state has not arrived yet.
+      cardHost = card();
+      surface.append(cardHost);
       fillAccountCard();
     }
     unmountScreen = mount(screenRoot, { go: show });
   }
+}
+
+/** What each Settings section is for, in one sentence, for its opening card
+ *  (design/design-system.md, "Night"). The heading is the rail's own label, so
+ *  a section is named one way wherever it appears. A destination with no entry
+ *  here gets no opening card. */
+const INTRO = {
+  "settings.dictation": "How you start and stop speaking, and what you hear when you do.",
+  "settings.languages": "The language you speak, so Deepgram knows what to listen for.",
+  "settings.vocabulary": "Names and terms to listen for, so they come out spelled the way you spell them.",
+  "settings.transcription": "Your Deepgram key, and the account EchoScribe is signed in to.",
+};
+
+function card() {
+  const node = document.createElement("div");
+  node.className = "surface__card";
+  return node;
+}
+
+function introCard(item, sentence) {
+  const intro = card();
+  intro.classList.add("surface__intro");
+  const heading = document.createElement("h1");
+  heading.className = "surface__intro-heading";
+  const label = item && item.querySelector(".rail__item-label");
+  heading.textContent = label ? label.textContent : "";
+  const text = document.createElement("p");
+  text.className = "surface__intro-text";
+  text.textContent = sentence;
+  intro.append(heading, text);
+  return intro;
 }
 
 /** Draw the account card into its host, once both the host and the auth state

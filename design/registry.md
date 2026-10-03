@@ -20,6 +20,31 @@ reconciles documents to what the repository shows; doing it row by row inside a
 patrol would leave the list half true in a way a reader could not detect. Until
 then, read `drawn` as "approved", not as "unbuilt".
 
+## Re-lock 2026-10-02, "Night"
+
+The user re-locked the look on 2026-10-02 (design/design-system.md, "Night").
+Where a row below disagrees with this section, this section wins; the rows
+keep their content decisions, which Night did not touch. What changed:
+
+- `Brand lockup` in the rail: **gone**. The window title names the app. The
+  sign-in window keeps its own.
+- `Nav item`: a stroke icon per top level item, teal when active, on the
+  raised pill fill with no edge. History at the top; a section with
+  sub-sections (Settings) and the account block at the rail foot.
+- `Account block`: in a bordered box under Settings, a 22px teal disc with
+  near black initials, and the name.
+- `Surface heading`: **now drawn**, as each Settings section's opening card,
+  its heading the rail's own label and one sentence held in
+  `src/shell/dashboard.js`. Overrules that row's "not drawn".
+- `History facts` (new): three cards above the history list, dictation count,
+  hotkey, language code. Real values from existing commands only; a failed
+  read shows a dash. Lives in `src/history/history-facts.js`.
+- Every screen sits in borderless graphite cards on the near black page; the
+  history list, search and empty state share one card.
+- `Deepgram key setup`: the approved preview's form. The SECRET badge and the
+  field's dot are gone; the field has a visible label; the closing caption's
+  facts moved into the third promise.
+
 ## Shell
 
 | Component | Where it lives | Status | Notes |

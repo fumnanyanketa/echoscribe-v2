@@ -78,16 +78,22 @@
 
   --border-width: 1px;
 
-  /* ---- Light surfaces ------------------------------------------------- */
-  --color-surface: #ffffff;         /* the app, where you read */
-  --color-surface-subtle: #f4f5f8;  /* rows, inputs, quiet fills */
-  --color-surface-sunken: #eef0f5;  /* wells, search field */
-  --color-surface-outside: #e7e9ef; /* behind the window */
-  --color-border: #d5d8e1;          /* decorative separators only */
-  --color-border-quiet: #e7e9ef;    /* decorative separators only */
+  /* ---- Reading surfaces ----------------------------------------------- */
+  /* Dark since the 2026-10-02 re-lock ("Night", design/design-system.md).
+     The names stayed so every screen moved with this block: "surface" is
+     still where you read, it is just a graphite card on a near black page
+     now. --color-surface also works as "ink on the light fills" (a primary
+     button's label, a switch's knob), which inverts cleanly with the rest. */
+  --color-page: #0e0e0f;            /* behind every card, the rail's ground */
+  --color-surface: #19191b;         /* the cards, where you read */
+  --color-surface-subtle: #222225;  /* rows, chosen rows, quiet fills */
+  --color-surface-sunken: #121213;  /* wells inside a card: inputs, search */
+  --color-surface-outside: #0e0e0f; /* behind the window */
+  --color-border: #2a2b2f;          /* decorative separators only */
+  --color-border-quiet: #262629;    /* decorative separators only */
   /* A boundary that tells you where a control is must clear 3:1, so inputs,
      selects and outlined buttons use this, never --color-border. */
-  --color-border-control: #8b8e97;  /*  3.3:1 on surface, 3.0:1 on subtle */
+  --color-border-control: #76797f;  /* 3:1 or better on every card fill */
 
   /* ---- Dark surfaces -------------------------------------------------- */
   --color-pill: #16171c;            /* the floating pill, the darkest thing */
@@ -98,18 +104,19 @@
   --color-pill-warn-border: #3d372c;
   --color-pill-danger: #1c1618;     /* error pill fill, danger kinds */
   --color-pill-danger-border: #40302f;
-  --color-rail: #121317;            /* the persistent left nav rail */
-  --color-rail-active: #22242c;
-  --color-rail-active-border: #30333d; /* the comp's edge on the raised fill */
-  --color-rail-border: #26282f;     /* decorative separators only */
+  --color-rail: #0e0e0f;            /* the rail sits on the page itself */
+  --color-rail-active: #1b1b1d;     /* the soft raised pill under an item */
+  --color-rail-active-border: #1b1b1d; /* Night draws no edge on it */
+  --color-rail-border: #2a2b2f;     /* the account box, decorative */
   --color-rail-border-control: #6c6e75; /* 3.7:1 on rail. Control edges. */
-  --color-onboarding: #101116;      /* the first-run window */
+  --color-onboarding: #0f0f10;      /* the first-run window */
+  --color-onboarding-tile: #19191c; /* the decorative waveform tiles */
 
-  /* ---- Ink on light --------------------------------------------------- */
-  --color-ink: #14161a;             /* 17.4:1 on surface */
-  --color-ink-secondary: #40454c;   /*  9.3:1 */
-  --color-ink-caption: #5c6169;     /*  6.0:1 */
-  --color-ink-faint: #696e76;       /*  5.1:1 on surface, 4.7:1 on subtle */
+  /* ---- Ink on the reading surfaces ------------------------------------ */
+  --color-ink: #f2f2f3;             /* on the cards */
+  --color-ink-secondary: #c2c4ca;
+  --color-ink-caption: #9c9fa6;
+  --color-ink-faint: #8b8e96;
 
   /* ---- Ink on dark ---------------------------------------------------- */
   --color-ink-on-dark: #f2f2f5;          /* 15.6:1 on pill */
@@ -117,33 +124,36 @@
   --color-ink-on-dark-soft: #c9ccd6;     /* account name, the pill's chip */
   --color-ink-on-dark-secondary: #b6bac6; /* 9.7:1 on onboarding */
   --color-ink-interim: #a1a5b4;          /*  7.6:1 on pill. Unsettled text. */
-  --color-ink-nav: #a7abb6;              /*  7.4:1 on rail */
+  --color-ink-nav: #c2c4ca;              /* resting nav items on the rail */
   --color-ink-hint: #9a9daa;             /* the pill's "go ahead", v2 badge */
   --color-ink-on-dark-caption: #9198a8;  /*  6.4:1 on onboarding */
   --color-ink-interim-rule: #7d8394;     /* the dotted rule under interim text */
-  --color-ink-count: #74788a;            /* nav counts. Redundant numbers. */
+  --color-ink-count: #8b8e96;            /* nav counts. Redundant numbers. */
   /* The comp's drawn value, restored 2026-10-01. 2.9:1 on pill: a non-text
      decorative handle with a 44px hit area and a grab cursor, exempt under
      1.4.11, and the comp's contrast note says so in its own words. */
   --color-ink-grip: #6b7080;
 
   /* ---- Accent --------------------------------------------------------- */
-  /* Violet means one thing only: the microphone is open. It is never
-     decoration, never a brand flourish, never a hover tint. */
-  --color-accent: #7c5cff;          /* the live channel: ring, meter fill */
-  --color-accent-pressed: #4b2fd6;
-  --color-accent-on-dark: #c4b5fd;  /*  9.9:1 on pill. Status wording. */
-  --color-accent-on-light: #5b3fd6; /*  6.9:1 on accent-wash */
-  --color-accent-link: #6b4df0;     /*  5.6:1 on surface */
-  --color-accent-wash: #fbf9ff;
-  --color-accent-border: #cfc2f2;
+  /* Teal since the 2026-10-02 re-lock, in every place violet used to be and
+     under the same rule: the live channel, plus the fixed list of statics in
+     design/design-system.md. Never a hover tint. Text on a teal fill is near
+     black, because white on teal cannot be read. */
+  --color-accent: #5eead4;          /* the live channel: ring, meter fill */
+  --color-accent-pressed: #2dd4bf;
+  --color-accent-ink: #0e0e0f;      /* text and glyphs on a teal fill */
+  --color-accent-on-dark: #5eead4;  /* status wording on the pill */
+  --color-accent-on-light: #5eead4; /* accent text and edges on the cards */
+  --color-accent-link: #5eead4;
+  --color-accent-wash: #13221f;
+  --color-accent-border: #23514a;
 
   /* ---- Status --------------------------------------------------------- */
   --color-warning-on-dark: #f0b95c; /* 10.5:1 on pill */
   --color-warning-edge: #4d452f;
   --color-danger-on-dark: #ff8b80;  /*  8.2:1 on pill */
   --color-danger-edge: #4d3634;
-  --color-danger-on-light: #b3261e;
+  --color-danger-on-light: #ff8b80; /* danger on the cards, dark since Night */
 
   /* ---- Elevation ------------------------------------------------------ */
   /* The pill sits above other applications, so it casts the deepest shadow
@@ -164,12 +174,12 @@
 }
 
 /* The interface is a fixed-size desktop surface, not a responsive page.
-   Light and dark are not a user preference here: the pill, the rail and the
-   first-run window are always dark, the reading surface is always white.
-   That is the design, so prefers-color-scheme is deliberately not honoured. */
+   Light and dark are not a user preference here: since the 2026-10-02
+   re-lock everything is dark, which is the design, so prefers-color-scheme
+   is deliberately not honoured. */
 
 html {
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 
 body {
@@ -179,7 +189,7 @@ body {
   line-height: var(--leading-body);
   font-weight: var(--weight-regular);
   color: var(--color-ink);
-  background: var(--color-surface);
+  background: var(--color-page);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
