@@ -12,64 +12,79 @@
      user's request: with the paragraph gone, left-aligned lines beside a
      full-width button read as shifted to one side. */
   text-align: center;
-  /* A stacking context of its own, so the tiles' negative z-index puts them
-     behind this column's content and nowhere else. */
+  /* A stacking context of its own, so the watermark's negative z-index puts
+     it behind this column's content and nowhere else. */
   position: relative;
   z-index: 0;
 }
 
 /* ---- Decoration ------------------------------------------------------ */
 
-/* Two rows of waveform tiles entering from the left and right edges at
-   mid-height, fading out before the text, and fading in once when the screen
-   first shows. The key setup screen's corner clusters
-   (src/dictate/key-setup.css) are the same kind of tile in another place.
-   Fixed to the window, which never scrolls, so the centred column's own box
-   does not place them. Decoration only. */
-.signin__tiles {
+/* The dashboard rail's watermark (src/shell/dashboard.css `.rail__watermark`),
+   drawn here twice: the faded logo bleeding in from the window's left edge,
+   and its mirror from the right. The same geometry as the rail, bar for bar,
+   so the first-run screens and the dashboard carry one mark; the user replaced
+   the grey tile rows with it on 2026-10-05. Fixed to the window, which never
+   scrolls, so the centred column's own box does not place it. It fades in
+   once when the screen first shows. Decoration only: hidden from a screen
+   reader and never under a click. */
+.signin__watermark {
   position: fixed;
   z-index: -1;
   top: 50%;
-  /* Anchored to the centre, not the edge: at the window's 760px this is
-     -160px, with the first five tiles past the edge, and in a larger window
-     the rows stay beside the content rather than drifting to the far edges. */
-  left: calc(50% - 540px);
+  /* Pinned to the content, not the window edge: the rail is a strip of fixed
+     width, so there the mark can hang off the edge, but this window resizes,
+     and pinned to its edge the mark drifted away from the text as the window
+     grew (the user, 2026-10-05). The row is 265px wide (twelve 12px bars,
+     eleven 11px gaps) and its last 18% is masked away, so it ends 40px into
+     the 344px column's left margin at every width. At the window's 760px
+     that start is -17px, cut by the edge as the rail's is. */
+  left: calc(50% - 397px);
   display: flex;
   align-items: center;
-  gap: 12px;
-  transform: translateY(-50%);
+  gap: 11px; /* the icon's own bar spacing, at this size */
+  height: 240px; /* the tallest bar */
+  transform: translateY(-50%); /* mid-height: no foot to keep above here */
+  opacity: 0.28;
   pointer-events: none;
-  /* Fully transparent before the 344px column begins, so nothing sits behind
-     the text. */
-  mask-image: linear-gradient(to right, #000 45%, transparent 78%);
-  -webkit-mask-image: linear-gradient(to right, #000 45%, transparent 78%);
-  animation: signin-tiles-in 900ms var(--ease-standard) both;
+  mask-image: linear-gradient(to right, #000 10%, transparent 82%);
+  -webkit-mask-image: linear-gradient(to right, #000 10%, transparent 82%);
+  animation: signin-watermark-in 900ms var(--ease-standard) both;
 }
 
-/* The right-hand row: the same row flipped about its own centre, so its fade
-   also runs toward the text. */
-.signin__tiles--mirror {
+/* Narrower than the window's own width the rows would run under the text,
+   so they go. */
+@media (max-width: 720px) {
+  .signin__watermark {
+    display: none;
+  }
+}
+
+/* The right-hand copy: the same row flipped about its own centre, so its
+   fade also runs toward the text. */
+.signin__watermark--mirror {
   left: auto;
-  right: calc(50% - 540px);
+  right: calc(50% - 397px);
   transform: translateY(-50%) scaleX(-1);
 }
 
-/* Larger than the key setup's tiles and one tone lighter, so the rows read as
-   a bold mark rather than a faint corner detail: the user's call on 2026-10-05. */
-.signin__tiles i {
+.signin__watermark i {
   display: block;
-  width: 28px;
-  border-radius: 9px; /* the key setup's radius, scaled with the tile */
-  background: var(--color-rail-border); /* a decorative token one step up */
-  transform: scaleY(0.6);
+  flex: none;
+  width: 12px; /* the icon's own bar width, at this size */
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
 }
 
-@keyframes signin-tiles-in {
+/* Ends at the resting 0.28, not at 1: with `both` the animation's last frame
+   is what stays, and a fade to full opacity left the mark four times too
+   bright (seen by the user on 2026-10-05). */
+@keyframes signin-watermark-in {
   from {
     opacity: 0;
   }
   to {
-    opacity: 1;
+    opacity: 0.28;
   }
 }
 
@@ -197,8 +212,8 @@
 /* The label carries the state on its own, so with reduced motion the fill just
    holds at the pressed rung. The blanket rule in styles.css stops the animation
    but would leave the bright rung showing, which reads as not busy at all, so
-   the resting colour has to be stated here. The tiles' fade-in is harmless
-   when stopped: `both` leaves them shown. */
+   the resting colour has to be stated here. The watermark's fade-in is
+   harmless when stopped: `both` leaves it shown. */
 @media (prefers-reduced-motion: reduce) {
   .signin__btn--busy {
     background: var(--color-accent-pressed);

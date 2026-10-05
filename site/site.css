@@ -3,7 +3,6 @@
 
 :root {
   --page: #0f0f10;
-  --tile: #2a2b2f;
   --card: #19191c;
   --ink: #f4f4f6;
   --ink-secondary: #c2c4ca;
@@ -37,47 +36,67 @@ a {
   color: var(--accent);
 }
 
-/* ---- Decoration: the app's two waveform rows ------------------------- */
+/* ---- Decoration: the app's watermark ---------------------------------- */
 
-.tiles {
+/* The dashboard rail's watermark, as the app's first-run screens draw it
+   (src/shell/dashboard.css `.rail__watermark`): the icon's twelve bars in the
+   accent, faded, bleeding in from the page's left edge and mirrored from the
+   right. Replaced the grey tile rows on 2026-10-05 so the page and the app
+   carry one mark. Twelve 12px bars and eleven 11px gaps are 265px wide, so
+   from -48px the row ends at 217px and the mask is fully transparent at about
+   169px; the 640px column starts at 280px on a 1200px window and at 40px
+   past the 720px cutoff below, where the mark is hidden. */
+.watermark {
   position: fixed;
   z-index: 0;
   top: 50%;
-  left: calc(50% - 540px);
+  /* Pinned to the content column, as on the app's two first-run screens: the
+     265px row ends 40px into the 640px column's left margin at every width,
+     inside its masked tail, so it never runs under the cards. */
+  left: calc(50% - 545px);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 11px;
+  height: 240px;
   transform: translateY(-50%);
+  opacity: 0.28;
   pointer-events: none;
-  mask-image: linear-gradient(to right, #000 45%, transparent 78%);
-  -webkit-mask-image: linear-gradient(to right, #000 45%, transparent 78%);
+  mask-image: linear-gradient(to right, #000 10%, transparent 82%);
+  -webkit-mask-image: linear-gradient(to right, #000 10%, transparent 82%);
 }
 
-.tiles--mirror {
+.watermark--mirror {
   left: auto;
-  right: calc(50% - 540px);
+  right: calc(50% - 545px);
   transform: translateY(-50%) scaleX(-1);
 }
 
-.tiles i {
+.watermark i {
   display: block;
-  width: 28px;
-  border-radius: 9px;
-  background: var(--tile);
-  transform: scaleY(0.6);
+  flex: none;
+  width: 12px;
+  border-radius: 999px;
+  background: var(--accent);
 }
 
-.tiles i:nth-child(1) { height: 160px; }
-.tiles i:nth-child(2) { height: 300px; }
-.tiles i:nth-child(3) { height: 200px; }
-.tiles i:nth-child(4) { height: 380px; }
-.tiles i:nth-child(5) { height: 260px; }
-.tiles i:nth-child(6) { height: 420px; }
-.tiles i:nth-child(7) { height: 180px; }
-.tiles i:nth-child(8) { height: 340px; }
+/* The icon's bars as fractions of the tallest, 240px, rounded to whole pixels:
+   the same twelve fractions the app's MARK_BARS lists hold. */
+.watermark i:nth-child(1) { height: 55px; } /* 0.23 */
+.watermark i:nth-child(2) { height: 113px; } /* 0.47 */
+.watermark i:nth-child(3) { height: 197px; } /* 0.82 */
+.watermark i:nth-child(4) { height: 139px; } /* 0.58 */
+.watermark i:nth-child(5) { height: 240px; } /* 1 */
+.watermark i:nth-child(6) { height: 178px; } /* 0.74 */
+.watermark i:nth-child(7) { height: 101px; } /* 0.42 */
+.watermark i:nth-child(8) { height: 214px; } /* 0.89 */
+.watermark i:nth-child(9) { height: 151px; } /* 0.63 */
+.watermark i:nth-child(10) { height: 77px; } /* 0.32 */
+.watermark i:nth-child(11) { height: 132px; } /* 0.55 */
+.watermark i:nth-child(12) { height: 60px; } /* 0.25 */
 
-@media (max-width: 720px) {
-  .tiles {
+/* Below this the row would be mostly off-screen or under the cards. */
+@media (max-width: 960px) {
+  .watermark {
     display: none;
   }
 }

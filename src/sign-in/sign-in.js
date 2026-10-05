@@ -68,7 +68,7 @@ export async function mountSignIn(root, options = {}) {
 
 function draw(ctx, screen) {
   const column = el("section", "signin");
-  column.append(tiles(""), tiles("signin__tiles--mirror"));
+  column.append(watermark(""), watermark("signin__watermark--mirror"));
 
   if (screen.view === "initial" && ctx.returnedNotice) {
     column.append(noticeLine(ctx.returnedNotice));
@@ -164,22 +164,25 @@ function errorLine(code) {
   return box;
 }
 
-// Decoration, hidden from a screen reader. The key setup screen draws the same
-// kind of tiles in its corners (src/dictate/key-setup.js); here two rows of
-// them enter from the left and right edges at mid-height and fade out before
-// the text, chosen by the user on 2026-10-05 from three rendered candidates.
-// A second copy on purpose: the two differ in placement, count and fade, and
-// feature folders do not import each other. A waveform rhythm, tall and short
-// by turns; the first five sit off-screen so the window's edge cuts the shape.
-const TILE_HEIGHTS = [160, 300, 200, 380, 260, 420, 180, 340, 240, 150, 220, 100];
+/** The app icon's twelve bars, as fractions of its tallest one, measured off
+ *  design/icon-1024.png. The same list as the dashboard rail's watermark
+ *  (src/shell/rail.js) and the key setup screen's (src/dictate/key-setup.js):
+ *  feature folders do not import from each other, so each holds its own copy,
+ *  and a Rust guard in src-tauri/src/sign_in/mod.rs fails the build when the
+ *  three copies differ, because the icon's bars are one fact. */
+const MARK_BARS = [0.23, 0.47, 0.82, 0.58, 1, 0.74, 0.42, 0.89, 0.63, 0.32, 0.55, 0.25];
 
-function tiles(modifier) {
-  const node = el("div", modifier ? "signin__tiles " + modifier : "signin__tiles");
+// Decoration, hidden from a screen reader: the rail's faded logo, bleeding in
+// from the window's left edge and, mirrored, from its right. Replaced the grey
+// tile rows on 2026-10-05 at the user's request, so the first-run screens carry
+// the same mark the dashboard does.
+function watermark(modifier) {
+  const node = el("div", modifier ? "signin__watermark " + modifier : "signin__watermark");
   node.setAttribute("aria-hidden", "true");
-  for (const height of TILE_HEIGHTS) {
-    const tile = el("i");
-    tile.style.height = height + "px";
-    node.append(tile);
+  for (const height of MARK_BARS) {
+    const bar = el("i");
+    bar.style.height = Math.round(height * 100) + "%";
+    node.append(bar);
   }
   return node;
 }

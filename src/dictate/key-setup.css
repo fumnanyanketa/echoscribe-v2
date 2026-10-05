@@ -12,13 +12,13 @@
  * and the key field with Verify beside it. Literals are that preview's own
  * geometry, each marked. Changed 2026-10-05 at the user's request: the
  * preview's card of three promises became a list of the three steps to a
- * key, and the corner tiles stay but are anchored to the centre.
+ * key, and the corner tiles became the rail's watermark, one each side.
  */
 
 .keysetup {
   position: relative;
-  /* A stacking context of its own, so the tiles' negative z-index puts them
-     behind this screen's content and nowhere else. */
+  /* A stacking context of its own, so the watermark's negative z-index puts
+     it behind this screen's content and nowhere else. */
   z-index: 0;
   flex: 1;
   display: flex;
@@ -32,59 +32,68 @@
 
 /* ---- Decoration ------------------------------------------------------ */
 
-/* Two rows of waveform tiles beside the column, at mid-height, one each
-   side, fading out as they reach it: the sign-in screen's rows, sized for
-   this screen (src/sign-in/sign-in.css draws the larger originals).
-   Decoration only, hidden from a screen reader, and audited as exempt in
-   design/check-contrast.py.
-
-   Anchored to the window's centre, and sized to fit the 160px between the
-   window's edge and the 440px column at the window's own 760px width, so the
-   rows sit in the same place beside the content at every window size and
-   are never cut by an edge. A larger window only adds dark space outside
-   them, which is what the user asked for on 2026-10-05 after the corner
-   clusters and a copy of the sign-in rows had both looked different when
-   maximised. */
-.keysetup__tiles {
+/* The dashboard rail's watermark (src/shell/dashboard.css `.rail__watermark`),
+   drawn here twice: the faded logo bleeding in from the window's left edge,
+   and its mirror from the right. The same geometry as the rail, bar for bar,
+   so the first-run screens and the dashboard carry one mark; the user
+   replaced the grey tile rows with it on 2026-10-05. Anchored to the window's
+   edge like the rail, so a larger window only adds dark space between the
+   mark and the column. It fades in once when the screen first shows.
+   Decoration only: hidden from a screen reader and never under a click. */
+.keysetup__watermark {
   position: absolute;
   z-index: -1;
   top: 50%;
-  left: calc(50% - 372px); /* 8px in from the left at 760px wide */
+  /* Pinned to the content, not the window edge, for the reason given in
+     src/sign-in/sign-in.css: pinned to the edge the mark drifted away from the
+     text as the window grew. The 265px row ends 40px into the 440px column's
+     left margin at every width, inside the masked tail. At the window's 760px
+     that start is -65px, cut by the edge as the rail's is. */
+  left: calc(50% - 445px);
   display: flex;
   align-items: center;
-  gap: 8px;
-  transform: translateY(-50%);
+  gap: 11px; /* the icon's own bar spacing, at this size */
+  height: 240px; /* the tallest bar */
+  transform: translateY(-50%); /* mid-height: no foot to keep above here */
+  opacity: 0.28;
   pointer-events: none;
-  /* Fully transparent at the row's end, which is 8px short of the column. */
-  mask-image: linear-gradient(to right, #000 30%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, #000 30%, transparent 100%);
-  animation: keysetup-tiles-in 900ms var(--ease-standard) both;
+  mask-image: linear-gradient(to right, #000 10%, transparent 82%);
+  -webkit-mask-image: linear-gradient(to right, #000 10%, transparent 82%);
+  animation: keysetup-watermark-in 900ms var(--ease-standard) both;
 }
 
-/* The right-hand row: the same row flipped about its own centre, so its fade
-   also runs toward the column. */
-.keysetup__tiles--mirror {
+/* Narrower than the window's own width the rows would run under the text,
+   so they go. */
+@media (max-width: 720px) {
+  .keysetup__watermark {
+    display: none;
+  }
+}
+
+/* The right-hand copy: the same row flipped about its own centre, so its
+   fade also runs toward the column. */
+.keysetup__watermark--mirror {
   left: auto;
-  right: calc(50% - 372px);
+  right: calc(50% - 445px);
   transform: translateY(-50%) scaleX(-1);
 }
 
-/* Heights are set per tile by key-setup.js and scaled here to the window.
-   Eight tiles at 12px with 8px gaps: 152px, inside the 160px of free space. */
-.keysetup__tiles i {
+.keysetup__watermark i {
   display: block;
-  width: 12px;
-  border-radius: 4px;
-  background: var(--color-rail-border); /* the sign-in rows' tone */
-  transform: scaleY(0.6);
+  flex: none;
+  width: 12px; /* the icon's own bar width, at this size */
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
 }
 
-@keyframes keysetup-tiles-in {
+/* Ends at the resting 0.28, not at 1: with `both` the last frame is what
+   stays, and a fade to 1 left the mark four times too bright. */
+@keyframes keysetup-watermark-in {
   from {
     opacity: 0;
   }
   to {
-    opacity: 1;
+    opacity: 0.28;
   }
 }
 

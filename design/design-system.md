@@ -46,6 +46,19 @@ and the older text stays so its reasoning is not re-invented.
   not to reassure them; and the preview's corner tiles became the sign-in
   screen's side rows, sized to the space beside this screen's column and
   anchored to the centre so every window size shows them alike.
+  **Amended again 2026-10-05, by the user:** the tile rows on both first-run
+  screens and on the public page became the dashboard rail's watermark, the
+  app icon's twelve bars in the accent at 0.28 opacity, fading before the
+  text, for brand consistency: one mark everywhere, not a second shape
+  invented for decoration. Unlike the rail's, which hangs off the edge of a
+  strip of fixed width, these rows are pinned to the content column (the row
+  ends 40px into the column's margin at every width), because pinned to the
+  window edge they drifted away from the text as the window grew, and they
+  are hidden below 720px (960px on the public page) where they would run
+  under the text. The fade-in ends at 0.28, not 1. Each feature holds
+  its own copy of the twelve fractions, and the guard
+  `the_icons_bars_are_one_fact_across_every_watermark` in
+  `src-tauri/src/sign_in/mod.rs` fails the build if any copy drifts.
 
 ## The character
 

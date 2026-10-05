@@ -290,3 +290,52 @@ fn finish_sign_in(
         .ok_or(SignInError::ClerkRejected)?;
     Ok(AccountView::from_account(&stored))
 }
+
+#[cfg(test)]
+mod tests {
+    /// The app icon's twelve bars live as a literal in three feature folders,
+    /// because feature folders do not import from each other (AGENTS.md). That
+    /// is one fact about the world declared three times, which standing rule
+    /// 19 says only a test across all of them will keep identical. Each copy
+    /// is named `MARK_BARS`; this reads the bracketed list after the name in
+    /// each file and fails the build when any two differ, so the rail, the
+    /// sign-in screen and the key setup screen can never draw three logos.
+    #[test]
+    fn the_icons_bars_are_one_fact_across_every_watermark() {
+        let copies = [
+            ("src/shell/rail.js", include_str!("../../../src/shell/rail.js")),
+            ("src/sign-in/sign-in.js", include_str!("../../../src/sign-in/sign-in.js")),
+            ("src/dictate/key-setup.js", include_str!("../../../src/dictate/key-setup.js")),
+        ];
+        let lists: Vec<(&str, String)> = copies
+            .iter()
+            .map(|(path, source)| (*path, mark_bars_in(source, path)))
+            .collect();
+        let (first_path, first) = &lists[0];
+        assert_eq!(
+            first.split(',').count(),
+            12,
+            "{first_path}: the icon has twelve bars, found {first}"
+        );
+        for (path, list) in &lists[1..] {
+            assert_eq!(
+                list, first,
+                "{path} draws a different mark from {first_path}: the icon's bars are one fact"
+            );
+        }
+    }
+
+    /// The text between the brackets after `MARK_BARS = `, with its spacing
+    /// removed so only the numbers and their order are compared.
+    fn mark_bars_in(source: &str, path: &str) -> String {
+        let after = source
+            .split_once("MARK_BARS = [")
+            .unwrap_or_else(|| panic!("{path} declares no MARK_BARS list"))
+            .1;
+        let list = after
+            .split_once(']')
+            .unwrap_or_else(|| panic!("{path}: MARK_BARS has no closing bracket"))
+            .0;
+        list.chars().filter(|c| !c.is_whitespace()).collect()
+    }
+}

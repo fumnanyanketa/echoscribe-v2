@@ -66,8 +66,8 @@ const STEPS = [
 
 function draw(ctx, focusTarget) {
   const screen = el("section", "keysetup");
-  screen.append(tiles("keysetup__tiles", TILE_HEIGHTS));
-  screen.append(tiles("keysetup__tiles keysetup__tiles--mirror", TILE_HEIGHTS));
+  screen.append(watermark("keysetup__watermark"));
+  screen.append(watermark("keysetup__watermark keysetup__watermark--mirror"));
 
   const column = el("div", "keysetup__column");
   screen.append(column);
@@ -276,22 +276,25 @@ function mark() {
   return node;
 }
 
-/** Decorative waveform tiles: two rows beside the column, one each side, in
- *  the sign-in screen's manner (src/sign-in/sign-in.js) but sized to the
- *  160px of free space each side of this screen's 440px column at the
- *  window's own width, so they never run under the text. A waveform rhythm,
- *  tall and short by turns, the tallest nearest the column. The user's
- *  choice on 2026-10-05, after the Night preview's corner clusters and a copy
- *  of the sign-in rows were both tried and declined. */
-const TILE_HEIGHTS = [120, 220, 160, 280, 200, 300, 150, 240];
+/** The app icon's twelve bars, as fractions of its tallest one, measured off
+ *  design/icon-1024.png. The same list as the dashboard rail's watermark
+ *  (src/shell/rail.js) and the sign-in screen's (src/sign-in/sign-in.js):
+ *  feature folders do not import from each other, so each holds its own copy,
+ *  and a Rust guard in src-tauri/src/sign_in/mod.rs fails the build when the
+ *  three copies differ, because the icon's bars are one fact. */
+const MARK_BARS = [0.23, 0.47, 0.82, 0.58, 1, 0.74, 0.42, 0.89, 0.63, 0.32, 0.55, 0.25];
 
-function tiles(className, heights) {
+/** Decoration, hidden from a screen reader: the rail's faded logo, bleeding
+ *  in from the window's left edge and, mirrored, from its right. Replaced the
+ *  grey tile rows on 2026-10-05 at the user's request, so the first-run
+ *  screens carry the same mark the dashboard does. */
+function watermark(className) {
   const node = el("div", className);
   node.setAttribute("aria-hidden", "true");
-  for (const height of heights) {
-    const tile = el("i");
-    tile.style.height = height + "px";
-    node.append(tile);
+  for (const height of MARK_BARS) {
+    const bar = el("i");
+    bar.style.height = Math.round(height * 100) + "%";
+    node.append(bar);
   }
   return node;
 }
