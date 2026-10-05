@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EchoScribe privacy policy</title>
+    <meta name="description" content="What EchoScribe does with your data: your words stay on your machine, audio goes to your own Deepgram account, sign-in is handled by Clerk." />
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <main class="page page--prose">
+      <header class="wordmark wordmark--small">
+        <a class="home" href="index.html"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span> EchoScribe</a>
+      </header>
+
+      <h1>Privacy policy</h1>
+      <p class="meta">In force from 5 October 2026.</p>
+
+      <p>
+        EchoScribe is a Windows application that turns your speech into typed text. This policy says what
+        data it handles, where that data goes, and what it never does. It is written to be read, not to
+        cover us.
+      </p>
+
+      <h2>The short version</h2>
+      <ul>
+        <li>Your transcribed words are stored on your own computer and nowhere else.</li>
+        <li>Your voice goes to Deepgram, using your own Deepgram account, and is never saved by EchoScribe.</li>
+        <li>Sign-in is handled by Clerk. EchoScribe never sees or stores a password.</li>
+        <li>There is no EchoScribe server. EchoScribe collects no analytics, no crash reports, and shows no advertising.</li>
+      </ul>
+
+      <h2>What EchoScribe stores on your computer</h2>
+      <p>
+        Everything EchoScribe keeps lives in one database file in your Windows user profile, in the
+        application data folder for EchoScribe. It holds:
+      </p>
+      <ul>
+        <li>the text of your past dictations (your history), each tied to your account;</li>
+        <li>the custom words you have taught it;</li>
+        <li>your chosen transcription language and your settings;</li>
+        <li>the email address and display name of your account, as given by your sign-in provider.</li>
+      </ul>
+      <p>
+        Your Deepgram API key and your sign-in session are kept in Windows Credential Manager, the
+        operating system's own store for secrets. The key is never shown in full again once it is saved,
+        and it is never written to any log or file.
+      </p>
+      <p>
+        Uninstalling EchoScribe and deleting that application data folder removes all of this. Signing out
+        removes the session from Credential Manager and leaves your history on the machine, tied to the
+        account that made it.
+      </p>
+
+      <h2>Your voice and Deepgram</h2>
+      <p>
+        When you press the dictation hotkey, EchoScribe opens your microphone, and something visible on
+        screen says so. It never listens without that. The audio is streamed to Deepgram, a speech
+        recognition service, using the API key from your own Deepgram account. The text comes back and is
+        typed at your cursor and kept in your local history. The audio itself is never written to disk,
+        never logged, and never kept after the text comes back.
+      </p>
+      <p>
+        Because the key is yours, Deepgram's handling of your audio is governed by your own agreement with
+        Deepgram and by Deepgram's privacy policy, not by EchoScribe. EchoScribe has no account of its own
+        with Deepgram and no access to what Deepgram keeps.
+      </p>
+
+      <h2>Signing in, and what we hold about you</h2>
+      <p>
+        EchoScribe uses Clerk, a sign-in service, so that your words and settings belong to an account and
+        stay signed in across restarts. Sign-in happens in your browser on Clerk's pages, never inside
+        EchoScribe. You can sign in with a one-time code sent to your email, or with your Google account.
+      </p>
+      <p>
+        The account record Clerk holds for you is your email address, your name, and, if you signed in
+        with Google, the profile picture Google supplies. EchoScribe itself keeps only the email address
+        and name, on your computer, to show you who is signed in. Clerk's handling of that record is
+        governed by Clerk's privacy policy.
+      </p>
+      <p>
+        If you sign in with Google, EchoScribe requests only your basic profile: your name, your email
+        address and your profile picture. That information is used solely to create and identify your
+        EchoScribe account and to show your name in the app. It is not used for advertising, not sold, and
+        not shared with anyone other than Clerk, which performs the sign-in. EchoScribe's use of information
+        received from Google APIs adheres to the Google API Services User Data Policy, including the
+        Limited Use requirements.
+      </p>
+
+      <h2>What EchoScribe does not do</h2>
+      <ul>
+        <li>It runs no server of its own. Nothing you say or type is routed through EchoScribe's infrastructure, because there is none.</li>
+        <li>It collects no analytics, no usage statistics and no crash reports.</li>
+        <li>It never opens the microphone without a visible sign on screen. There is no always-on listening and no wake word.</li>
+        <li>It never types into a password field, even while you are dictating.</li>
+        <li>It never sends your transcribed text anywhere except to the cursor you dictated into and to your local history.</li>
+      </ul>
+
+      <h2>Deleting your account</h2>
+      <p>
+        To delete the account record held by Clerk, email
+        <a href="mailto:exentrik.co@gmail.com">exentrik.co@gmail.com</a> from the address on the account
+        and we will remove it. Your local history is yours to delete by removing EchoScribe's application
+        data folder.
+      </p>
+
+      <h2>Changes to this policy</h2>
+      <p>
+        If EchoScribe ever starts collecting something new, this page will say so before it does, with the
+        date the change takes effect.
+      </p>
+
+      <h2>Who we are</h2>
+      <p>
+        EchoScribe is made by exentrik.co, based in Finland. Contact:
+        <a href="mailto:exentrik.co@gmail.com">exentrik.co@gmail.com</a>.
+      </p>
+
+      <footer class="foot">
+        <p><a class="link" href="index.html">Back to EchoScribe</a></p>
+      </footer>
+    </main>
+  </body>
+</html>

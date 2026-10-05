@@ -1,0 +1,258 @@
+/* The public EchoScribe page at echoscribe.exentrik.co. The app's Night look,
+   in the same tokens, so the page and the sign-in window read as one thing. */
+
+:root {
+  --page: #0f0f10;
+  --tile: #2a2b2f;
+  --card: #19191c;
+  --ink: #f4f4f6;
+  --ink-secondary: #c2c4ca;
+  --ink-caption: #9c9fa6;
+  --accent: #5eead4;
+  --accent-pressed: #2dd4bf;
+  --accent-ink: #0e0e0f;
+  --font: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--page);
+  color: var(--ink-secondary);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+}
+
+/* ---- Decoration: the app's two waveform rows ------------------------- */
+
+.tiles {
+  position: fixed;
+  z-index: 0;
+  top: 50%;
+  left: calc(50% - 540px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  mask-image: linear-gradient(to right, #000 45%, transparent 78%);
+  -webkit-mask-image: linear-gradient(to right, #000 45%, transparent 78%);
+}
+
+.tiles--mirror {
+  left: auto;
+  right: calc(50% - 540px);
+  transform: translateY(-50%) scaleX(-1);
+}
+
+.tiles i {
+  display: block;
+  width: 28px;
+  border-radius: 9px;
+  background: var(--tile);
+  transform: scaleY(0.6);
+}
+
+.tiles i:nth-child(1) { height: 160px; }
+.tiles i:nth-child(2) { height: 300px; }
+.tiles i:nth-child(3) { height: 200px; }
+.tiles i:nth-child(4) { height: 380px; }
+.tiles i:nth-child(5) { height: 260px; }
+.tiles i:nth-child(6) { height: 420px; }
+.tiles i:nth-child(7) { height: 180px; }
+.tiles i:nth-child(8) { height: 340px; }
+
+@media (max-width: 720px) {
+  .tiles {
+    display: none;
+  }
+}
+
+/* ---- The page -------------------------------------------------------- */
+
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 72px 20px 48px;
+  text-align: center;
+}
+
+.page--prose {
+  max-width: 680px;
+  padding-top: 40px;
+  text-align: left;
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.wordmark h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.wordmark--small {
+  justify-content: flex-start;
+  margin-bottom: 32px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.wordmark--small .home {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+}
+
+.mark i {
+  display: block;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.mark i:nth-child(1) { height: 9px; }
+.mark i:nth-child(2) { height: 18px; }
+.mark i:nth-child(3) { height: 26px; }
+.mark i:nth-child(4) { height: 15px; }
+.mark i:nth-child(5) { height: 21px; }
+.mark i:nth-child(6) { height: 11px; }
+
+.lead {
+  margin: 0 auto 36px;
+  max-width: 540px;
+  font-size: 18px;
+  color: var(--ink-secondary);
+  text-wrap: pretty;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 36px;
+  text-align: left;
+}
+
+.fact {
+  padding: 18px 20px;
+  border-radius: 10px;
+  background: var(--card);
+}
+
+.fact h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.fact p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-secondary);
+}
+
+.cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 48px;
+}
+
+.button {
+  display: inline-block;
+  min-width: 220px;
+  padding: 12px 32px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 8px 24px -8px rgba(94, 234, 212, 0.45);
+}
+
+.button:hover {
+  background: var(--accent-pressed);
+}
+
+.link {
+  font-size: 14px;
+  color: var(--ink-caption);
+  text-underline-offset: 3px;
+}
+
+.foot {
+  font-size: 13px;
+  color: var(--ink-caption);
+}
+
+/* ---- Prose ----------------------------------------------------------- */
+
+.page--prose h1 {
+  margin: 0 0 4px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.page--prose .meta {
+  margin: 0 0 24px;
+  font-size: 13px;
+  color: var(--ink-caption);
+}
+
+.page--prose h2 {
+  margin: 32px 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.page--prose p,
+.page--prose li {
+  font-size: 15px;
+}
+
+.page--prose ul {
+  padding-left: 22px;
+}
+
+.page--prose li + li {
+  margin-top: 6px;
+}
