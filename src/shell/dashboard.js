@@ -3,8 +3,8 @@
 //
 // It asks Rust three things and draws what it is told. `get_rail()` for the
 // sections that exist and which one to land on, `get_auth_state()` for what the
-// account block and the account card show, and `sign_out()` when a person
-// presses Sign out on the card. It sends nothing else and emits nothing, ever.
+// account block and its menu show, and `sign_out()` when a person presses Sign
+// out in that menu. It sends nothing else and emits nothing, ever.
 //
 // Which section is showing is this page's own business and needs no command and
 // no event. It is drawing, not a decision.
@@ -16,7 +16,6 @@
 
 import { mountRail, setActive, itemFor, setCount, toggleSub } from "./rail.js";
 import { mountAccountBlock, setOffline } from "./account-block.js";
-import { mountAccountCard } from "./account-card.js";
 import { mountDictationSettings } from "../dictate/dictation-settings.js";
 import { mountTranscriptionSettings } from "../dictate/transcription-settings.js";
 import { mountLanguageSettings } from "../language/language.js";
@@ -53,13 +52,6 @@ let accountBlock = null;
 let railView = null;
 // The unmount function of whatever screen the surface is holding.
 let unmountScreen = null;
-// The auth state snapshot, kept for the account card: the card is drawn each
-// time the Transcription surface opens, and the five things it shows cannot
-// change while this window is open, so one read serves every visit.
-let authState = null;
-// Where the account card goes, while the Transcription surface is the one
-// showing. Null on every other surface.
-let cardHost = null;
 // The destination whose screen the surface is holding, so a press on a section
 // can tell "enter this section" apart from "fold the section I am inside".
 let currentTarget = null;
@@ -110,12 +102,7 @@ async function start() {
       // The snapshot only fills in when neither event has spoken yet. An event
       // is always the newer truth.
       if (offline === null) offline = state.state === "signed_in_offline";
-      authState = state;
       mountAccountBlock(accountBlock, state, offline);
-      // The other side of the race fillAccountCard names: if the person reached
-      // the Transcription surface before this read came back, its card host is
-      // sitting empty and is filled now.
-      fillAccountCard();
     }
   } catch (err) {
     // Same reasoning: the rail is up and usable, and the block that says who
@@ -182,7 +169,6 @@ function show(id) {
   surface.replaceChildren();
 
   const mount = SCREEN[target];
-  cardHost = null;
   // The second argument is how a screen asks the rail to move, and only the
   // history empty state's one action uses it: design/design-system.md's empty
   // state rule asks for a way to change the setup, and the hotkey is chosen on
@@ -200,14 +186,6 @@ function show(id) {
       screenRoot = card();
       surface.append(screenRoot);
     }
-    if (target === "settings.transcription") {
-      // The account card rides beneath the Transcription screen in a card of
-      // its own (design/registry.md "Account card"), with its own host so it
-      // can be filled late when the auth state has not arrived yet.
-      cardHost = card();
-      surface.append(cardHost);
-      fillAccountCard();
-    }
     unmountScreen = mount(screenRoot, { go: show });
   }
 }
@@ -220,7 +198,7 @@ const INTRO = {
   "settings.dictation": "How you start and stop speaking, and what you hear when you do.",
   "settings.languages": "The language you speak, so Deepgram knows what to listen for.",
   "settings.vocabulary": "Names and terms to listen for, so they come out spelled the way you spell them.",
-  "settings.transcription": "Your Deepgram key, and the account EchoScribe is signed in to.",
+  "settings.transcription": "Your Deepgram key.",
 };
 
 function card() {
@@ -241,15 +219,6 @@ function introCard(item, sentence) {
   text.textContent = sentence;
   intro.append(heading, text);
   return intro;
-}
-
-/** Draw the account card into its host, once both the host and the auth state
- *  exist. Called from both sides of that race: the Transcription surface
- *  opening, and `get_auth_state` coming back. */
-function fillAccountCard() {
-  if (cardHost && authState && !cardHost.hasChildNodes()) {
-    mountAccountCard(cardHost, authState);
-  }
 }
 
 /** The destination that actually gets drawn when `id` is pressed. `id` itself

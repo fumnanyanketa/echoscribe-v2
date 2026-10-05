@@ -8,33 +8,108 @@
   width: 100%;
   max-width: 344px; /* the comp's sign-in column */
   padding: var(--space-10) var(--space-6);
-  text-align: left; /* the comp's column is left aligned */
+  /* The comp's column was left aligned. Centred since 2026-10-05 at the
+     user's request: with the paragraph gone, left-aligned lines beside a
+     full-width button read as shifted to one side. */
+  text-align: center;
+  /* A stacking context of its own, so the tiles' negative z-index puts them
+     behind this column's content and nowhere else. */
+  position: relative;
+  z-index: 0;
 }
 
-.signin__brand {
+/* ---- Decoration ------------------------------------------------------ */
+
+/* Two rows of waveform tiles entering from the left and right edges at
+   mid-height, fading out before the text, and fading in once when the screen
+   first shows. The key setup screen's corner clusters
+   (src/dictate/key-setup.css) are the same kind of tile in another place.
+   Fixed to the window, which never scrolls, so the centred column's own box
+   does not place them. Decoration only. */
+.signin__tiles {
+  position: fixed;
+  z-index: -1;
+  top: 50%;
+  /* Anchored to the centre, not the edge: at the window's 760px this is
+     -160px, with the first five tiles past the edge, and in a larger window
+     the rows stay beside the content rather than drifting to the far edges. */
+  left: calc(50% - 540px);
   display: flex;
   align-items: center;
-  gap: 9px; /* the comp's lockup gap */
-  margin-bottom: 18px; /* the comp's column gap */
+  gap: 12px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  /* Fully transparent before the 344px column begins, so nothing sits behind
+     the text. */
+  mask-image: linear-gradient(to right, #000 45%, transparent 78%);
+  -webkit-mask-image: linear-gradient(to right, #000 45%, transparent 78%);
+  animation: signin-tiles-in 900ms var(--ease-standard) both;
 }
 
-.signin__brand-dot {
-  width: 9px; /* the comp's dot */
-  height: 9px;
-  border-radius: var(--radius-pill);
+/* The right-hand row: the same row flipped about its own centre, so its fade
+   also runs toward the text. */
+.signin__tiles--mirror {
+  left: auto;
+  right: calc(50% - 540px);
+  transform: translateY(-50%) scaleX(-1);
+}
+
+/* Larger than the key setup's tiles and one tone lighter, so the rows read as
+   a bold mark rather than a faint corner detail: the user's call on 2026-10-05. */
+.signin__tiles i {
+  display: block;
+  width: 28px;
+  border-radius: 9px; /* the key setup's radius, scaled with the tile */
+  background: var(--color-rail-border); /* a decorative token one step up */
+  transform: scaleY(0.6);
+}
+
+@keyframes signin-tiles-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The waveform mark in teal above the name, as on the key setup screen: one
+   of the accent's comp-drawn statics, not a live-microphone signal. */
+.signin__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 26px;
+}
+
+/* The wordmark is the initial view's heading: the mark beside the name in
+   one centred row, set bolder and larger than the state headings. It carries
+   the 32px gap before the button that the trimmed paragraph used to end
+   with. */
+.signin__wordmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+  font-size: 28px; /* one step above the comp's 23px state headings */
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.signin__mark i {
+  display: block;
+  width: 4px;
+  border-radius: var(--radius-xs);
   background: var(--color-accent);
-}
-
-/* The comp's wordmark: plain case at 15px, never uppercase. */
-.signin__brand-word {
-  font-size: 15px;
-  font-weight: var(--weight-semibold);
-  color: var(--color-ink-on-dark-heading);
+  transform: scaleY(0.76);
 }
 
 .signin__notice {
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: var(--space-2);
   margin-bottom: var(--space-5);
   font-size: var(--text-xs);
@@ -62,24 +137,21 @@
   color: var(--color-ink-on-dark-heading);
 }
 
-.signin__body {
-  margin: 0 0 var(--space-8);
-  font-size: var(--text-sm);
-  line-height: var(--leading-prose);
-  color: var(--color-ink-on-dark-secondary);
-}
-
 .signin__action {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 9px; /* the comp's stack gap */
   margin-bottom: var(--space-6);
 }
 
 /* The comp's sign-in buttons: full width, 13px medium, the comp's radius. */
+/* Not the comp's full-width bar since 2026-10-05: the user found a short
+   label lost in a 344px button. Sized to its label plus generous sides, with
+   a floor so "Sign in", "Cancel" and "Try again" all come out the same width. */
 .signin__btn {
-  width: 100%;
-  padding: 11px; /* the comp's button padding */
+  min-width: 180px;
+  padding: 11px var(--space-8); /* the comp's vertical padding */
   border-radius: var(--radius-lg);
   font-family: var(--font-sans);
   font-size: 13px; /* the comp's button size */
@@ -89,16 +161,24 @@
   border: var(--border-width) solid transparent;
 }
 
+/* Teal since 2026-10-05 at the user's request; it was the comp's light fill.
+   Near-black label on teal, per the Night rule. The soft teal shadow is the
+   only lift: no gradient, so the fill stays one honest token. */
 .signin__btn--primary {
-  background: var(--color-ink-on-dark-heading);
-  color: var(--color-onboarding);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  box-shadow: 0 8px 24px -8px rgba(94, 234, 212, 0.45); /* the accent at 45% */
+  transition: background 120ms var(--ease-standard);
+}
+
+.signin__btn--primary:hover {
+  background: var(--color-accent-pressed);
 }
 
 /* design/registry.md "Primary button, on dark, busy". Same geometry and the
    same dark label as the resting button, so nothing moves or resizes when it
-   goes busy. The fill breathes between the two light rungs on the waiting
-   indicator's 1.4s cadence. Never violet: violet only ever means an open
-   microphone. */
+   goes busy. The fill breathes between the two teal rungs on the waiting
+   indicator's 1.4s cadence. */
 .signin__btn--busy {
   cursor: default;
   animation: signin-btn-busy 1.4s var(--ease-standard) infinite;
@@ -107,20 +187,21 @@
 @keyframes signin-btn-busy {
   0%,
   100% {
-    background: var(--color-ink-on-dark-heading);
+    background: var(--color-accent);
   }
   50% {
-    background: var(--color-ink-on-dark-secondary);
+    background: var(--color-accent-pressed);
   }
 }
 
 /* The label carries the state on its own, so with reduced motion the fill just
-   holds at the dim rung. The blanket rule in styles.css stops the animation but
-   would leave the bright rung showing, which reads as not busy at all, so the
-   resting colour has to be stated here. */
+   holds at the pressed rung. The blanket rule in styles.css stops the animation
+   but would leave the bright rung showing, which reads as not busy at all, so
+   the resting colour has to be stated here. The tiles' fade-in is harmless
+   when stopped: `both` leaves them shown. */
 @media (prefers-reduced-motion: reduce) {
   .signin__btn--busy {
-    background: var(--color-ink-on-dark-secondary);
+    background: var(--color-accent-pressed);
   }
 }
 
@@ -133,6 +214,7 @@
 .signin__waiting {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
   margin-bottom: var(--space-4);
   font-size: var(--text-sm);

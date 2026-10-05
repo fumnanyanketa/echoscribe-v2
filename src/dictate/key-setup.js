@@ -45,32 +45,29 @@ export function mountKeySetup(root, options) {
   };
 }
 
-/** The three promises on the card, in the order the preview the user approved
- *  on 2026-10-02 draws them ("Night", design/design-system.md). Each claims
- *  only what this app controls: AGENTS.md's data rules, and where the key is
- *  kept. Icons are SVG path data on a 24 unit grid. */
-const PROMISES = [
+/** The three steps to a key, in the order a person takes them. Replaced the
+ *  2026-10-02 preview's card of three promises on 2026-10-05 at the user's
+ *  request: this screen's job (record 0002 AC-9) is to say what a Deepgram key
+ *  is and how to get one, and the promises said neither. */
+const STEPS = [
   {
-    icon: ["M5 4h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z", "M8 20h8M12 16v4"],
-    title: "Stays on this machine",
-    text: "Your history lives in one file on this computer and nowhere else.",
+    title: "Create a Deepgram account",
+    text: "“Open Deepgram sign-up” below takes you there in your browser.",
   },
   {
-    icon: ["M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z", "M19 11a7 7 0 0 1-14 0M12 18v3"],
-    title: "Straight to your Deepgram account",
-    text: "Audio goes from here to Deepgram and is never saved. No EchoScribe server in between.",
+    title: "Create an API key",
+    text: "In Deepgram’s console, choose API Keys, create one, and copy it.",
   },
   {
-    icon: ["M7 11h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z", "M8 11V7a4 4 0 0 1 8 0v4"],
-    title: "Key stored locally",
-    text: "Kept in Windows Credential Manager, and never shown in full again once it is saved.",
+    title: "Paste it here and click Verify",
+    text: "",
   },
 ];
 
 function draw(ctx, focusTarget) {
   const screen = el("section", "keysetup");
-  screen.append(tiles("keysetup__tiles keysetup__tiles--top", [90, 170, 250, 140, 200, 70]));
-  screen.append(tiles("keysetup__tiles keysetup__tiles--bottom", [110, 220, 160, 280, 120]));
+  screen.append(tiles("keysetup__tiles", TILE_HEIGHTS));
+  screen.append(tiles("keysetup__tiles keysetup__tiles--mirror", TILE_HEIGHTS));
 
   const column = el("div", "keysetup__column");
   screen.append(column);
@@ -80,10 +77,10 @@ function draw(ctx, focusTarget) {
     withText(el("h1", "keysetup__heading"), "Connect your Deepgram key"),
     withText(
       el("p", "keysetup__body"),
-      "EchoScribe turns your voice into text with your own Deepgram account. " +
-        "Here is how your words are kept.",
+      "EchoScribe turns your voice into text through your own Deepgram account. " +
+        "Three steps, about a minute:",
     ),
-    promiseCard(),
+    stepsList(),
   );
 
   // The error line sits above the action, the same order as the sign-in and
@@ -167,7 +164,7 @@ function draw(ctx, focusTarget) {
   // from.
   const link = makeButton(
     "keysetup__link",
-    "Where do I get a key?",
+    "Open Deepgram sign-up",
     () => openFixedPage("open_deepgram_signup"),
   );
   form.append(link);
@@ -270,7 +267,15 @@ function mark() {
   return node;
 }
 
-/** Decorative waveform tiles in a corner of the window. */
+/** Decorative waveform tiles: two rows beside the column, one each side, in
+ *  the sign-in screen's manner (src/sign-in/sign-in.js) but sized to the
+ *  160px of free space each side of this screen's 440px column at the
+ *  window's own width, so they never run under the text. A waveform rhythm,
+ *  tall and short by turns, the tallest nearest the column. The user's
+ *  choice on 2026-10-05, after the Night preview's corner clusters and a copy
+ *  of the sign-in rows were both tried and declined. */
+const TILE_HEIGHTS = [120, 220, 160, 280, 200, 300, 150, 240];
+
 function tiles(className, heights) {
   const node = el("div", className);
   node.setAttribute("aria-hidden", "true");
@@ -282,33 +287,15 @@ function tiles(className, heights) {
   return node;
 }
 
-function promiseCard() {
-  const card = el("ul", "keysetup__promises");
-  for (const promise of PROMISES) {
-    const row = el("li", "keysetup__promise");
-    const words = el("div", "keysetup__promise-words");
-    words.append(
-      withText(el("span", "keysetup__promise-title"), promise.title),
-      withText(el("span", "keysetup__promise-text"), promise.text),
-    );
-    row.append(icon(promise.icon), words);
-    card.append(row);
+function stepsList() {
+  const list = el("ol", "keysetup__steps");
+  for (const step of STEPS) {
+    const row = el("li", "keysetup__step-item");
+    row.append(withText(el("span", "keysetup__step-title"), step.title));
+    if (step.text) row.append(withText(el("span", "keysetup__step-text"), step.text));
+    list.append(row);
   }
-  return card;
-}
-
-function icon(paths) {
-  const ns = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("class", "keysetup__promise-icon");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("aria-hidden", "true");
-  for (const d of paths) {
-    const path = document.createElementNS(ns, "path");
-    path.setAttribute("d", d);
-    svg.append(path);
-  }
-  return svg;
+  return list;
 }
 
 function el(tag, className) {

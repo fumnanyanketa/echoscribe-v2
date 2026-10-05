@@ -8,14 +8,18 @@
  * needs it.
  *
  * Rebuilt 2026-10-02 to the preview the user approved, "Night"
- * (design/design-system.md): decorative waveform tiles in two corners, the
- * waveform mark, a centred two-step stepper, a card of three promises, and the
- * key field with Verify beside it. Literals are that preview's own geometry,
- * each marked.
+ * (design/design-system.md): the waveform mark, a centred two-step stepper,
+ * and the key field with Verify beside it. Literals are that preview's own
+ * geometry, each marked. Changed 2026-10-05 at the user's request: the
+ * preview's card of three promises became a list of the three steps to a
+ * key, and the corner tiles stay but are anchored to the centre.
  */
 
 .keysetup {
   position: relative;
+  /* A stacking context of its own, so the tiles' negative z-index puts them
+     behind this screen's content and nowhere else. */
+  z-index: 0;
   flex: 1;
   display: flex;
   align-items: center;
@@ -28,33 +32,60 @@
 
 /* ---- Decoration ------------------------------------------------------ */
 
-/* Waveform tiles in two corners. Decoration only, hidden from a screen
-   reader, and audited as exempt in design/check-contrast.py. */
+/* Two rows of waveform tiles beside the column, at mid-height, one each
+   side, fading out as they reach it: the sign-in screen's rows, sized for
+   this screen (src/sign-in/sign-in.css draws the larger originals).
+   Decoration only, hidden from a screen reader, and audited as exempt in
+   design/check-contrast.py.
+
+   Anchored to the window's centre, and sized to fit the 160px between the
+   window's edge and the 440px column at the window's own 760px width, so the
+   rows sit in the same place beside the content at every window size and
+   are never cut by an edge. A larger window only adds dark space outside
+   them, which is what the user asked for on 2026-10-05 after the corner
+   clusters and a copy of the sign-in rows had both looked different when
+   maximised. */
 .keysetup__tiles {
   position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: calc(50% - 372px); /* 8px in from the left at 760px wide */
   display: flex;
   align-items: center;
-  gap: 10px; /* Night's tile gap at this window's size */
+  gap: 8px;
+  transform: translateY(-50%);
   pointer-events: none;
+  /* Fully transparent at the row's end, which is 8px short of the column. */
+  mask-image: linear-gradient(to right, #000 30%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, #000 30%, transparent 100%);
+  animation: keysetup-tiles-in 900ms var(--ease-standard) both;
 }
 
-.keysetup__tiles--top {
-  top: 18px;
-  left: 18px;
+/* The right-hand row: the same row flipped about its own centre, so its fade
+   also runs toward the column. */
+.keysetup__tiles--mirror {
+  left: auto;
+  right: calc(50% - 372px);
+  transform: translateY(-50%) scaleX(-1);
 }
 
-.keysetup__tiles--bottom {
-  right: 18px;
-  bottom: 18px;
-}
-
-/* Heights are set per tile by key-setup.js and scaled here to the window. */
+/* Heights are set per tile by key-setup.js and scaled here to the window.
+   Eight tiles at 12px with 8px gaps: 152px, inside the 160px of free space. */
 .keysetup__tiles i {
   display: block;
-  width: 22px; /* Night's tile width at this window's size */
-  border-radius: var(--radius-lg);
-  background: var(--color-onboarding-tile);
+  width: 12px;
+  border-radius: 4px;
+  background: var(--color-rail-border); /* the sign-in rows' tone */
   transform: scaleY(0.6);
+}
+
+@keyframes keysetup-tiles-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .keysetup__column {
@@ -134,9 +165,11 @@
   text-wrap: pretty;
 }
 
-/* ---- The promise card ------------------------------------------------ */
+/* ---- The three steps --------------------------------------------------- */
 
-.keysetup__promises {
+/* Numbered by the list itself, in the accent, on the promise card's geometry
+   so the column keeps its shape. */
+.keysetup__steps {
   display: flex;
   flex-direction: column;
   gap: 14px; /* Night's row gap */
@@ -145,41 +178,45 @@
   margin: 0;
   padding: 18px 20px; /* Night's card padding */
   list-style: none;
+  counter-reset: step;
   border-radius: var(--radius-card);
   background: var(--color-onboarding-tile);
 }
 
-.keysetup__promise {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-
-.keysetup__promise-icon {
-  flex: none;
-  width: 17px;
-  height: 17px;
-  margin-top: 1px;
-  fill: none;
-  stroke: var(--color-ink-on-dark-soft);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.keysetup__promise-words {
+.keysetup__step-item {
   display: flex;
   flex-direction: column;
   gap: var(--space-hair);
+  padding-left: 30px;
+  position: relative;
+  counter-increment: step;
+  text-align: left;
 }
 
-.keysetup__promise-title {
+.keysetup__step-item::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-wash);
+  border: 1px solid var(--color-accent-border);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  line-height: 18px;
+  text-align: center;
+  color: var(--color-accent-on-dark);
+}
+
+.keysetup__step-title {
   font-size: 13.5px;
   font-weight: var(--weight-semibold);
   color: var(--color-ink-on-dark-heading);
 }
 
-.keysetup__promise-text {
+.keysetup__step-text {
   font-size: var(--text-xs);
   line-height: var(--leading-body);
   color: var(--color-ink-on-dark-secondary);

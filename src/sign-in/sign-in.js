@@ -68,7 +68,7 @@ export async function mountSignIn(root, options = {}) {
 
 function draw(ctx, screen) {
   const column = el("section", "signin");
-  column.append(brandLockup());
+  column.append(tiles(""), tiles("signin__tiles--mirror"));
 
   if (screen.view === "initial" && ctx.returnedNotice) {
     column.append(noticeLine(ctx.returnedNotice));
@@ -96,22 +96,20 @@ function draw(ctx, screen) {
       ),
     );
   } else {
-    column.append(withText(el("h1", "signin__heading"), "Sign in to EchoScribe"));
-    column.append(
-      withText(
-        el("p", "signin__body"),
-        "Your account keeps your settings, your words and your history together, and they stay on this machine.",
-      ),
-    );
+    // The wordmark (the waveform mark beside the app's name) is the heading,
+    // then the one action. Since the 2026-10-05 trim there is no "Sign in to"
+    // prefix and no paragraph: the button alone says what pressing it does.
+    const name = el("h1", "signin__heading signin__wordmark");
+    name.append(mark(), withText(el("span"), "EchoScribe"));
+    column.append(name);
     column.append(actionRow(makeButton("signin__btn signin__btn--primary", "Sign in", (button) => begin(ctx, button))));
   }
 
-  column.append(
-    withText(
-      el("p", "signin__caption"),
-      "Sign-in opens in your browser. EchoScribe never sees your password.",
-    ),
-  );
+  // The waiting view already says it is waiting for the browser, so the
+  // caption would only repeat it there.
+  if (screen.view !== "waiting") {
+    column.append(withText(el("p", "signin__caption"), "Clicking the button opens your browser to sign in."));
+  }
 
   ctx.root.replaceChildren(column);
 }
@@ -147,11 +145,6 @@ function setBusy(button, label) {
   button.textContent = label;
 }
 
-function brandLockup() {
-  const brand = el("div", "signin__brand");
-  brand.append(el("span", "signin__brand-dot"), withText(el("span", "signin__brand-word"), "EchoScribe"));
-  return brand;
-}
 
 function noticeLine(notice) {
   const line = el("p", "signin__notice signin__notice--" + notice.tone);
@@ -169,6 +162,41 @@ function errorLine(code) {
     withText(el("p", "signin__error-text"), FAILURE_SENTENCE[code] || FAILURE_SENTENCE.clerk_rejected),
   );
   return box;
+}
+
+// Decoration, hidden from a screen reader. The key setup screen draws the same
+// kind of tiles in its corners (src/dictate/key-setup.js); here two rows of
+// them enter from the left and right edges at mid-height and fade out before
+// the text, chosen by the user on 2026-10-05 from three rendered candidates.
+// A second copy on purpose: the two differ in placement, count and fade, and
+// feature folders do not import each other. A waveform rhythm, tall and short
+// by turns; the first five sit off-screen so the window's edge cuts the shape.
+const TILE_HEIGHTS = [160, 300, 200, 380, 260, 420, 180, 340, 240, 150, 220, 100];
+
+function tiles(modifier) {
+  const node = el("div", modifier ? "signin__tiles " + modifier : "signin__tiles");
+  node.setAttribute("aria-hidden", "true");
+  for (const height of TILE_HEIGHTS) {
+    const tile = el("i");
+    tile.style.height = height + "px";
+    node.append(tile);
+  }
+  return node;
+}
+
+// The waveform mark in teal: the same six bars as the key setup screen's mark
+// (src/dictate/key-setup.js), so the two first screens share one motif.
+const MARK_HEIGHTS = [12, 24, 34, 20, 28, 14];
+
+function mark() {
+  const node = el("div", "signin__mark");
+  node.setAttribute("aria-hidden", "true");
+  for (const height of MARK_HEIGHTS) {
+    const bar = el("i");
+    bar.style.height = height + "px";
+    node.append(bar);
+  }
+  return node;
 }
 
 function actionRow(button) {

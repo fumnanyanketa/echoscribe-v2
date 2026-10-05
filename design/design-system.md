@@ -39,9 +39,13 @@ and the older text stays so its reasoning is not re-invented.
 - **Each Settings section** opens with a card holding its heading and one
   sentence saying what the section is for. `Surface heading`'s "not drawn"
   is overruled by this choice.
-- **The key setup screen** takes the preview's form: decorative waveform
-  tiles in two corners, the waveform mark, a centred two-step stepper, a
-  card of three promises, and the key field with Verify beside it.
+- **The key setup screen** takes the preview's form: the waveform mark, a
+  centred two-step stepper, and the key field with Verify beside it.
+  **Amended 2026-10-05, by the user:** the card of three promises became the
+  three steps to a key, because the screen's job is to get a person a key,
+  not to reassure them; and the preview's corner tiles became the sign-in
+  screen's side rows, sized to the space beside this screen's column and
+  anchored to the centre so every window size shows them alike.
 
 ## The character
 
@@ -74,6 +78,16 @@ first-run screen, and that screen's step bars. Those comp-drawn statics are
 the whole exception. Violet still never arrives as a hover tint, a new
 decoration, or anything the comp does not draw, and the live channel (ring,
 meter, caret) still only ever means an open microphone.
+
+**Amended 2026-10-05, by the user.** The sign-in screen's one button is
+filled with the accent (teal, since the Night re-lock), with the near-black
+label the Night rule requires, a soft teal shadow and the pressed teal on
+hover. The user chose it over the comp's light fill after seeing both
+rendered, and it was flagged at the time as a new use of the channel. It is
+accepted on this reasoning: the sign-in window is the one screen with no
+microphone and no pill, so nothing on it can be mistaken for listening. It
+is a second, narrow exception, not a licence: the accent still never fills a
+button anywhere a microphone can be open.
 
 The consequence is that the "off" state is not a grey pill. **Off is the
 pill absent from the screen entirely**, so there is nothing idle-looking to
