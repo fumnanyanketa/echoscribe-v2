@@ -77,8 +77,17 @@ function draw(ctx, focusTarget) {
     withText(el("h1", "keysetup__heading"), "Connect your Deepgram key"),
     withText(
       el("p", "keysetup__body"),
-      "EchoScribe turns your voice into text through your own Deepgram account. " +
-        "Three steps, about a minute:",
+      // Why a key is asked for at all, said here for the person who never reads
+      // anything else about the app (the user's words, 2026-10-05; they cut a
+      // "for now" as sounding like a warning). Nothing here names a price,
+      // because payments are out of scope (AGENTS.md). The $200 and "no card"
+      // are Deepgram's own published terms (deepgram.com/pricing, checked
+      // 2026-10-05): $200 of credit per new account, no expiry, about 700
+      // hours of transcription, hence "hundreds of hours".
+      "EchoScribe is free to use because you get to bring your own Deepgram key. " +
+        "Deepgram gives every new account $200 of free credit, no card needed, " +
+        "which is hundreds of hours of dictation. All it takes is three steps, which " +
+        "is about a minute.",
     ),
     stepsList(),
   );

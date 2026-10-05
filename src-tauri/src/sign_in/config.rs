@@ -15,6 +15,14 @@ pub const OAUTH_CLIENT_ID: &str = "e9UCEAbRxiyaIiCA";
 /// token, which is what keeps a person signed in across restarts.
 pub const SCOPES: &[&str] = &["openid", "profile", "email", "offline_access"];
 
+/// Sent as `prompt` on every authorize URL, so Clerk's hosted page always asks
+/// who is signing in, even when the browser still holds Clerk's own session
+/// from an earlier sign-in. Without it, the next Sign in on a shared machine
+/// walked straight into the previous person's account (record 0003, amendment
+/// of 2026-10-05, AC-19 and AC-20). Clerk honours it but does not document
+/// it, which is why AC-19 is proved live on every verify.
+pub const PROMPT: &str = "login";
+
 /// Path half of the loopback redirect. The full redirect URI at runtime is
 /// `http://127.0.0.1:<port>/callback`, with a fresh free port each sign-in.
 /// Clerk has `http://127.0.0.1/callback` on its allow list and accepts the

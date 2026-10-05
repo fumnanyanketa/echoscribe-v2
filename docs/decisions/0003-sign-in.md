@@ -18,6 +18,10 @@ after AC-14 and belongs to this record's set. Nothing else moves: the state
 that drives it is still `signed_in_offline` from `get_auth_state()`, and
 `renewal.rs` still emits `auth:offline` and `auth:signed_in`. Nothing is
 owed in Rust. No criterion is renumbered, reworded or added.
+**Amended again:** 2026-10-05, by `/architect`, after the first day on
+production. It adds AC-19 to AC-21 and the section "Amendment 2026-10-05:
+the browser's own session" below. No existing criterion is renumbered or
+reworded.
 **Weight:** heavy
 **Plan row:** 1
 **Supersedes:** nothing
@@ -93,6 +97,15 @@ an account id needs the account this feature defines.
   shows none of them.
 - **AC-18**: A brand-new person reaches record 0002's Deepgram key setup
   only after they are signed in, never before.
+- **AC-19**: Pressing Sign in always shows Clerk's sign-in page asking who
+  I am, even when my browser is still signed in to Clerk from an earlier
+  sign-in. (Added 2026-10-05.)
+- **AC-20**: After I sign out of EchoScribe, nobody can get into my account
+  from this computer by pressing Sign in. They have to sign in as
+  themselves. (Added 2026-10-05.)
+- **AC-21**: Signing in asks me for exactly one thing, who I am, on Clerk's
+  page. There is no second page asking me to allow EchoScribe access to
+  EchoScribe. (Added 2026-10-05.)
 
 ## The decision
 
@@ -248,6 +261,8 @@ One migration creates `account` and `session`. It runs before record
 | Data separation between accounts | AC-10, AC-11 | Every record 0002 table is filtered by `account.id`, and the Deepgram credential entry is named per account. Enforced in Rust. |
 | Reaching the Deepgram setup only after sign-in | AC-18 | Record 0002's key check runs only in the `signed_in` or `signed_in_offline` state, which this feature owns. |
 | The bound on an abandoned sign-in | AC-12 | A fixed timeout in this record: five minutes with no callback, after which the listener closes and `auth:sign_in_failed` fires. Fixed, not a setting. |
+| The always-ask switch | AC-19, AC-20 | A fixed `prompt=login` parameter on every authorize URL the Rust core builds, from a constant beside the scopes in `sign_in/config.rs`. Added 2026-10-05. Not a setting, never from the interface. |
+| No "allow access" page | AC-21 | The Clerk dashboard's "Consent screen" switch on the EchoScribe desktop OAuth application, turned off on 2026-10-05 for the production instance. A dashboard setting, not code; recorded here so it is not turned back on by someone following Clerk's "recommended" badge. |
 
 Configuration and secrets: the OAuth client id and the Clerk instance
 domain are embedded in the app and are safe to embed, because the app is a
@@ -426,6 +441,76 @@ Checked by /warden after the build against these three.
 - **Clerk is a hard dependency for the first sign-in.** With no network
   and no prior session, EchoScribe cannot be used at all. This follows
   from the stack decision but is worth stating.
+
+## Amendment 2026-10-05: the browser's own session
+
+**What was wrong.** Signing out of EchoScribe (AC-9) revokes the app's own
+refresh token and empties the local session, and that part works. But the
+sign-in happens in the person's browser, on Clerk's hosted pages, and those
+pages keep their own sign-in cookie that EchoScribe never touches. So after
+a sign-out, the next press of Sign in on the same computer skipped Clerk's
+sign-in page entirely and went straight to "Allow EchoScribe access" in the
+previous person's name. Proved live on 2026-10-05 against the production
+instance, twice: by the user, who could not reach the email code at all,
+and by `/architect`, who watched the authorize request land on the consent
+page with no sign-in. On a shared computer this is one click from somebody
+else's account and history. The second bullet under "Still open" below had
+already met the same cookie on 2026-08-28 and read it as a testing nuisance;
+it is a product gap.
+
+**What was found.** Clerk's discovery document has no `end_session_endpoint`,
+so the app cannot end the browser's session itself. Clerk's Backend API can
+revoke sessions, but only with a secret key, which this app refuses to hold
+(Risk, above). Clerk's documentation says nothing about the standard OpenID
+`prompt` parameter. Tested anyway, on 2026-10-05, in a browser holding a live
+Clerk session for the production instance: an authorize request **without**
+`prompt` went straight to the consent page; the same request **with**
+`prompt=login` showed the sign-in page, email field and Google button;
+`prompt=select_account` did the same. Research cached at
+`docs/.agent-cache/research/clerk-browser-session-sign-out.md`.
+
+**The decision.** Every sign-in asks who you are. The Rust core adds
+`prompt=login` to every authorize URL it builds (AC-19, AC-20). That is the
+whole code change: one constant beside the scopes in `sign_in/config.rs`,
+one line where `handoff.rs` builds the URL, and a test that fails the build
+if the parameter ever leaves the URL. Chosen by the user over a "not you?
+sign out of your browser" link on the sign-in screen, which would have left
+the takeover one unnoticed link away.
+
+**What it costs.** A person who presses Sign in while their browser is
+still signed in to Clerk does one Google click or one email code instead of
+nothing. They press Sign in rarely: the app keeps its own session across
+restarts (AC-6, AC-8), so this is paid at sign-out and first install, not
+daily.
+
+**What it risks.** The parameter is honoured today and is undocumented by
+Clerk. If Clerk ever stops honouring it, AC-19 fails and the gap returns
+silently. So AC-19 is proved live, not by reading code, on every `/check
+verify` of this record, and `/liftoff` treats it as a gate.
+
+**One hoop fewer, decided in the same sitting (AC-21).** Clerk's OAuth
+application showed a consent page, "EchoScribe desktop wants to access
+Echoscribe on behalf of you", after every sign-in. That page exists for
+third-party apps asking to reach a Clerk account that is not theirs. Here
+the app and the account belong to the same product, so the page asked a
+person to allow EchoScribe into EchoScribe. The dashboard's "Consent screen"
+switch was turned off on the production OAuth application on 2026-10-05.
+This is a dashboard setting, not code, which is why it is written down here
+and in the value sourcing table.
+
+**What else was considered.** Opening Clerk's account page on sign-out so
+the person can sign out there too: puts the burden on the person and opens a
+browser tab nobody asked for. Pointing sign-out at a Backend API session
+revoke: needs a secret key the app must never hold. Doing nothing and
+documenting it: rejected by the user.
+
+**What breaks.** Nothing relies on the old behaviour. Record 0004's shell
+and the sign-in screen are unchanged; the hosted page simply appears one
+step earlier than it did.
+
+**Build plan.** One milestone, `/develop`: the constant, the one line in
+`handoff.rs`, the URL guard test, then a live proof of AC-19 and AC-21
+recorded under `docs/evidence/sign-in/`.
 
 ## Still open
 

@@ -70,21 +70,7 @@ pub fn start() -> Result<Handoff, StartError> {
     let redirect_uri = format!("http://127.0.0.1:{port}{}", config::REDIRECT_PATH);
 
     let (challenge, verifier) = PkceCodeChallenge::new_random_sha256();
-
-    let client = BasicClient::new(ClientId::new(config::OAUTH_CLIENT_ID.to_string()))
-        .set_auth_uri(AuthUrl::new(config::authorize_url()).map_err(|_| StartError::Internal)?)
-        .set_token_uri(TokenUrl::new(config::token_url()).map_err(|_| StartError::Internal)?)
-        .set_redirect_uri(
-            RedirectUrl::new(redirect_uri.clone()).map_err(|_| StartError::Internal)?,
-        );
-
-    let mut request = client
-        .authorize_url(CsrfToken::new_random)
-        .set_pkce_challenge(challenge);
-    for scope in config::SCOPES {
-        request = request.add_scope(Scope::new((*scope).to_string()));
-    }
-    let (auth_url, csrf) = request.url();
+    let (auth_url, csrf) = authorize_url(&redirect_uri, challenge)?;
 
     open::that(auth_url.as_str()).map_err(|_| StartError::BrowserFailed)?;
 
@@ -94,6 +80,32 @@ pub fn start() -> Result<Handoff, StartError> {
         csrf_state: csrf.secret().to_string(),
         pkce_verifier: verifier.secret().to_string(),
     })
+}
+
+/// The address the browser is sent to: Clerk's authorize endpoint with the
+/// client id, the loopback redirect, the scopes, the PKCE challenge, a fresh
+/// state, and `prompt=login` so Clerk always asks who is signing in (record
+/// 0003 AC-19). Split from `start` so a test can read the URL without opening
+/// a browser.
+fn authorize_url(
+    redirect_uri: &str,
+    challenge: PkceCodeChallenge,
+) -> Result<(oauth2::url::Url, CsrfToken), StartError> {
+    let client = BasicClient::new(ClientId::new(config::OAUTH_CLIENT_ID.to_string()))
+        .set_auth_uri(AuthUrl::new(config::authorize_url()).map_err(|_| StartError::Internal)?)
+        .set_token_uri(TokenUrl::new(config::token_url()).map_err(|_| StartError::Internal)?)
+        .set_redirect_uri(
+            RedirectUrl::new(redirect_uri.to_string()).map_err(|_| StartError::Internal)?,
+        );
+
+    let mut request = client
+        .authorize_url(CsrfToken::new_random)
+        .set_pkce_challenge(challenge)
+        .add_extra_param("prompt", config::PROMPT);
+    for scope in config::SCOPES {
+        request = request.add_scope(Scope::new((*scope).to_string()));
+    }
+    Ok(request.url())
 }
 
 /// Block until the callback arrives, the person cancels (`cancel` flips true),
@@ -238,6 +250,23 @@ mod tests {
             classify("/callback?state=xyz", "xyz"),
             Parsed::ClerkError(None)
         ));
+    }
+
+    #[test]
+    fn every_sign_in_asks_who_you_are() {
+        // covers: AC-19 and AC-20 (record 0003, amendment of 2026-10-05). The
+        // authorize URL carries `prompt=login`, which is what makes Clerk's
+        // hosted page ask for a sign-in even when the browser still holds a
+        // session from before. Drop it and the next Sign in on a shared
+        // machine walks into the previous person's account.
+        let (challenge, _) = PkceCodeChallenge::new_random_sha256();
+        let (url, _) = authorize_url("http://127.0.0.1:1/callback", challenge).unwrap();
+        let prompt = url
+            .query_pairs()
+            .find(|(k, _)| k == "prompt")
+            .map(|(_, v)| v.into_owned());
+        assert_eq!(prompt.as_deref(), Some("login"), "the authorize URL must carry prompt=login");
+        assert!(url.as_str().starts_with(&config::authorize_url()));
     }
 
     #[test]
