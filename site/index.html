@@ -49,8 +49,26 @@
         </div>
       </section>
 
+      <section class="get" id="download" aria-labelledby="get-heading">
+        <h2 id="get-heading">Get EchoScribe for Windows</h2>
+        <p class="get__lead">Enter your email and we send you the download link.</p>
+        <!-- The one form on this site. It posts the address to Kit, the mailing
+             list service (privacy.html, "The download form on this site"). The
+             script below keeps you on this page when it can; without it the
+             form still works and Kit shows its own "check your email" page. -->
+        <form class="get__form" action="https://app.kit.com/forms/10005424/subscriptions" method="post">
+          <label class="get__label" for="email">Email address</label>
+          <div class="get__row">
+            <input class="get__input" id="email" name="email_address" type="email" required autocomplete="email" placeholder="you@example.com" />
+            <button class="button" type="submit">Send me the link</button>
+          </div>
+        </form>
+        <p class="get__note">
+          One email with the link. Now and then we also tell you what is new in EchoScribe, and you can stop that at any time.
+        </p>
+      </section>
+
       <p class="cta">
-        <a class="button" href="https://github.com/fumnanyanketa/echoscribe-v2/releases">Download for Windows</a>
         <a class="link" href="privacy.html">Privacy policy</a>
       </p>
 
@@ -58,5 +76,42 @@
         <p>EchoScribe is made by exentrik.co. Questions: <a href="mailto:exentrik.co@gmail.com">exentrik.co@gmail.com</a></p>
       </footer>
     </main>
+
+    <script>
+      // Sends the address to Kit without leaving the page, then swaps the form
+      // for a confirmation line. Any failure falls back to the plain submit, so
+      // the form never dead-ends.
+      (function () {
+        var form = document.querySelector(".get__form");
+        if (!form) return;
+        form.addEventListener("submit", function (event) {
+          event.preventDefault();
+          var button = form.querySelector("button");
+          var email = form.querySelector("input").value;
+          button.disabled = true;
+          button.textContent = "Sending";
+          fetch(form.action, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ email_address: email }),
+          })
+            .then(function (response) {
+              return response.json().then(function (data) {
+                if (!response.ok || data.status === "failed") throw new Error("refused");
+              });
+            })
+            .then(function () {
+              var done = document.createElement("p");
+              done.className = "get__done";
+              done.setAttribute("role", "status");
+              done.textContent = "Check your email. The download link is on its way.";
+              form.replaceWith(done);
+            })
+            .catch(function () {
+              form.submit();
+            });
+        });
+      })();
+    </script>
   </body>
 </html>
