@@ -4,11 +4,12 @@
 //! there is no client secret anywhere in the app (docs/decisions/0003-sign-in.md).
 //! Change these only when the Clerk application changes.
 
-/// The Clerk instance domain, also called the Frontend API domain.
-pub const CLERK_DOMAIN: &str = "hopeful-snail-1633.clerk.accounts.dev";
+/// The Clerk instance domain, also called the Frontend API domain. This is the
+/// production instance, on the `echoscribe.exentrik.co` subdomain.
+pub const CLERK_DOMAIN: &str = "clerk.echoscribe.exentrik.co";
 
-/// The OAuth application's client id. Public client, no secret.
-pub const OAUTH_CLIENT_ID: &str = "EjsH4kPFbq3OaWS4";
+/// The production OAuth application's client id. Public client, no secret.
+pub const OAUTH_CLIENT_ID: &str = "e9UCEAbRxiyaIiCA";
 
 /// Requested scopes. `offline_access` is what makes Clerk return a refresh
 /// token, which is what keeps a person signed in across restarts.
