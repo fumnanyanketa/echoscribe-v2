@@ -71,6 +71,17 @@ a {
   transform: translateY(-50%) scaleX(-1);
 }
 
+/* The prose pages' column is 680px, 40px wider, so the rows sit 20px further
+   out on each side to end at the same point in its margin. */
+.body--prose .watermark {
+  left: calc(50% - 565px);
+}
+
+.body--prose .watermark--mirror {
+  left: auto;
+  right: calc(50% - 565px);
+}
+
 .watermark i {
   display: block;
   flex: none;
@@ -178,31 +189,45 @@ a {
   text-wrap: pretty;
 }
 
+/* Three facts, one line each, an icon apiece: the user's call on 2026-10-05
+   over the three paragraphs that stood here. */
 .facts {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 36px;
-  text-align: left;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 0 36px;
+  padding: 0;
+  list-style: none;
 }
 
 .fact {
-  padding: 18px 20px;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 12px;
   border-radius: 10px;
   background: var(--card);
-}
-
-.fact h2 {
-  margin: 0 0 4px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.fact p {
-  margin: 0;
   font-size: 14px;
-  color: var(--ink-secondary);
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.fact__icon {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 540px) {
+  .facts {
+    flex-direction: column;
+  }
 }
 
 /* ---- The download form ----------------------------------------------- */
