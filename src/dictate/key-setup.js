@@ -50,18 +50,12 @@ export function mountKeySetup(root, options) {
  *  request: this screen's job (record 0002 AC-9) is to say what a Deepgram key
  *  is and how to get one, and the promises said neither. */
 const STEPS = [
-  {
-    title: "Create a Deepgram account",
-    text: "“Open Deepgram sign-up” below takes you there in your browser.",
-  },
-  {
-    title: "Create an API key",
-    text: "In Deepgram’s console, choose API Keys, create one, and copy it.",
-  },
-  {
-    title: "Paste it here and click Verify",
-    text: "",
-  },
+  // The first step's verb is the AC-9 link itself: it opens Deepgram's sign-up
+  // page in the system browser (design/registry.md "Get-a-key link", which
+  // since 2026-10-07 lives here rather than under the field).
+  { link: "Open Deepgram sign-up", text: " and create an account." },
+  { verb: "Create an API key", text: " under API Keys in Deepgram’s console, and copy it." },
+  { verb: "Paste it above", text: " and click Verify." },
 ];
 
 function draw(ctx, focusTarget) {
@@ -71,25 +65,23 @@ function draw(ctx, focusTarget) {
 
   const column = el("div", "keysetup__column");
   screen.append(column);
-  column.append(mark(), stepRow());
+  // No stepper: design/registry.md "Step indicator" retired it on 2026-09-04
+  // (no route can tell "which step am I on"), and the 2026-10-07 redraw
+  // finally stopped drawing it.
+  column.append(mark());
 
   column.append(
     withText(el("h1", "keysetup__heading"), "Connect your Deepgram key"),
     withText(
-      el("p", "keysetup__body"),
-      // Why a key is asked for at all, said here for the person who never reads
-      // anything else about the app (the user's words, 2026-10-05; they cut a
-      // "for now" as sounding like a warning). Nothing here names a price,
-      // because payments are out of scope (AGENTS.md). The $200 and "no card"
-      // are Deepgram's own published terms (deepgram.com/pricing, checked
-      // 2026-10-05): $200 of credit per new account, no expiry, about 700
-      // hours of transcription, hence "hundreds of hours".
-      "EchoScribe is free to use because you get to bring your own Deepgram key. " +
-        "Deepgram gives every new account $200 of free credit, no card needed, " +
-        "which is hundreds of hours of dictation. All it takes is three steps, which " +
-        "is about a minute.",
+      el("p", "keysetup__line"),
+      // Why a key is asked for at all, in the user's own words (2026-10-07).
+      // Hours, never money: nothing here names a price or a card, because
+      // payments are out of scope (AGENTS.md). "Hundreds of hours" is
+      // Deepgram's own published new-account allowance (deepgram.com/pricing,
+      // checked 2026-10-05: about 700 hours of transcription).
+      "EchoScribe is free to use because you bring your own Deepgram key, " +
+        "which gives every new account hundreds of hours for free.",
     ),
-    stepsList(),
   );
 
   // The error line sits above the action, the same order as the sign-in and
@@ -112,8 +104,9 @@ function draw(ctx, focusTarget) {
   const form = el("form", "keysetup__form");
   form.noValidate = true;
 
-  // The field's visible label, above it, as the approved preview draws it.
-  const label = withText(el("label", "keysetup__label"), "Deepgram API key");
+  // The field's label, for a screen reader only since 2026-10-07: on screen the
+  // placeholder says the same thing, so the field is the one thing asking.
+  const label = withText(el("label", "keysetup__sr"), "Deepgram API key");
   label.htmlFor = "deepgram-key";
 
   const field = el("div", "keysetup__field");
@@ -124,7 +117,7 @@ function draw(ctx, focusTarget) {
   input.type = "password";
   input.id = "deepgram-key";
   input.name = "deepgram-key";
-  input.placeholder = "paste your key here";
+  input.placeholder = "Paste your Deepgram API key";
   input.autocomplete = "off";
   input.spellcheck = false;
   input.value = ctx.pasted;
@@ -167,16 +160,10 @@ function draw(ctx, focusTarget) {
     column.append(row);
   }
 
-  // AC-9's link out to get a key. A button, not an anchor: it opens the system
-  // browser through Rust, which holds the one address it is allowed to open.
-  // Navigating this window would take the app somewhere it cannot come back
-  // from.
-  const link = makeButton(
-    "keysetup__link",
-    "Open Deepgram sign-up",
-    () => openFixedPage("open_deepgram_signup"),
-  );
-  form.append(link);
+  // design/registry.md "Get-a-key steps": one help line, and the three steps
+  // hidden behind it until asked for, so the field is the only thing on the
+  // screen that asks for anything. AC-9's link out is the first step.
+  form.append(helpLine());
 
   ctx.root.replaceChildren(screen);
 
@@ -251,20 +238,7 @@ function setBusy(button, label) {
   button.textContent = label;
 }
 
-/** The stepper: this window is step two of the first run, sign-in being step
- *  one, and both bars are lit because both steps are reached. The bars are
- *  decoration; the words are for a screen reader. */
-function stepRow() {
-  const row = el("div", "keysetup__step");
-  row.append(withText(el("span", "keysetup__step-words"), "Step 2 of 2"));
-  const bars = el("span", "keysetup__step-bars");
-  bars.setAttribute("aria-hidden", "true");
-  bars.append(el("i"), el("i"));
-  row.append(bars);
-  return row;
-}
-
-/** The waveform mark above the stepper, the app's own icon in bars. */
+/** The waveform mark above the heading, the app's own icon in bars. */
 function mark() {
   const node = el("div", "keysetup__mark");
   node.setAttribute("aria-hidden", "true");
@@ -299,15 +273,48 @@ function watermark(className) {
   return node;
 }
 
-function stepsList() {
+/** "No key yet? Show the three steps · about a minute", then the counted
+ *  list it reveals. Always arrives hidden; a redraw after a failed check
+ *  arrives hidden too, which is fine, because by then the person has a key. */
+function helpLine() {
+  const wrap = el("div", "keysetup__help-wrap");
+
   const list = el("ol", "keysetup__steps");
+  list.id = "keysetup-steps";
+  list.hidden = true;
   for (const step of STEPS) {
     const row = el("li", "keysetup__step-item");
-    row.append(withText(el("span", "keysetup__step-title"), step.title));
-    if (step.text) row.append(withText(el("span", "keysetup__step-text"), step.text));
+    // One span holds the whole sentence: the row is a two-column grid (the
+    // counter, then the words), and a bare text node beside the verb would be
+    // a grid item of its own, wrapping one word per line in the counter's
+    // column. It did, on this screen's first build on 2026-10-07.
+    const words = el("span", "keysetup__step-words");
+    if (step.link) {
+      // A button, not an anchor: it opens the system browser through Rust,
+      // which holds the one address it is allowed to open. Navigating this
+      // window would take the app somewhere it cannot come back from.
+      words.append(makeButton("keysetup__link", step.link, () => openFixedPage("open_deepgram_signup")));
+    } else {
+      words.append(withText(el("span", "keysetup__step-verb"), step.verb));
+    }
+    words.append(document.createTextNode(step.text));
+    row.append(words);
     list.append(row);
   }
-  return list;
+
+  const help = el("p", "keysetup__help");
+  help.append(document.createTextNode("No key yet? "));
+  const toggle = makeButton("keysetup__toggle", "Show the three steps", (button) => {
+    list.hidden = !list.hidden;
+    button.setAttribute("aria-expanded", list.hidden ? "false" : "true");
+    button.textContent = list.hidden ? "Show the three steps" : "Hide the steps";
+  });
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.setAttribute("aria-controls", list.id);
+  help.append(toggle, document.createTextNode(" · about a minute"));
+
+  wrap.append(help, list);
+  return wrap;
 }
 
 function el(tag, className) {

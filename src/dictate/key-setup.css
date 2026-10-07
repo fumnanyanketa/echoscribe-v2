@@ -13,6 +13,9 @@
  * geometry, each marked. Changed 2026-10-05 at the user's request: the
  * preview's card of three promises became a list of the three steps to a
  * key, and the corner tiles became the rail's watermark, one each side.
+ * Redrawn 2026-10-07 to the "Key Setup Calm" preview the user approved: one
+ * sentence, no stepper, the steps hidden behind a help line, a quiet Verify
+ * until a key is pasted, and a smaller, fainter watermark pushed to the edges.
  */
 
 .keysetup {
@@ -49,16 +52,19 @@
      text as the window grew. The 265px row ends 40px into the 440px column's
      left margin at every width, inside the masked tail. At the window's 760px
      that start is -65px, cut by the edge as the rail's is. */
-  left: calc(50% - 445px);
+  /* Since 2026-10-07 the row is smaller (nine-pixel bars, 207px across) and
+     ends 24px before the 440px column: 220 + 24 + 207 = 451. At the window's
+     760px that start is -71px, cut by the edge as the rail's is. */
+  left: calc(50% - 451px);
   display: flex;
   align-items: center;
-  gap: 11px; /* the icon's own bar spacing, at this size */
-  height: 240px; /* the tallest bar */
+  gap: 9px; /* the icon's own bar spacing, at this size */
+  height: 180px; /* the tallest bar */
   transform: translateY(-50%); /* mid-height: no foot to keep above here */
-  opacity: 0.28;
+  opacity: 0.14; /* half the rail's, by the 2026-10-07 redraw: a watermark, not a frame */
   pointer-events: none;
-  mask-image: linear-gradient(to right, #000 10%, transparent 82%);
-  -webkit-mask-image: linear-gradient(to right, #000 10%, transparent 82%);
+  mask-image: linear-gradient(to right, #000 0%, transparent 70%);
+  -webkit-mask-image: linear-gradient(to right, #000 0%, transparent 70%);
   animation: keysetup-watermark-in 900ms var(--ease-standard) both;
 }
 
@@ -74,26 +80,26 @@
    fade also runs toward the column. */
 .keysetup__watermark--mirror {
   left: auto;
-  right: calc(50% - 445px);
+  right: calc(50% - 451px);
   transform: translateY(-50%) scaleX(-1);
 }
 
 .keysetup__watermark i {
   display: block;
   flex: none;
-  width: 12px; /* the icon's own bar width, at this size */
+  width: 9px; /* the icon's own bar width, at this size */
   border-radius: var(--radius-pill);
   background: var(--color-accent);
 }
 
-/* Ends at the resting 0.28, not at 1: with `both` the last frame is what
-   stays, and a fade to 1 left the mark four times too bright. */
+/* Ends at the resting 0.14, not at 1: with `both` the last frame is what
+   stays, and a fade to 1 left the mark many times too bright. */
 @keyframes keysetup-watermark-in {
   from {
     opacity: 0;
   }
   to {
-    opacity: 0.28;
+    opacity: 0.14;
   }
 }
 
@@ -102,7 +108,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-4);
+  gap: 0; /* each block below carries its own distance, the redraw's air */
   width: 440px; /* Night's column */
   max-width: 100%;
 }
@@ -123,14 +129,8 @@
   transform: scaleY(0.76);
 }
 
-/* The stepper: both bars lit, because both steps are reached. The words are
-   for a screen reader; the bars are what the eye reads. */
-.keysetup__step {
-  display: flex;
-  align-items: center;
-}
-
-.keysetup__step-words {
+/* The field's label, kept for a screen reader and taken off the screen. */
+.keysetup__sr {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -141,22 +141,10 @@
   white-space: nowrap;
 }
 
-.keysetup__step-bars {
-  display: flex;
-  gap: 6px; /* Night's stepper gap */
-}
-
-.keysetup__step-bars i {
-  width: 40px; /* Night's stepper bar */
-  height: 3px;
-  border-radius: var(--radius-xs);
-  background: var(--color-accent);
-}
-
 /* ---- Words ----------------------------------------------------------- */
 
 .keysetup__heading {
-  margin: var(--space-1) 0 0;
+  margin: 22px 0 0; /* the redraw's air above the heading */
   font-size: var(--text-xl);
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-tight);
@@ -165,69 +153,84 @@
   text-align: center;
 }
 
-.keysetup__body {
-  margin: 0;
+.keysetup__line {
+  margin: 10px 0 0;
+  max-width: 40ch;
   font-size: var(--text-sm);
   line-height: var(--leading-body);
-  color: var(--color-ink-on-dark-secondary);
+  color: var(--color-ink-on-dark-caption);
   text-align: center;
   text-wrap: pretty;
 }
 
-/* ---- The three steps --------------------------------------------------- */
+/* ---- The help line and the three steps ------------------------------- */
 
-/* Numbered by the list itself, in the accent, on the promise card's geometry
-   so the column keeps its shape. */
+/* design/registry.md "Get-a-key steps". One line of help, and the counted list
+   it reveals. Hidden at rest, so the field is the only thing asking. */
+.keysetup__help-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.keysetup__help {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-ink-faint);
+  text-align: center;
+}
+
+.keysetup__toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--color-ink-on-dark-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Not a card: no fill, no edge, no badges. The counter in mono accent. */
 .keysetup__steps {
   display: flex;
   flex-direction: column;
-  gap: 14px; /* Night's row gap */
+  gap: 6px;
   box-sizing: border-box;
   width: 100%;
   margin: 0;
-  padding: 18px 20px; /* Night's card padding */
+  padding: 0;
   list-style: none;
   counter-reset: step;
-  border-radius: var(--radius-card);
-  background: var(--color-onboarding-tile);
+}
+
+.keysetup__steps[hidden] {
+  display: none;
 }
 
 .keysetup__step-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-hair);
-  padding-left: 30px;
-  position: relative;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
   counter-increment: step;
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--color-ink-on-dark-caption);
   text-align: left;
 }
 
 .keysetup__step-item::before {
   content: counter(step);
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-pill);
-  background: var(--color-accent-wash);
-  border: 1px solid var(--color-accent-border);
+  font-family: var(--font-mono);
   font-size: var(--text-micro);
-  font-weight: var(--weight-semibold);
-  line-height: 18px;
-  text-align: center;
   color: var(--color-accent-on-dark);
 }
 
-.keysetup__step-title {
-  font-size: 13.5px;
-  font-weight: var(--weight-semibold);
-  color: var(--color-ink-on-dark-heading);
-}
-
-.keysetup__step-text {
-  font-size: var(--text-xs);
-  line-height: var(--leading-body);
+.keysetup__step-verb {
+  font-weight: var(--weight-medium);
   color: var(--color-ink-on-dark-secondary);
 }
 
@@ -271,14 +274,13 @@
 .keysetup__form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  align-items: center;
   align-self: stretch;
+  margin-top: 32px; /* the redraw's air above the field */
 }
 
-.keysetup__label {
-  font-size: 13px; /* Night's field label */
-  font-weight: var(--weight-medium);
-  color: var(--color-ink-on-dark-soft);
+.keysetup__field {
+  width: 100%;
 }
 
 .keysetup__field {
@@ -333,11 +335,14 @@
   color: var(--color-accent-ink);
 }
 
-/* Nothing pasted yet, so there is nothing to check. Dimmed to the same rung
-   the busy state uses, so the button never changes size or moves. */
+/* Nothing pasted yet, so there is nothing to check. Quiet, not washed out:
+   the subtle fill with secondary ink and a decorative edge, the same size, so
+   the button never moves when a key arrives and it turns teal. */
 .keysetup__btn--primary:disabled {
   cursor: default;
-  background: var(--color-ink-on-dark-secondary);
+  background: var(--color-surface-subtle);
+  border-color: var(--color-border);
+  color: var(--color-ink-on-dark-secondary);
 }
 
 /* design/registry.md "Key setup, checking": the busy primitive. Same geometry,
@@ -385,13 +390,12 @@
    it opens the system browser rather than navigating this window. Underlined,
    so the colour is not the only thing marking it as the thing to press. */
 .keysetup__link {
-  align-self: flex-start;
   padding: 0;
   border: 0;
   background: none;
-  font-family: var(--font-sans);
-  font-size: 13px; /* Night's link size */
-  color: var(--color-ink-on-dark-soft);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-on-dark-secondary);
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;

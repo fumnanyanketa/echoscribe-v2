@@ -1171,4 +1171,34 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn the_key_setup_screen_stays_calm() {
+        // covers: design/registry.md "Key setup screen", redrawn 2026-10-07
+        // from the preview the user approved, and "Step indicator", retired
+        // 2026-09-04 and finally not drawn. A source guard only: it proves the
+        // lines are present, never that the screen reads calm.
+        let js = include_str!("../../../src/dictate/key-setup.js");
+        let flat = flattened(js);
+        assert!(
+            js.contains("which gives every new account hundreds of hours for free."),
+            "the key setup sentence is no longer the user's: hours, never money"
+        );
+        assert!(
+            !js.contains('$') && !js.to_lowercase().contains("no card"),
+            "the key setup screen names money or a card again. The user cut both on 2026-10-07: the screen says hours, nothing else"
+        );
+        assert!(
+            !js.contains("Step 2 of 2") && !flat.contains("keysetup__step-bars"),
+            "the key setup screen draws a step indicator again. design/registry.md retired it on 2026-09-04: no route can tell which step a person is on"
+        );
+        assert!(
+            flat.contains("list.hidden=true;") && js.contains("\"Show the three steps\""),
+            "the three steps are no longer hidden behind the help line, so the field is no longer the one thing on the screen asking for something"
+        );
+        assert!(
+            flat.contains("\"open_deepgram_signup\""),
+            "the key setup screen lost its way out to get a key (record 0002 AC-9)"
+        );
+    }
 }

@@ -59,6 +59,15 @@ and the older text stays so its reasoning is not re-invented.
   its own copy of the twelve fractions, and the guard
   `the_icons_bars_are_one_fact_across_every_watermark` in
   `src-tauri/src/sign_in/mod.rs` fails the build if any copy drifts.
+  **Amended 2026-10-07, by the user, from an approved preview:** the key
+  setup screen is quieter. One sentence instead of a paragraph (hours, never
+  money), no stepper, no steps card: the three steps hide behind one help
+  line until asked for, the field is the one thing asking, Verify is quiet
+  until a key is pasted, and the watermark is smaller and at half the
+  opacity. The rule it taught: on a first-run screen, one container and one
+  alignment; a bordered card inside a column inside a window is three
+  frames for one list. design/registry.md "Key setup screen" has the
+  measurements.
 
 ## The character
 
