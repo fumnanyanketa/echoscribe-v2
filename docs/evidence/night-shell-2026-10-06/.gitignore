@@ -1,0 +1,5 @@
+# Holds the proofs that carry personal data: the account block, past
+# dictation texts, and ambient room speech a live microphone heard.
+# The repository is public, and the data rules say what a person said
+# never leaves their machine. These stay on this machine only.
+local-only/

@@ -458,7 +458,7 @@ async function openFixedPage(command) {
 }
 
 /** The verified date in the machine's own locale, or null when there is none.
- *  A second copy of `src/shell/account-card.js`'s formatter on purpose:
+ *  A second copy of `src/shell/account-block.js`'s formatter on purpose:
  *  AGENTS.md makes something shared when a third feature needs it, and two is
  *  a coincidence. */
 function formatDate(iso) {

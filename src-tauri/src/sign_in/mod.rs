@@ -338,4 +338,35 @@ mod tests {
             .0;
         list.chars().filter(|c| !c.is_whitespace()).collect()
     }
+
+    #[test]
+    fn the_sign_in_wordmark_keeps_its_own_size() {
+        // covers: design/registry.md "Sign-in window", redrawn 2026-10-05: the
+        // wordmark is the heading, "at 28px bold". Written as the regression
+        // test for the finding in docs/evidence/night-shell-2026-10-06/report.md:
+        // sign-in.js gives the wordmark both `signin__heading` and
+        // `signin__wordmark`, and sign-in.css declares the wordmark's 28px rule
+        // before the heading's 23px one, so with equal specificity the later
+        // rule wins and the name renders at 23px medium. The promise holds
+        // either way: the element carries one class, or the wordmark's rule
+        // comes after the heading's.
+        let js = include_str!("../../../src/sign-in/sign-in.js");
+        let css = include_str!("../../../src/sign-in/sign-in.css");
+        let wordmark = css
+            .find(".signin__wordmark {")
+            .expect("sign-in.css no longer styles .signin__wordmark");
+        assert!(
+            css[wordmark..].contains("font-size: 28px"),
+            "the wordmark rule in sign-in.css no longer sets 28px"
+        );
+        if js.contains("signin__heading signin__wordmark") {
+            let heading = css
+                .find(".signin__heading {")
+                .expect("sign-in.css no longer styles .signin__heading");
+            assert!(
+                wordmark > heading,
+                "the wordmark carries both signin__heading and signin__wordmark, and the heading rule comes later in sign-in.css, so it wins and the name renders at the heading's 23px instead of the wordmark's 28px. Move the wordmark rule after the heading rule, or give the element one class"
+            );
+        }
+    }
 }

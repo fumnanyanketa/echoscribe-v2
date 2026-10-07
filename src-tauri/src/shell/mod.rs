@@ -664,4 +664,123 @@ mod tests {
             );
         }
     }
+
+    // ----- Guards for the 2026-10-02 to 2026-10-05 rail changes ------------
+    //
+    // The interface has no test runner (AGENTS.md), so what a Rust test can do
+    // about a screen is read its source and fail the build when a promise
+    // leaves it. These four hold the promises `/check verify` observed live on
+    // 2026-10-06 (docs/evidence/night-shell-2026-10-06/report.md). They prove
+    // a line is present, never that the screen behaves.
+
+    #[test]
+    fn the_account_row_is_a_button_and_the_only_way_to_sign_out() {
+        // covers: design/registry.md "Account block", changed 2026-10-05 by
+        // the user: the row is a button that opens a menu holding Sign out,
+        // closed by Escape or a click elsewhere. And "Account card", retired
+        // the same day: Sign out lives nowhere else.
+        let block = flattened(include_str!("../../../src/shell/account-block.js"));
+        assert!(
+            block.contains("el(\"button\",\"account__identity\")"),
+            "the account row is no longer a button, so pressing the name does nothing again"
+        );
+        for attr in ["aria-haspopup", "aria-expanded", "aria-controls"] {
+            assert!(block.contains(attr), "the account row lost {attr}: a screen reader can no longer tell it opens a menu");
+        }
+        assert!(
+            block.contains("event.key===\"Escape\""),
+            "Escape no longer closes the account menu"
+        );
+        assert!(
+            block.contains("\"pointerdown\""),
+            "a click elsewhere no longer closes the account menu"
+        );
+        assert!(
+            include_str!("../../../src/shell/account-block.js").contains("\"Sign out\""),
+            "the account menu no longer holds Sign out"
+        );
+        for (name, source) in [
+            ("shell/dashboard.js", include_str!("../../../src/shell/dashboard.js")),
+            ("shell/rail.js", include_str!("../../../src/shell/rail.js")),
+            (
+                "dictate/transcription-settings.js",
+                include_str!("../../../src/dictate/transcription-settings.js"),
+            ),
+        ] {
+            assert!(
+                !source.contains("\"Sign out\""),
+                "{name} draws its own Sign out. The user put sign-out under the profile on 2026-10-05, and a second one is the scattered rail the 2026-10-02 patrol found"
+            );
+        }
+    }
+
+    #[test]
+    fn nothing_in_the_interface_names_the_deleted_account_card() {
+        // covers: design/registry.md "Account card", retired 2026-10-05.
+        // `src/shell/account-card.js` was deleted in the same change. A file
+        // that still names it is either importing something that is gone or
+        // carrying a comment that sends the next reader to a file that does
+        // not exist, which is how "two copies held together" drifts.
+        let deleted = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../src/shell/account-card.js");
+        assert!(
+            !deleted.exists(),
+            "src/shell/account-card.js is back. The account card was retired on 2026-10-05; its contents live in the account menu"
+        );
+        for (name, source) in [
+            ("shell/dashboard.js", include_str!("../../../src/shell/dashboard.js")),
+            ("shell/dashboard.css", include_str!("../../../src/shell/dashboard.css")),
+            ("shell/rail.js", include_str!("../../../src/shell/rail.js")),
+            (
+                "dictate/transcription-settings.js",
+                include_str!("../../../src/dictate/transcription-settings.js"),
+            ),
+        ] {
+            // account-block.js is left out on purpose: its header says the
+            // card was deleted, which is history and not a pointer.
+            assert!(
+                !source.contains("account-card"),
+                "{name} still names src/shell/account-card.js, which was deleted on 2026-10-05. If it is a comment, point it at src/shell/account-block.js, where the surviving copy is"
+            );
+        }
+    }
+
+    #[test]
+    fn a_hidden_sub_nav_and_a_hidden_account_menu_are_hidden_on_screen_too() {
+        // covers: design/registry.md "Section sub-nav" (corrected 2026-10-02)
+        // and "Account block" (2026-10-05). Both are hidden with the `hidden`
+        // attribute, and the offline row's 2026-09-03 bug taught that a
+        // display rule on the class silently beats the attribute. Each needs
+        // its own `[hidden] { display: none }` rule.
+        let css = flattened(include_str!("../../../src/shell/dashboard.css"));
+        for selector in [".rail__sub[hidden]", ".account__menu[hidden]"] {
+            let rule = format!("{selector}{{display:none");
+            assert!(
+                css.contains(&rule),
+                "dashboard.css lost the rule `{selector} {{ display: none }}`. The element's own display rule beats the hidden attribute, so the folded sub-nav or the closed menu would stay on screen"
+            );
+        }
+    }
+
+    #[test]
+    fn a_second_press_on_a_section_folds_its_sub_nav_and_changes_nothing_else() {
+        // covers: design/registry.md "Section sub-nav", amended 2026-10-02 by
+        // the user: a second press on the section a person is already inside
+        // folds the sub-nav without changing the screen. The `return` is the
+        // whole promise: nothing below it runs, so the screen stays.
+        let dashboard = flattened(include_str!("../../../src/shell/dashboard.js"));
+        assert!(
+            dashboard.contains("toggleSub(rail,id);return;"),
+            "dashboard.js no longer folds the sub-nav and stops. Either the fold is gone, or the press goes on to change the screen, which is the navigation AC-2 already covers and not the fold the user asked for"
+        );
+        let rail = flattened(include_str!("../../../src/shell/rail.js"));
+        assert!(
+            rail.contains("sub.hidden=!sub.hidden;"),
+            "rail.js's toggleSub no longer flips the sub-nav"
+        );
+        assert!(
+            rail.contains("item.setAttribute(\"aria-expanded\",sub.hidden?\"false\":\"true\")"),
+            "toggleSub no longer tells the parent item its expanded state, so the fold is layout only and a screen reader hears nothing"
+        );
+    }
 }
