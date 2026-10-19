@@ -1,6 +1,6 @@
 # 0003. Sign in
 
-**Status:** In progress
+**Status:** Accepted
 **Date:** 2026-08-28
 **Amended:** 2026-09-03, by `/architect`, and it changes one thing only:
 where AC-14's "working offline" sign is shown. It leaves the sign-in

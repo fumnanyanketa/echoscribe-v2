@@ -1,6 +1,6 @@
 # 0007. See what you've said before
 
-**Status:** In progress
+**Status:** Accepted
 **Date:** 2026-09-04
 **Weight:** medium
 **Plan row:** 5

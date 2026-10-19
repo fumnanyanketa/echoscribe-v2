@@ -1,6 +1,6 @@
 # 0005. Teach it your words
 
-**Status:** In progress
+**Status:** Accepted
 **Date:** 2026-09-04
 **Weight:** medium
 **Plan row:** 3

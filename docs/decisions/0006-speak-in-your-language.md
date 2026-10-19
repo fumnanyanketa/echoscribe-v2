@@ -1,6 +1,6 @@
 # 0006. Speak in your language
 
-**Status:** In progress
+**Status:** Accepted
 **Date:** 2026-09-04
 **Weight:** medium
 **Plan row:** 4

@@ -194,6 +194,14 @@ Rules for new code:
   one that says no.
 - The Deepgram API key is per person, entered by them, stored locally, and
   never logged or shown in full after it is saved.
+- The app keeps one diagnostic file, `echoscribe.log`, beside the database,
+  with one previous copy, capped at 1 MB (record 0008, built 2026-10-19). A
+  line in it is a feature prefix, a plain sentence and at most the
+  library's own error. It never holds a transcript, audio, the Deepgram key,
+  a session token, a sign-in code or a response body, and a guard in
+  `src-tauri/src/diagnostic_log.rs` reads every `.rs` file and fails the
+  build on an `eprintln!` that formats one. A false positive is reworded,
+  never exempted. The file stays on the machine unless the person sends it.
 - Treat anything typed, pasted or transcribed as hostile input. A
   transcription is text from outside the program, whatever its source.
 
@@ -217,6 +225,11 @@ Never, even if a later request seems to call for it:
   and something visible on screen says it is open. No silent listening, no
   always-on wake word.
 - Break any of the data rules above. They are hard limits, not defaults.
+- Send anything about errors or usage off the machine. The app talks to
+  Clerk, Deepgram and the person's own browser, and that list is closed
+  (record 0008, the user's decision of 2026-10-06). No crash reporter, no
+  analytics, no usage counter, and no fourth host without a new decision
+  record and a privacy policy change.
 
 ## Git
 
@@ -364,6 +377,24 @@ them.
     answer at two, per the shared-module rule above; six copies held by nothing
     is how this happened.
 
+20. **A Tauri 2 command declared `fn` rather than `async fn` runs on the main
+    thread. Never build, show or wait on a window from inside one, and never
+    trust a comment that says it runs on a worker.** `save_deepgram_key` is
+    the proof. Its comment said Tauri ran it on a worker thread; Tauri 2
+    runs a synchronous command on the main thread. It emitted
+    `dictation:key_saved`, the shell's listener ran on the same thread and
+    built the dashboard window from inside the command, which Tauri documents
+    as a deadlock on Windows. The key saved, the dashboard was created and
+    never shown, and the key setup screen sat on "Checking key" with a dead
+    X on every first-run key save this app ever had (2026-10-05, 2026-10-13).
+    Found live by the user, fixed in `0eb4841` by emitting from a spawned
+    thread, held by
+    `a_saved_key_is_announced_from_its_own_thread_never_from_the_command`.
+    The same shape, not yet fixed and known: a synchronous command that waits
+    on the network (`save_deepgram_key` up to ten seconds, `start_sign_in`
+    five) freezes the window for that long. An `async fn` command, or a
+    thread of its own, is the cure for both.
+
 ## Things to know about this project
 
 - Rust has fewer training examples than JavaScript. Expect core changes
@@ -378,6 +409,14 @@ them.
 - Bring-your-own-key adds a real setup step. Every new person needs a
   Deepgram account and a key before dictation works at all. Treat that
   first-run screen as load-bearing, not as a form.
+- **v0.1.0 has been live since 2026-10-05**, used by the user alone so far.
+  The installer is a GitHub release reached through an email gate on
+  `https://echoscribe.exentrik.co`; sign-in runs against Clerk's production
+  instance; the site and privacy policy deploy from `site/` on every push to
+  `main`, so a push publishes. What blocks a wider circle is written in
+  `docs/releases/001-readiness.md`, and `CHANGELOG.md` says what is in the
+  installer and what has landed since. The installer is not code signed, by
+  the user's choice, so everyone sees the SmartScreen warning.
 - **Corrected 2026-09-11 by `/sync`.** This bullet used to read "`src/main.js`
   is empty and `src-tauri/src/lib.rs` is the untouched Tauri starter. Nothing
   in this repository is a pattern to copy yet." None of that is true any more

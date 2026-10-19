@@ -1,5 +1,9 @@
 # Release readiness: EchoScribe v0.1.0, written 2026-10-06
 
+_Updated 2026-10-19 by `/sync`: lines 6 and 8 and the watch list, after the
+diagnostic log was built and the key setup hang was found and fixed. Every
+other line is as written on 2026-10-06._
+
 **Version:** v0.1.0, tag on `dd2bb96`, GitHub release published 2026-10-05
 15:18 UTC with one asset, `EchoScribe-Setup.exe` (4,785,689 bytes), reached
 through the stable link
@@ -25,9 +29,9 @@ Nothing here is a reason to pull v0.1.0 from the one person who has it.
 | 3 | Phones | n/a | Windows desktop only, by the brief |
 | 4 | Development leftovers are gone | **pass** | Release builds hide the console (`main.rs`), there is no test button, no seeded account and no fake data in the interface (the History fact cards draw real counts only, by the Night rule). Clerk's production instance and Google's production client are the ones in the build (`930d1f0`). The two Google test users were made redundant when the consent screen left testing on 2026-10-05 |
 | 5 | Secrets clean, history included | **pass** | `docs/reviews/security-2026-10-05.md`: 0 Critical, 0 High. `cargo audit` 0 vulnerabilities. Full history pattern sweep clean; history rewritten on 2026-09-24 to purge personal data. The one Medium (the browser's own Clerk session after sign-out) was closed by `dd2bb96` (`prompt=login`, record 0003 AC-19 to AC-21). Open and accepted: no dedicated secret scanner is installed, which is a tooling decision owed to the user |
-| 6 | The three instruments are wired and emitting | **fail** | Decided today in `docs/decisions/0008-instruments.md`, by the user: error tracking **none**, analytics **none**, both by design and already promised by the privacy policy; logging is **a local file that is not built yet**. Today the app's 91 diagnostic lines go to a hidden console and vanish. A person who writes to hello@ has nothing to attach. Route: `/develop 0008` (one sitting), then the privacy policy sentence |
+| 6 | The three instruments are wired and emitting | **fail, narrowing** | Decided in `docs/decisions/0008-instruments.md`, by the user: error tracking **none**, analytics **none**, both by design and already promised by the privacy policy. Logging: **built 2026-10-19** (`src-tauri/src/diagnostic_log.rs`), proved on a dev build, not yet seen on an installed build and not yet in any installer. Still owed: the privacy policy sentence (drafted in `docs/evidence/instruments/develop-2026-10-19.md`, the user approves it), then `/check verify` on the installed build, then v0.1.1 |
 | 7 | The rollback plan is written and rehearsed | **fail** | Written below. **Not rehearsed.** Route: run the rehearsal below once, then tick this line |
-| 8 | Tests green, serious findings resolved | **pass, with one owed** | `cargo test`: 352 passed, 0 failed, 2 ignored, this morning, after the two findings of `docs/evidence/night-shell-2026-10-06/report.md` were fixed in the working tree (the sign-in wordmark cascade, the stale comment) and the five new guards went green. `cargo clippy -D warnings` clean. The 2026-09-11 review's blocker (two databases) was fixed in `76a5c3d`/`6461889` and proved live on 2026-10-01. **Owed:** `/sync` has not reconciled that review's Major list against the code since, and `docs/plan.md`'s header still describes the project as it stood on 2026-09-11 |
+| 8 | Tests green, serious findings resolved | **pass** | `cargo test`: 366 passed, 0 failed, 2 ignored on 2026-10-19, `cargo clippy -D warnings` clean. The two findings of `docs/evidence/night-shell-2026-10-06/report.md` were fixed and guarded in `6575bd4`. The 2026-09-11 review's blocker (two databases) was fixed in `76a5c3d`/`6461889` and proved live on 2026-10-01. `/sync` reconciled `docs/plan.md`, the record statuses and AGENTS.md on 2026-10-19; the plan header now describes the project as it stands |
 | 9 | No unratified assumptions | **pass** | Record statuses: 0001 Accepted; 0002 to 0007 In progress; 0008 Proposed. None is `Assumed` |
 | 10 | The running cost is known | **pass** | The app calls one paid service, Deepgram, on every dictation, and every person brings their own key and their own allowance (record 0001). The project's own bill is zero. Clerk is on its free tier; Kit's trial ends about 2026-10-19 and drops to its free plan on its own |
 
@@ -93,8 +97,10 @@ sign-in problem appears; the branding verification survives it.
 
 - The release asset's download count, and the Kit list for new addresses.
 - hello@ for a reply from anyone whose installer was blocked by SmartScreen
-  or whose Deepgram key setup stalled (the one unreproduced bug in memory is a
-  key setup window stuck on "Checking key").
+  or whose Deepgram key setup stalled. The "stuck on Checking key" bug was
+  caught live on 2026-10-13, fixed in `0eb4841` and re-proved by the user on
+  2026-10-19; **v0.1.0 still has it**, so anyone on that installer hits it on
+  their first key save. v0.1.1 carries the fix.
 - Nothing else can be watched, by design: record 0008 says the app reports
   nothing. The first signal of a crash on someone else's machine is their
   email, with the log file attached once 0008 is built.

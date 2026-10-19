@@ -1,6 +1,6 @@
 # 0002. Dictate with a hotkey
 
-**Status:** In progress
+**Status:** Accepted
 **Date:** 2026-08-27
 **Amended:** 2026-08-29. AC-2 and AC-19 were named but never settled, and
 `/develop`'s gate stopped on both. This amendment settles them and touches

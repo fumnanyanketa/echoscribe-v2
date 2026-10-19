@@ -6,17 +6,17 @@ into whatever app you're using. The scary risk is those pieces not
 connecting, so phase 1 proves the whole pipe works end to end, for real,
 before any one piece is made great.
 
-**Last reconciled:** 2026-09-11
+**Last reconciled:** 2026-10-19
 
 ## At a glance
 
 | # | Feature | Phase | Weight | Status |
 |---|---|---|---|---|
-| 1 | Sign in | 1 | heavy | in progress |
-| 2 | Dictate with a hotkey | 1 | heavy | in progress |
-| 3 | Teach it your words | 2 | medium | in progress |
-| 4 | Speak in your language | 2 | medium | in progress |
-| 5 | See what you've said before | 2 | medium | in progress |
+| 1 | Sign in | 1 | heavy | in progress · shipped, your sign-off owed |
+| 2 | Dictate with a hotkey | 1 | heavy | in progress · shipped, your sign-off owed |
+| 3 | Teach it your words | 2 | medium | done |
+| 4 | Speak in your language | 2 | medium | done |
+| 5 | See what you've said before | 2 | medium | done |
 | 6 | Remember which app received each dictation | 3 | medium | not started · needs a decision |
 | 7 | Filter history by app and by date | 3 | light | not started · needs a decision |
 | 8 | The microphone device row | 3 | medium | not started · needs a decision |
@@ -24,14 +24,24 @@ before any one piece is made great.
 | 10 | A scratchpad to try dictation in | 3 | light | not started · needs a decision |
 | 11 | Actions on the error pill | 3 | medium | not started · needs a decision |
 
-**Where this really stands, 2026-09-11.** Every row above says "in
-progress" and every row is built. **None of the five has ever passed
-`/check verify`**, so nothing in this project is known to work. Record
-0002's last verify verdict was Blocked and record 0004's was Fail. On top
-of that, `/check review` found on 2026-09-11 that rows 3, 4 and 5 cannot
-work at all: the app opens two SQLite files where its own comments promise
-one. Each of those three rows carries the detail at its foot. Eleven
-further Major findings are open. Nothing was fixed in that run or this one.
+**Where this really stands, 2026-10-19.** EchoScribe v0.1.0 has been live
+since 2026-10-05, installed and dictating on the user's own machine, with the
+installer handed out through `https://echoscribe.exentrik.co`. The two-database
+blocker recorded here on 2026-09-11 was fixed the same day (`76a5c3d`,
+`6461889`) and the whole pipe was then driven live on 2026-10-01
+([end-to-end report](evidence/end-to-end-2026-10-01/report.md), PASS): sign in,
+hotkey, speech in English and German, typing, history, custom words, the
+language choice, and all of it surviving a restart. Rows 3, 4 and 5 are
+done on that evidence plus their 2026-09-04 test passes. Rows 1 and 2 are
+heavy, and heavy needs the user's own written approval: the plain-language
+sign-off is drafted at
+[docs/evidence/sign-off-2026-10-07.md](evidence/sign-off-2026-10-07.md) and
+its boxes are empty, so both rows stay in progress on that one line alone.
+Record 0004, the shell, was verified live on 2026-10-06 with one finding (the
+sign-in wordmark size), fixed and guarded in `6575bd4` and not yet re-seen
+live. The record statuses now say Accepted for 0002, 0003, 0005, 0006 and
+0007. What blocks a wider circle than the user is listed in
+[docs/releases/001-readiness.md](releases/001-readiness.md).
 
 ---
 
@@ -53,6 +63,17 @@ still signed in.
 - [x] The sign-in screen and the browser handoff · `src-tauri/src/sign_in/`, `src/sign-in/`
 - [x] Staying signed in, and signing out · `src-tauri/src/sign_in/renewal.rs`
 - [x] Offline, and a second account on the machine · `src-tauri/src/sign_in/clerk.rs`, `src/sign-in/`
+
+**Where it stands, 2026-10-19.** Shipped in v0.1.0 against Clerk's
+production instance (`930d1f0`), proved live: the browser hand-off with an
+email code and with Google on 2026-10-05 and 2026-10-06, staying signed in
+across every relaunch since 2026-10-01, sign-out, the timed-out browser, and
+the token never reaching the screens (`docs/evidence/night-shell-2026-10-06/report.md`,
+`docs/evidence/sign-off-2026-10-07.md` part 1: 9 promises proved, 5 in part,
+7 not yet, two of those only the user can see). Record 0003 is Accepted.
+**The row is not done because heavy needs the user's written sign-off**, and
+the sign-off file's boxes are empty. Not proved on the production build: no
+internet at launch (AC-14, AC-15), a session ended elsewhere (AC-16).
 
 ### 2. Dictate with a hotkey · in progress · heavy
 
@@ -80,6 +101,21 @@ typed text exactly where my cursor was, in any app.
 - [x] The settings screen, the Dictation half · the visible half of AC-19, AC-21 and AC-22 · unblocked 2026-09-03 when the shell's three milestones landed, and **built 2026-09-04**, awaiting the user's own drive and then `/check verify`. `src/dictate/dictation-settings.js` and `.css` (new: the two hotkey rows as one radio group, the sound switch, the two captions, the `Setting error line` on a refused write and the read failure state that draws no control at all), `src-tauri/src/dictate/settings.rs` (the two codes and the two sentences now held there and handed out on a `SettingError`, replacing the bare error strings the four commands used to return, plus 5 new tests including a guard that the screen holds no copy of either sentence), `src/shell/dashboard.js` (the surface now mounts the screen of whichever destination the rail is on, and a section resolves to the first sub-section that has one), `src/shell/dashboard.html` and `.css` (the screen's stylesheet, and the stale comment saying the surface is empty until this row). The gate found six values with no named source and the user settled all six the same day, written up in [docs/evidence/dictate-with-a-hotkey/milestone-5-screen-decisions-owed.md](evidence/dictate-with-a-hotkey/milestone-5-screen-decisions-owed.md): the two caption sentences, what pressing the parent Settings item opens, the scope of this build, and two things the comp draws that `design/registry.md` does not register, a section heading and the hotkey setting's label. **`/architect` owed record 0002 an amendment for the two sentences and `/canvas` owed `design/registry.md` three rows. Both landed 2026-09-04**: the amendment as record 0002's sixteenth, and the rows as `Setting label`, `Settings, could not be read` and `Surface heading` in that patrol's report, [design/patrols/2026-09-04.md](../design/patrols/2026-09-04.md). Record 0004's AC-2 is now met for `settings` and `settings.dictation` and still not for `settings.transcription`. `Device row` is deliberately not built: `design/registry.md` draws it here, no acceptance criterion asks for it, and none of its three values has a source named in record 0002, the same standing as the pill's elapsed and word count chip
 - [x] The settings screen, the Transcription half · AC-12's visible half, the masked Deepgram key · `design/registry.md` puts it on the Transcription surface as `Secret field`, and record 0004's AC-2 is unmet for that rail item until it lands. **Needs `/architect` first**, which `/develop`'s gate found on 2026-09-04 and the user chose to route rather than assume: `Secret field`'s replace and its remove are two behaviours no record names, and its "locally stored" wording is a sentence a person reads. Record 0004's Still open already holds the same question as "what the Transcription section holds beyond the saved key row". The three commands it would call are already there, `get_deepgram_key_info`, `save_deepgram_key` and `clear_deepgram_key` · **Unblocked 2026-09-04** by record 0002's sixteenth amendment, which settles all four unnamed things and adds AC-34 and AC-35, taking that record to 35. Replace opens the paste field in place on the same surface rather than handing the person to the small dark window, and the key already saved stays in force until Deepgram accepts a new one. Remove asks once, on the row and never in a modal, because AC-12 means the key can never be shown again and because removing it destroys the dashboard as well: record 0004's invariant stops holding and the guided setup screen is what is left on screen. No command, no event and nothing in `src-tauri/capabilities/` is added. The amendment also names one thing the build owes that nothing had: `src/main.js` must re-read the state on `dictation:key_cleared`, or Remove leaves a blank 760x540 window over nothing · **Built 2026-09-04**, awaiting the user's own drive and then `/check verify` and `/test`. `src/dictate/transcription-settings.js` and `.css` (new: the masked row with its fixed 20 bullets and the last four characters, the two actions, the paste field in place for Replace, and the question Remove asks before anything is deleted), `src/shell/dashboard.js` and `.html` (the second destination's screen and its stylesheet), `src-tauri/src/dictate/deepgram_key.rs` (`get_deepgram_key_info` and `clear_deepgram_key` now hand out the settings surface's own error line instead of a bare string, and Remove deletes the row before the vault entry so that every failure leaves "so it is unchanged" true), `src-tauri/src/dictate/settings.rs` (the `SettingError` constructors visible to the feature, and the doc comment saying the surface has two sections), `src/main.js` (the `dictation:key_cleared` listener the amendment named as owed, plus the machine reason on the one fatal message, which would otherwise have printed an object). The gate found four more values with no named source, all four words a person reads, and all four were settled under option 3 and carried into record 0002 by its seventeenth amendment: the sentence that stands where the empty field's blocker sentence would be, the verify label, the backing-out label, and the wording of the link out to get a key. `/canvas` ran a second pass the same day and added five contrast pairs, because nothing had ever measured the light `Primary button`. **Record 0004's AC-2 is now met for all three of the rail's destinations.** `Device row` is still deliberately not built, on the Dictation surface, for the reason the row above gives · **Tested 2026-09-04**: 9 tests in `src-tauri/src/dictate/deepgram_key.rs` and one existing guard in `settings.rs` widened to cover both screens, 222 passing. AC-12's masked half, AC-35's question and its focus, and the delete ordering are covered. **Three things a machine cannot check and a person must, every time**: that a key Deepgram accepts actually replaces the old one, that a key Deepgram rejects leaves the old one dictating, and that Remove really does end with the guided setup screen on screen. All three need a real Deepgram key and a real window, so they are `/check verify`'s and stay manual. Proved by breaking the delete order on purpose: the guard failed with the sentence naming the dashboard left over an account with no key, then it was put back
 
+**Where it stands, 2026-10-19.** Every "awaiting `/check verify`" in the
+boxes above is stale and left where it stands because rewriting a row is
+`/scope`'s. The verifies happened: `docs/evidence/dictate-with-a-hotkey/report.md`
+(2026-09-02, the user at the keyboard for every voice and sound moment),
+`docs/evidence/end-to-end-2026-10-01/report.md` (PASS, English and German,
+custom words, restart) and `docs/evidence/night-shell-2026-10-06/report.md`.
+`docs/evidence/sign-off-2026-10-07.md` part 2 counts 25 of 33 promises
+proved, 4 in part, 4 not yet (three need a second monitor, one was skipped
+at the user's choice). Shipped in v0.1.0 and in daily use since 2026-10-05.
+Record 0002 is Accepted. **The row is not done because heavy needs the
+user's written sign-off.** Two faults found after release are fixed and not
+yet in an installer: the key setup screen hanging on "Checking key" after a
+key was accepted (`0eb4841`, re-proved live by the user 2026-10-19), and
+the sign-in wordmark size (`6575bd4`).
+
 ---
 
 ## Phase 2: make it more accurate and more yours
@@ -88,7 +124,7 @@ The three things confirmed as being built, not cut, on top of the
 working core loop. Order among these three is a judgment call, not a
 dependency — any could move first.
 
-### 3. Teach it your words · in progress · medium
+### 3. Teach it your words · done · medium
 
 Accuracy is the one thing EchoScribe has to get right. This lets you
 fix words or names it keeps getting wrong.
@@ -102,16 +138,16 @@ say it, it comes out right.
 - [x] The screen, and the rail item · milestone 3 in the record · AC-1, AC-4, AC-13, and the visible half of AC-2, AC-9 and AC-11 · built 2026-09-04. `src/vocabulary/vocabulary.js` and `.css` (new: the add field with its unusable-while-empty action, the list with a Remove per row, the room left in both its states, the empty state, the read failure state and the caption), `src-tauri/src/shell/rail.rs` and `src/shell/rail.js` (the `settings.vocabulary` destination and its wording), `src/shell/dashboard.js` and `.html`. Awaiting the user's own drive and then `/check verify`
 - [x] Tests · 2026-09-04, `/test`. Coverage map, with every gap named, in [docs/evidence/teach-it-your-words/tests-2026-09-04.md](evidence/teach-it-your-words/tests-2026-09-04.md). The suite is 302 passing, up from 253. **Nine of this row's and row 4's 26 criteria cannot be automated here and are a person's job at `/check verify`, forever**, and the largest single reason is that this project has no JavaScript test runner, so neither new screen has any automated coverage at all. Three invariants were broken on purpose to prove the tests can fail: dropping the keyterms failed 5 request tests, moving the read after the microphone failed the ordering guard, and raising the budget to 4000 failed the safety property with the right words. One application change was owed and made as a build change rather than hidden: `transcribe.rs`'s options builder was extracted as `stream_options`, which is what turns AC-14 from a guard into an assertion about the real query string
 
-**Built, and does not work. Recorded 2026-09-11 by `/sync`, from
-`/check review`.** This feature opens `echoscribe.db` while `sign_in` and
-`dictate` open `echoscribe.sqlite3`, so the `account` table it references
-is not in its file and every add fails with "This could not be saved, so
-your list is unchanged." The boxes above stay ticked because the code was
-genuinely built; the feature is unusable until the one constant is fixed.
-Not fixed here, by instruction. See
-[docs/reviews/2026-09-11-master.md](reviews/2026-09-11-master.md).
+**Recorded 2026-09-11 by `/sync`, from `/check review`: built, and did
+not work.** This feature opened `echoscribe.db` while `sign_in` and
+`dictate` opened `echoscribe.sqlite3`, so every add failed. **Fixed the same
+day (`76a5c3d`, `6461889`) and proved live 2026-10-01**: a custom word
+added, sent on the stream and recognised, surviving a restart
+([end-to-end report](evidence/end-to-end-2026-10-01/report.md)). Done on
+that verify and the 2026-09-04 tests; the nine criteria `/test` named as a
+person's job were covered by that drive. Shipped in v0.1.0.
 
-### 4. Speak in your language · in progress · medium
+### 4. Speak in your language · done · medium
 
 Done when: I pick a language other than English, speak, and the text
 comes out correctly in that language.
@@ -122,14 +158,15 @@ comes out correctly in that language.
 - [x] The screen and the rail item · milestone 3 in the record · AC-5, AC-6, AC-11, and the visible half of AC-1, AC-2 and AC-9 · built 2026-09-04. `src/language/language.js` and `.css` (new: the 64 rows as one radio group sorted by the name a person reads, the `CHOSEN` badge, the filter with its live match count and its no-matches state, the Multilingual row's second line, the caption and the read failure state), `src/dictate/pill.html` (`dir="auto"` on the transcript line and both halves of it, which is AC-11's pill half), `src-tauri/src/shell/rail.rs` and `src/shell/rail.js` (the `settings.languages` destination and its wording), `src/shell/dashboard.js` and `.html`. Awaiting the user's own drive and then `/check verify`. **AC-11's typed half needs nothing and was checked by reading rather than building**: `typing.rs` already sends each UTF-16 unit through `KEYEVENTF_UNICODE` in order and derives no key code from a character, so it is script independent by construction
 - [x] Tests · 2026-09-04, `/test`, in the same pass as row 3 and reported in the same file, because the two most valuable tests cover both at once: a request carries a language and a vocabulary together and neither drops the other. AC-3 stands for 64 languages and a machine can only check that Deepgram was asked, so which language it actually works in is `/check verify`'s to name
 
-**Built, and does not work. Recorded 2026-09-11 by `/sync`, from
-`/check review`.** Same cause as row 3: this feature opens `echoscribe.db`,
-so `set_transcription_language` always fails with "This language could not
-be saved, so it is unchanged." and the chosen language always reads back as
-English. Not fixed here, by instruction. See
-[docs/reviews/2026-09-11-master.md](reviews/2026-09-11-master.md).
+**Recorded 2026-09-11 by `/sync`, from `/check review`: built, and did
+not work.** Same cause as row 3, so the choice never saved and always read
+back as English. **Fixed the same day (`76a5c3d`, `6461889`) and proved live
+2026-10-01** in German: chosen, dictated, typed, saved with the row, and
+still chosen after a restart ([end-to-end report](evidence/end-to-end-2026-10-01/report.md)).
+AC-3 stands for 64 languages and has been proved in two. Done on that verify
+and the 2026-09-04 tests. Shipped in v0.1.0.
 
-### 5. See what you've said before · in progress · medium
+### 5. See what you've said before · done · medium
 
 Done when: I open my history and see the text from something I
 dictated earlier, even after closing and reopening the app.
@@ -142,23 +179,15 @@ dictated earlier, even after closing and reopening the app.
 
 ---
 
-**Built, and does not work. Recorded 2026-09-11 by `/sync`, from
-`/check review`.** Same cause as rows 3 and 4, and the worst of the three
-because this is the screen the app lands on after sign-in. This feature
-opens `echoscribe.db`, where the `dictation` table it reads does not exist,
-so every read fails and a signed-in person meets "Your history could not be
-read, so none of it is shown." on every launch. `history/store.rs` creates
-nothing by design, relying on dictate having created the table first, which
-is correct and is defeated by the wrong filename. Not fixed here, by
-instruction. See
-[docs/reviews/2026-09-11-master.md](reviews/2026-09-11-master.md).
-
-**Fixed and proved since.** The one-file fix and its cross-feature guard
-were committed the same day (`76a5c3d`, `6461889`), and the 2026-10-01
-end-to-end verify drove this screen live: history reads, custom words and
-the language choice save, and all three survived a restart. Evidence:
-[docs/evidence/end-to-end-2026-10-01/report.md](evidence/end-to-end-2026-10-01/report.md).
-The rows above still await their own full `/check verify` passes.
+**Recorded 2026-09-11 by `/sync`, from `/check review`: built, and did
+not work.** Same cause as rows 3 and 4, and the worst of the three because
+this is the screen the app lands on. **Fixed the same day (`76a5c3d`,
+`6461889`) and proved live 2026-10-01**: history reads, the count and Copy
+work, and the rows survive a restart
+([end-to-end report](evidence/end-to-end-2026-10-01/report.md)). The
+user's own production dictation of 2026-10-05 is visible as a history row
+in `docs/evidence/night-shell-2026-10-06/`. Done on that verify and the
+2026-09-04 tests. Shipped in v0.1.0.
 
 ## Phase 3: what the comp draws that nothing backs yet
 

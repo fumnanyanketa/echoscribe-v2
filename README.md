@@ -2,7 +2,7 @@
 
 **Speak, and it types. A desktop dictation tool that turns your voice into text wherever your cursor is, triggered by a hotkey.**
 
-**Status:** in active development — see [CHANGELOG.md](CHANGELOG.md) for exactly what works and what doesn't yet
+**Status:** v0.1.0 released 2026-10-05, in use by its maker and not yet offered wider. See [CHANGELOG.md](CHANGELOG.md) for what is in it and what has changed since
 **Platform:** Windows first, macOS planned
 **Designed and built by:** Fumnanya Nketa, using AI-assisted development
 
