@@ -346,9 +346,12 @@ impl From<SavedKey> for KeyInfo {
 /// Returns the last four characters on success, which is the only thing about
 /// the key that ever crosses back to the interface.
 ///
-/// Declared `fn`, not `async fn`, so Tauri runs it on a worker thread and the
-/// blocking request never sits on the async runtime. The same shape as
-/// `start_sign_in`.
+/// Declared `fn`, not `async fn`, so the blocking request never sits on the
+/// async runtime. **In Tauri 2 that means it runs on the main thread**, not a
+/// worker thread as this comment used to say: nothing in here may build or
+/// wait on a window, and the saved-key announcement below is made from a
+/// thread of its own for exactly that reason. The network wait here does
+/// freeze the window for up to ten seconds; that is known and separate.
 #[tauri::command]
 pub fn save_deepgram_key(app: AppHandle, key: String) -> Result<String, KeyErrorPayload> {
     // Every command on this surface refuses when nobody is signed in, and
@@ -397,7 +400,28 @@ pub fn save_deepgram_key(app: AppHandle, key: String) -> Result<String, KeyError
     // dashboard is due. The shell listens for this. It carries nothing about
     // the key, not even its last four characters, because nothing that listens
     // needs them.
-    let _ = app.emit("dictation:key_saved", json!({}));
+    //
+    // Announced from a thread of its own, never from here. A listener runs on
+    // the thread that emits, and this command runs on the main thread, so the
+    // shell would build the dashboard from inside this command, which Tauri
+    // documents as a deadlock on Windows. It was one: on 2026-10-05 and
+    // 2026-10-13 the key saved, the dashboard was built and never shown, and
+    // the screen stayed on "Checking key" with its X dead
+    // (docs/evidence/dictate-with-a-hotkey/finding-key-setup-stuck-on-checking-key.md).
+    // From a separate thread the build waits for the main thread, which is free
+    // the moment this returns: the path the browser sign-in has always taken.
+    let announcer = app.clone();
+    if let Err(e) = std::thread::Builder::new()
+        .name("key-saved".into())
+        .spawn(move || {
+            let _ = announcer.emit("dictation:key_saved", json!({}));
+        })
+    {
+        // No thread means no dashboard yet, but the key is saved, so the next
+        // launch opens it. Saying so is the honest ending; failing the save
+        // would be a lie.
+        eprintln!("dictate: could not start the thread that announces a saved key: {e}");
+    }
 
     Ok(masked)
 }
@@ -932,6 +956,33 @@ mod tests {
         assert!(
             flat.contains("listen(\"dictation:key_cleared\""),
             "the small window's router no longer re-reads the state when the key is removed. It last drew the empty at-rest page, so Remove leaves a person looking at a blank 760x540 window (record 0002, sixteenth amendment)"
+        );
+    }
+
+    #[test]
+    fn a_saved_key_is_announced_from_its_own_thread_never_from_the_command() {
+        // covers: record 0002 AC-10 and record 0004 AC-1. The regression test
+        // for docs/evidence/dictate-with-a-hotkey/finding-key-setup-stuck-on-checking-key.md.
+        // `save_deepgram_key` runs on the main thread. The shell hears
+        // `dictation:key_saved` on whatever thread emits it and builds the
+        // dashboard there, and building a window inside a synchronous command
+        // deadlocks on Windows: the key saved, the dashboard was never shown,
+        // and the screen sat on "Checking key" forever. A source guard: the
+        // announcement must sit inside a spawned thread's body, and nowhere else.
+        let flat = flattened(include_str!("deepgram_key.rs"));
+        let emit = "emit(\"dictation:key_saved\"";
+        assert_eq!(
+            flat.matches(emit).count(),
+            1,
+            "dictation:key_saved is announced in more than one place, or none"
+        );
+        let at = flat.find(emit).expect("counted above");
+        let spawn = flat[..at]
+            .rfind(".spawn(move||{")
+            .expect("dictation:key_saved is announced outside a spawned thread. From the command itself it deadlocks the dashboard's creation on Windows and the key setup screen never leaves \"Checking key\"");
+        assert!(
+            !flat[spawn..at].contains("})"),
+            "the spawned thread closes before dictation:key_saved is announced, so the announcement is back on the command's own thread"
         );
     }
 }
