@@ -215,8 +215,8 @@ fn run_handoff(app: AppHandle, handoff: Handoff, cancel: Arc<AtomicBool>) {
         }
         Callback::ClerkError(oauth_error) => {
             match &oauth_error {
-                Some(code) => {
-                    eprintln!("sign-in: Clerk redirected back with error={code}")
+                Some(reason) => {
+                    eprintln!("sign-in: Clerk redirected back with error={reason}")
                 }
                 None => eprintln!("sign-in: the callback had neither a code nor an error"),
             }
@@ -303,9 +303,18 @@ mod tests {
     #[test]
     fn the_icons_bars_are_one_fact_across_every_watermark() {
         let copies = [
-            ("src/shell/rail.js", include_str!("../../../src/shell/rail.js")),
-            ("src/sign-in/sign-in.js", include_str!("../../../src/sign-in/sign-in.js")),
-            ("src/dictate/key-setup.js", include_str!("../../../src/dictate/key-setup.js")),
+            (
+                "src/shell/rail.js",
+                include_str!("../../../src/shell/rail.js"),
+            ),
+            (
+                "src/sign-in/sign-in.js",
+                include_str!("../../../src/sign-in/sign-in.js"),
+            ),
+            (
+                "src/dictate/key-setup.js",
+                include_str!("../../../src/dictate/key-setup.js"),
+            ),
         ];
         let lists: Vec<(&str, String)> = copies
             .iter()

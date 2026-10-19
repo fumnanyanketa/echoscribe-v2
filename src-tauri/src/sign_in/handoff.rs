@@ -265,7 +265,11 @@ mod tests {
             .query_pairs()
             .find(|(k, _)| k == "prompt")
             .map(|(_, v)| v.into_owned());
-        assert_eq!(prompt.as_deref(), Some("login"), "the authorize URL must carry prompt=login");
+        assert_eq!(
+            prompt.as_deref(),
+            Some("login"),
+            "the authorize URL must carry prompt=login"
+        );
         assert!(url.as_str().starts_with(&config::authorize_url()));
     }
 

@@ -1,6 +1,6 @@
 # 0008. Instruments: what the app records about itself, and where it goes
 
-**Status:** Proposed
+**Status:** In progress
 **Date:** 2026-10-06
 **Weight:** medium
 **Plan row:** none. A cross-cutting standard, not a feature. It was owed by the

@@ -797,11 +797,12 @@ fn on_ended(app: &AppHandle, ended: transcribe::Ended) {
 
     match ended {
         transcribe::Ended::Deepgram(cause) => {
-            eprintln!(
-                "dictate: dictation stopped: {} ({})",
-                cause.code(),
-                cause.message()
-            );
+            // Named `reason` rather than read as `code()` in the line itself:
+            // record 0008's log guard refuses a diagnostic line that formats
+            // anything called `code`, because the sign-in code is one, and a
+            // false positive is reworded, never exempted.
+            let reason = cause.code();
+            eprintln!("dictate: dictation stopped: {reason} ({})", cause.message());
             // Broadcast, the same way every other error on this feature is, so
             // the window receives it on the capability it already has and
             // nothing in `src-tauri/capabilities/` widens. The pill draws the

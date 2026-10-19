@@ -252,12 +252,10 @@ fn settle(app: &AppHandle) {
     // lock means a settle panicked, and settling anyway is strictly better
     // than never settling again.
     let state = app.try_state::<Shell>();
-    let _one_at_a_time = state
-        .as_ref()
-        .map(|shell| match shell.settle_gate.lock() {
-            Ok(held) => held,
-            Err(poisoned) => poisoned.into_inner(),
-        });
+    let _one_at_a_time = state.as_ref().map(|shell| match shell.settle_gate.lock() {
+        Ok(held) => held,
+        Err(poisoned) => poisoned.into_inner(),
+    });
     let dashboard_up = if dashboard_is_due(app) {
         if dashboard_window::is_open(app) {
             true
@@ -685,7 +683,10 @@ mod tests {
             "the account row is no longer a button, so pressing the name does nothing again"
         );
         for attr in ["aria-haspopup", "aria-expanded", "aria-controls"] {
-            assert!(block.contains(attr), "the account row lost {attr}: a screen reader can no longer tell it opens a menu");
+            assert!(
+                block.contains(attr),
+                "the account row lost {attr}: a screen reader can no longer tell it opens a menu"
+            );
         }
         assert!(
             block.contains("event.key===\"Escape\""),
@@ -700,7 +701,10 @@ mod tests {
             "the account menu no longer holds Sign out"
         );
         for (name, source) in [
-            ("shell/dashboard.js", include_str!("../../../src/shell/dashboard.js")),
+            (
+                "shell/dashboard.js",
+                include_str!("../../../src/shell/dashboard.js"),
+            ),
             ("shell/rail.js", include_str!("../../../src/shell/rail.js")),
             (
                 "dictate/transcription-settings.js",
@@ -721,15 +725,21 @@ mod tests {
         // that still names it is either importing something that is gone or
         // carrying a comment that sends the next reader to a file that does
         // not exist, which is how "two copies held together" drifts.
-        let deleted = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../src/shell/account-card.js");
+        let deleted =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/shell/account-card.js");
         assert!(
             !deleted.exists(),
             "src/shell/account-card.js is back. The account card was retired on 2026-10-05; its contents live in the account menu"
         );
         for (name, source) in [
-            ("shell/dashboard.js", include_str!("../../../src/shell/dashboard.js")),
-            ("shell/dashboard.css", include_str!("../../../src/shell/dashboard.css")),
+            (
+                "shell/dashboard.js",
+                include_str!("../../../src/shell/dashboard.js"),
+            ),
+            (
+                "shell/dashboard.css",
+                include_str!("../../../src/shell/dashboard.css"),
+            ),
             ("shell/rail.js", include_str!("../../../src/shell/rail.js")),
             (
                 "dictate/transcription-settings.js",

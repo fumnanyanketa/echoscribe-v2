@@ -1,3 +1,4 @@
+mod diagnostic_log;
 mod dictate;
 mod history;
 mod language;
@@ -16,6 +17,17 @@ pub fn run() {
         // events, so they are filtered always.
         .device_event_filter(tauri::DeviceEventFilter::Always)
         .setup(|app| {
+            // First, before any feature says anything: every diagnostic line
+            // the app writes goes to one small local file beside the
+            // database, and nothing about it ever leaves the machine
+            // (docs/decisions/0008-instruments.md). A log that cannot be
+            // opened must never stop the app, so this one says so on
+            // whatever standard error it still has and carries on.
+            if let Err(e) = diagnostic_log::init(app) {
+                eprintln!(
+                    "log: the diagnostic log could not be opened, lines stay on the console: {e}"
+                );
+            }
             sign_in::init(app)?;
             // Both of these open their own connection to the same file and
             // both reference `account`, so they follow sign-in. Both are read
@@ -99,6 +111,34 @@ mod tests {
             "lib.rs no longer filters device events to Always. The dictation \
              hotkey will go dead whenever an EchoScribe window has focus \
              (2026-08-30, tauri-apps/tauri#13919)"
+        );
+    }
+
+    #[test]
+    fn the_diagnostic_log_is_opened_first_inside_setup_before_any_feature() {
+        // covers: record 0008 AC-2, as a source guard. The redirect has to
+        // happen inside setup (it needs the app's data folder) and before the
+        // first feature's init, or that feature's first sentences go to a
+        // hidden console and vanish, which is the state record 0008 exists to
+        // end. The live proof, a line in the file on the installed build,
+        // belongs to /check verify (standing rule 14).
+        let flat = this_file_flattened();
+        let setup = flat
+            .find(".setup(|app|{")
+            .expect("run() has a setup closure");
+        let log = flat
+            .find("diagnostic_log::init(app)")
+            .expect("run() no longer opens the diagnostic log (record 0008)");
+        let first_feature = flat
+            .find("sign_in::init(app)?;")
+            .expect("sign_in is still the first feature booted");
+        assert!(
+            setup < log && log < first_feature,
+            "diagnostic_log::init must be the first call inside setup, before sign_in::init"
+        );
+        assert!(
+            flat.contains("ifletErr(e)=diagnostic_log::init(app){eprintln!("),
+            "a diagnostic log that cannot be opened must not stop the app: the call is              guarded with if let Err, never with ?"
         );
     }
 

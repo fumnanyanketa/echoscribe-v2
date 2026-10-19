@@ -44,6 +44,9 @@ windows = { version = "0.61", features = [
     # the package family name of the process behind the focused window.
     "Win32_Storage_Packaging_Appx",
     "Win32_System_Threading",
+    # Record 0008: pointing the process's standard error at the diagnostic log
+    # file beside the database (src/diagnostic_log.rs).
+    "Win32_System_Console",
 ] }
 cpal = "0.18.2"
 # Record 0002's New libraries table, approved with the decision. Deepgram's own
